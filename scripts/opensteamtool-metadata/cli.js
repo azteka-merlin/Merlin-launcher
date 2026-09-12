@@ -57,9 +57,10 @@ function parseSignature(signature) {
   });
 }
 
-function findPattern(buffer, signature) {
+function findPatternOffsets(buffer, signature) {
   const bytes = parseSignature(signature);
   const limit = buffer.length - bytes.length;
+  const offsets = [];
   for (let offset = 0; offset <= limit; offset += 1) {
     let matches = true;
     for (let i = 0; i < bytes.length; i += 1) {
@@ -69,11 +70,37 @@ function findPattern(buffer, signature) {
         break;
       }
     }
-    if (matches) {
-      return offset;
+    if (matches) offsets.push(offset);
+  }
+  return offsets;
+}
+
+function fileOffsetToRva(buffer, fileOffset) {
+  if (buffer.length < 0x40 || buffer.readUInt16LE(0) !== 0x5A4D) {
+    throw new Error('Expected a valid PE file.');
+  }
+
+  const peOffset = buffer.readUInt32LE(0x3C);
+  const fileHeaderOffset = peOffset + 4;
+  if (peOffset + 24 > buffer.length || buffer.readUInt32LE(peOffset) !== 0x4550) {
+    throw new Error('Expected a valid PE header.');
+  }
+
+  const sectionCount = buffer.readUInt16LE(fileHeaderOffset + 2);
+  const optionalHeaderSize = buffer.readUInt16LE(fileHeaderOffset + 16);
+  const sectionTableOffset = fileHeaderOffset + 20 + optionalHeaderSize;
+  for (let index = 0; index < sectionCount; index += 1) {
+    const sectionOffset = sectionTableOffset + (index * 40);
+    if (sectionOffset + 40 > buffer.length) break;
+    const virtualAddress = buffer.readUInt32LE(sectionOffset + 12);
+    const rawSize = buffer.readUInt32LE(sectionOffset + 16);
+    const rawOffset = buffer.readUInt32LE(sectionOffset + 20);
+    if (fileOffset >= rawOffset && fileOffset < rawOffset + rawSize) {
+      return virtualAddress + (fileOffset - rawOffset);
     }
   }
-  return null;
+
+  throw new Error(`Pattern offset 0x${fileOffset.toString(16)} is outside PE sections.`);
 }
 
 function formatHex(value) {
@@ -94,10 +121,16 @@ function generatePatternToml(component, dllPath, outDir) {
   const buffer = fs.readFileSync(dllPath);
   const definitions = patterns[component];
   const entries = definitions.map((definition) => {
-    const offset = findPattern(buffer, definition.sig);
+    let offsets = findPatternOffsets(buffer, definition.sig);
+    if (offsets.length !== 1 && definition.preferredRva) {
+      offsets = offsets.filter((offset) => fileOffsetToRva(buffer, offset) === definition.preferredRva);
+    }
+    if (offsets.length !== 1) {
+      throw new Error(`${component}:${definition.name} expected one signature match, found ${offsets.length}.`);
+    }
     return {
       ...definition,
-      rva: offset === null ? '0x0' : formatHex(offset)
+      rva: formatHex(fileOffsetToRva(buffer, offsets[0]))
     };
   });
 
@@ -105,7 +138,7 @@ function generatePatternToml(component, dllPath, outDir) {
   ensureDir(targetDir);
   const outputPath = path.join(targetDir, `${sha256}.toml`);
   fs.writeFileSync(outputPath, renderPatternToml(entries), 'utf8');
-  return { component, sha256, outputPath, missing: entries.filter((entry) => entry.rva === '0x0') };
+  return { component, sha256, outputPath };
 }
 
 function loadIpcInput(inputPath) {
