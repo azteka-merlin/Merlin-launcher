@@ -23,7 +23,7 @@ IPC: `corrections.list`, `refresh`, `prepareInstall`, `vote`, `download`, `insta
 
 ### Regras de planos, liberacao e cooldown
 
-| Plano | Liberacao de novo jogo Premium | Cooldown | Limite Premium |
+| Plano | Liberacao de novo jogo Premium | Cooldown do plano da pessoa | Limite Premium |
 | --- | --- | --- | --- |
 | Bronze | 7 dias apos o cadastro do jogo | global de 24 h | 3 ativacoes por ciclo mensal da licenca |
 | Prata | 5 dias apos o cadastro do jogo | global de 24 h | sem limite mensal |
@@ -31,6 +31,9 @@ IPC: `corrections.list`, `refresh`, `prepareInstall`, `vote`, `download`, `insta
 
 - Cooldown global (Bronze/Prata) bloqueia a pessoa de ativar qualquer Premium durante a janela; nao deve ser mostrado como slot ocupado de um jogo especifico.
 - Cooldown por jogo (Ouro) bloqueia apenas nova ativacao daquele titulo. A UI recebe `cooldownEntries` por jogo, `cooldownUntil`/`reservedUntil` do viewer e disponibilidade de slots separadamente.
+- Cada jogo Premium tambem pode ter um **cooldown de ativacao personalizado**, configurado no Admin em dias inteiros (minimo um; vazio = 24 h). Depois que uma pessoa ativa esse jogo, ela nao pode ativa-lo novamente ate `activatedAt + activationCooldownHours`, independentemente do seu tier. Exemplo: jogo configurado com 7 dias: quem ativou fica impedido por 7 dias.
+- Esse cooldown personalizado e individual e **nao estende a vaga global**. Para os demais usuarios, uma ativacao ativa ocupa uma vaga do jogo somente por 24 h; reservas/processamentos tambem a ocupam apenas ate seu timeout. Assim, um jogo pode ter vaga novamente para outra pessoa em 24 h, enquanto o usuario que o ativou continua em cooldown de 7 dias.
+- O novo front deve apresentar separadamente o cooldown individual do viewer e a proxima vaga global do jogo; nunca inferir que ambos terminam na mesma data.
 - `tierAvailability` informa ao front quando cada tier podera ativar. `lockedReason` pode ser `tier_release_pending`, `tier_disabled`, `bronze_limit` ou `free_catalog_cutoff`; o front deve exibir o motivo/CTA, sem fabricar datas.
 
 ### Pessoas gratuitas e catalogo futuro

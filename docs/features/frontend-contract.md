@@ -58,7 +58,7 @@ Os nomes completos estao em `preload.js`; ao altera-los, atualize testes `*-ipc-
 - [ ] Caches stale continuam renderizaveis.
 - [ ] Tier/early access/restricoes Premium recebidos da API continuam apenas apresentados, nunca contornados pelo cliente.
 - [ ] Limites separados de licenca de teste, ciclos e mensagens `test_limit_normal`/`test_limit_premium` continuam distintos.
-- [ ] Cooldown global Bronze/Prata, cooldown por jogo Ouro, slots e janelas de liberacao por tier continuam visualmente distintos.
+- [ ] Cooldown global Bronze/Prata, cooldown por jogo Ouro, cooldown personalizado configurado por jogo, slots e janelas de liberacao por tier continuam visualmente distintos. Um cooldown individual de 7 dias nao pode fazer a UI informar que a vaga para outras pessoas dura 7 dias: a vaga ativa do jogo expira em 24 h.
 - [ ] Gratuitos restritos no corte e gratuitos legados sem restricao recebem a experiencia devolvida pela API, sem liberar jogos no cliente.
 - [ ] Badge de status de servico continua agregando saude Ryuu e falhas de catalogo sem bloquear o aplicativo.
 - [ ] Allowlists de update/links externos continuam no main.
