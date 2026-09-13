@@ -47,6 +47,10 @@ Codigos esperados:
 - Linhas ativas com `setmanifestid(` sao comentadas no Lua quando auto-update esta ativo conforme regra atual do transformer.
 - Se a API indicar manifest override por header `x-merlin-manifest-source: r2-override`, o auto-update e forcado para `false`.
 - Ao finalizar instalacao com sucesso, a Library e invalidada/atualizada.
+- A consulta de manifest pode terminar com HTTP `200` e `success: false`. Isso representa um resultado de negocio, nao uma falha de transporte:
+  - `manifest_unavailable`: todas as fontes confirmaram que o jogo nao esta disponivel. A UI orienta o usuario a confirmar se o jogo ja foi lancado e, se necessario, falar com o suporte.
+  - `manifest_sources_unavailable`: pelo menos uma fonte falhou, expirou ou devolveu arquivo invalido. A UI informa que os arquivos nao puderam ser baixados e pede para contatar o suporte caso o jogo ja tenha sido lancado, sem prometer que uma nova tentativa resolvera o caso.
+- O launcher deve ler esse JSON antes de validar o ZIP. Respostas de manifest bem-sucedidas continuam sendo ZIPs.
 
 ## Add Games E Fila
 
