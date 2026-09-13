@@ -11,7 +11,7 @@ Inventario cruzado do painel Admin, pagina publica e API. Esta pagina nao docume
 | Licencas de teste | editar limites normal/Premium e resetar uso | altera imediatamente as cotas que `/manifests` e `/premium/activate` aplicam |
 | Overrides | criar/alterar/excluir manifest ou Lua por App ID | manifest pode vir do R2 override; auto-update e forcado desligado e o arquivo entregue muda |
 | Premium | cadastrar/editar/habilitar/remover jogo, archive, tipo e caminhos | muda os itens, botoes e o fluxo de ativacao disponivel no catalogo Premium |
-| Premium | slots, cooldown, janela por tier e arquivo disponivel | API muda `availability` e `viewer`; launcher deve refletir slot, cooldown, bloqueio ou ativacao |
+| Premium | slots, cooldown do plano, cooldown personalizado por jogo, janela por tier e arquivo disponivel | API muda `availability` e `viewer`; launcher deve distinguir o cooldown individual configurado para o jogo da vaga global de 24 h para outras pessoas |
 | Premium | conceder/remover acesso antecipado por jogo+licenca | libera/bloqueia somente futuras ativacoes daquela pessoa, preservando demais regras |
 | Polls | criar, editar, abrir, fechar, excluir | muda badge/modal e opcoes que o launcher carrega para a pessoa autenticada |
 | Announcements | criar, editar, publicar/ocultar, excluir | muda o anuncio elegivel mostrado no launcher e os registros de view/dismiss |
