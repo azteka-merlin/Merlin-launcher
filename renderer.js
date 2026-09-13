@@ -437,6 +437,8 @@ const addGamesTranslations = {
         games_error_steam_path_missing: 'Configure o caminho da Steam antes de iniciar a instalação.',
         games_error_steam_path_invalid: 'O caminho configurado não é uma instalação válida da Steam.',
         games_error_required_files_missing: 'Os arquivos obrigatórios não estão instalados. Use Reparar primeiro.',
+        games_error_manifest_unavailable: 'Este jogo ainda não está disponível no catálogo do Merlin. Verifique se ele já foi lançado; se sim, informe o suporte para avaliar a possibilidade de disponibilizá-lo.',
+        games_error_manifest_sources_unavailable: 'Não foi possível baixar os arquivos deste jogo. Se ele já foi lançado, informe o suporte para verificarmos a disponibilidade.',
         games_error_download_unavailable: 'Não foi possível baixar os arquivos desse jogo.',
         games_error_archive_invalid: 'Os arquivos recebidos são inválidos ou estão incompletos.',
         games_error_queue_full: 'A fila permite no máximo 30 jogos.',
@@ -461,7 +463,7 @@ const addGamesTranslations = {
         games_error_empty_queue: 'The queue is empty.', games_error_install_busy: 'An installation is already running.', games_error_queue_not_empty: 'Install now is available only when the queue is empty.',
         games_error_queue_locked: 'The queue cannot be changed during installation.', games_error_not_found: 'The game is no longer in the queue.',
         games_error_steam_path_missing: 'Configure the Steam path before starting installation.', games_error_steam_path_invalid: 'The configured path is not a valid Steam installation.',
-        games_error_required_files_missing: 'Required files are missing. Use Repair first.', games_error_download_unavailable: 'The files for this game could not be downloaded.',
+        games_error_required_files_missing: 'Required files are missing. Use Repair first.', games_error_manifest_unavailable: 'This game is not yet available in the Merlin catalog. Check whether it has already been released; if so, contact support so we can evaluate making it available.', games_error_manifest_sources_unavailable: 'The files for this game could not be downloaded. If it has already been released, contact support so we can check its availability.', games_error_download_unavailable: 'The files for this game could not be downloaded.',
         games_error_archive_invalid: 'The received files are invalid or incomplete.', games_error_queue_full: 'The queue allows a maximum of 30 games.',
         games_error_rate_limited: 'The temporary request limit for this license was reached. Wait a few moments and try again.', games_error_generic: 'This operation could not be completed.'
     },
@@ -483,7 +485,7 @@ const addGamesTranslations = {
         games_error_empty_queue: 'La cola está vacía.', games_error_install_busy: 'Ya hay una instalación en curso.', games_error_queue_not_empty: 'Instalar ahora solo está disponible cuando la cola está vacía.',
         games_error_queue_locked: 'No se puede modificar la cola durante la instalación.', games_error_not_found: 'El juego ya no está en la cola.',
         games_error_steam_path_missing: 'Configure la ruta de Steam antes de iniciar la instalación.', games_error_steam_path_invalid: 'La ruta configurada no es una instalación válida de Steam.',
-        games_error_required_files_missing: 'Faltan archivos obligatorios. Use Reparar primero.', games_error_download_unavailable: 'No se pudieron descargar los archivos del juego.',
+        games_error_required_files_missing: 'Faltan archivos obligatorios. Use Reparar primero.', games_error_manifest_unavailable: 'Este juego aún no está disponible en el catálogo de Merlin. Compruebe si ya fue lanzado; si es así, contacte al soporte para evaluar la posibilidad de añadirlo.', games_error_manifest_sources_unavailable: 'No se pudieron descargar los archivos del juego. Si ya fue lanzado, contacte al soporte para que podamos verificar su disponibilidad.', games_error_download_unavailable: 'No se pudieron descargar los archivos del juego.',
         games_error_archive_invalid: 'Los archivos recibidos no son válidos o están incompletos.', games_error_queue_full: 'La cola permite un máximo de 30 juegos.',
         games_error_rate_limited: 'Se alcanzó el límite temporal de solicitudes de esta licencia. Espere unos instantes e inténtelo de nuevo.', games_error_generic: 'No se pudo completar esta operación.'
     },
@@ -505,7 +507,7 @@ const addGamesTranslations = {
         games_error_empty_queue: 'La file est vide.', games_error_install_busy: 'Une installation est déjà en cours.', games_error_queue_not_empty: 'Installer maintenant est disponible uniquement lorsque la file est vide.',
         games_error_queue_locked: 'La file ne peut pas être modifiée pendant l’installation.', games_error_not_found: 'Le jeu n’est plus dans la file.',
         games_error_steam_path_missing: 'Configurez le chemin Steam avant de lancer l’installation.', games_error_steam_path_invalid: 'Le chemin configuré n’est pas une installation Steam valide.',
-        games_error_required_files_missing: 'Des fichiers requis sont absents. Utilisez d’abord Réparer.', games_error_download_unavailable: 'Impossible de télécharger les fichiers de ce jeu.',
+        games_error_required_files_missing: 'Des fichiers requis sont absents. Utilisez d’abord Réparer.', games_error_manifest_unavailable: 'Ce jeu n’est pas encore disponible dans le catalogue Merlin. Vérifiez s’il est déjà sorti ; si oui, contactez le support afin que nous puissions évaluer sa disponibilité.', games_error_manifest_sources_unavailable: 'Impossible de télécharger les fichiers de ce jeu. S’il est déjà sorti, contactez le support afin que nous puissions vérifier sa disponibilité.', games_error_download_unavailable: 'Impossible de télécharger les fichiers de ce jeu.',
         games_error_archive_invalid: 'Les fichiers reçus sont invalides ou incomplets.', games_error_queue_full: 'La file est limitée à 30 jeux.',
         games_error_rate_limited: 'La limite temporaire de requêtes pour cette licence a été atteinte. Attendez quelques instants puis réessayez.', games_error_generic: 'Impossible de terminer cette opération.'
     },
@@ -527,7 +529,7 @@ const addGamesTranslations = {
         games_error_empty_queue: 'Die Warteschlange ist leer.', games_error_install_busy: 'Eine Installation läuft bereits.', games_error_queue_not_empty: 'Jetzt installieren ist nur bei leerer Warteschlange verfügbar.',
         games_error_queue_locked: 'Die Warteschlange kann während der Installation nicht geändert werden.', games_error_not_found: 'Das Spiel ist nicht mehr in der Warteschlange.',
         games_error_steam_path_missing: 'Konfigurieren Sie vor der Installation den Steam-Pfad.', games_error_steam_path_invalid: 'Der konfigurierte Pfad ist keine gültige Steam-Installation.',
-        games_error_required_files_missing: 'Erforderliche Dateien fehlen. Verwenden Sie zuerst Reparieren.', games_error_download_unavailable: 'Die Dateien für dieses Spiel konnten nicht heruntergeladen werden.',
+        games_error_required_files_missing: 'Erforderliche Dateien fehlen. Verwenden Sie zuerst Reparieren.', games_error_manifest_unavailable: 'Dieses Spiel ist noch nicht im Merlin-Katalog verfügbar. Prüfen Sie, ob es bereits veröffentlicht wurde. Falls ja, wenden Sie sich an den Support, damit wir die Verfügbarkeit prüfen können.', games_error_manifest_sources_unavailable: 'Die Dateien für dieses Spiel konnten nicht heruntergeladen werden. Wenn es bereits veröffentlicht wurde, wenden Sie sich an den Support, damit wir die Verfügbarkeit prüfen können.', games_error_download_unavailable: 'Die Dateien für dieses Spiel konnten nicht heruntergeladen werden.',
         games_error_archive_invalid: 'Die empfangenen Dateien sind ungültig oder unvollständig.', games_error_queue_full: 'Die Warteschlange ist auf 30 Spiele begrenzt.',
         games_error_rate_limited: 'Das temporäre Anfragelimit für diese Lizenz wurde erreicht. Warten Sie einen Moment und versuchen Sie es erneut.', games_error_generic: 'Dieser Vorgang konnte nicht abgeschlossen werden.'
     }

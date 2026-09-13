@@ -204,6 +204,16 @@ function createGameInstaller({
                     });
 
                     const response = await archiveClient.request(source);
+                    const applicationResult = parseApiErrorData(response.data);
+                    if (applicationResult?.success === false && typeof applicationResult.code === 'string') {
+                        const error = new Error(
+                            typeof applicationResult.error === 'string'
+                                ? applicationResult.error
+                                : 'The manifest source could not complete this request.'
+                        );
+                        error.code = applicationResult.code;
+                        throw error;
+                    }
                     const archiveData = Buffer.from(response.data);
                     if (!isZipArchive(archiveData)) {
                         throw new Error(`Invalid ZIP response from ${source.name}`);
@@ -223,7 +233,15 @@ function createGameInstaller({
                     console.error(`Attempt ${i + 1} failed (${source.name}):`, error.message);
                     if (
                         isNormalTestLimitError(error)
-                        || (error.code && ['missing', 'invalid_key', 'expired', 'revoked', 'hwid_mismatch'].includes(error.code))
+                        || (error.code && [
+                            'missing',
+                            'invalid_key',
+                            'expired',
+                            'revoked',
+                            'hwid_mismatch',
+                            'manifest_unavailable',
+                            'manifest_sources_unavailable'
+                        ].includes(error.code))
                     ) {
                         throw error;
                     }

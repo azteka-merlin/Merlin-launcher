@@ -14,10 +14,10 @@ function friendlyInstallResult(result) {
         };
     }
 
-    if (result.reason === 'rate_limited') {
+    if (['rate_limited', 'manifest_unavailable', 'manifest_sources_unavailable'].includes(result.reason)) {
         return {
             ...result,
-            code: 'rate_limited'
+            code: result.reason
         };
     }
     if (result.reason === 'test_limit_normal') {
