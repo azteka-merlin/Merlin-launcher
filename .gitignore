@@ -13,6 +13,9 @@ yarn-error.log*
 # Arquivos gerados pelo Electron Builder
 dist/
 
+# Artefato compilado do repositório Merlin-launcher-frontend
+frontend/
+
 # Cache e saídas geradas pelo OpenSteamTool internalizado
 .deps/
 OpenSteamTool/build/

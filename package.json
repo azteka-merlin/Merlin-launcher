@@ -9,6 +9,7 @@
     "start:prod": "set MERLIN_API_BASE_URL=https://api-merlin.com/api&& electron .",
     "doctor": "node scripts/doctor.js",
     "build:opensteamtool": "node build.js --opensteamtool-only",
+    "frontend:sync": "node scripts/sync-frontend.js",
     "build": "node build.js",
     "release:local": "npm run doctor -- --build && npm test && npm run build",
     "build:release": "npm version patch --no-git-tag-version && node build.js",
