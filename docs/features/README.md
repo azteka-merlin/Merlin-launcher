@@ -17,4 +17,6 @@ Mapa de referencia para manter comportamento durante a reconstrucao do front-end
 
 Antes de mexer numa area, leia seu modulo e `../CHANGE_GUARDRAILS.md`. Mudanca em payload/canal IPC exige atualizar o modulo correspondente, `preload.js`, main e os testes de contrato.
 
+Toda troca de front tambem deve cumprir o bloco **Compatibilidade com staging** em `frontend-contract.md`.
+
 Este material descreve o comportamento existente; nao autoriza alteracao de regra de produto.
