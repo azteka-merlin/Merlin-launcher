@@ -4506,6 +4506,12 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
 /* Maintenance actions share one row; the legacy last-child rule must not
    expand Restart Steam to a full-width row. */
 .settings-main-view .config-section .maintenance-actions .btn:last-child { grid-column: auto !important; }
+.settings-main-view .config-section .maintenance-actions #verifyFilesBtn,
+.settings-main-view .config-section .maintenance-actions #restartSteamSettingsBtn {
+    grid-column: auto !important;
+    border-color: rgba(79, 102, 145, .62);
+    background: rgba(18, 27, 45, .56);
+}
 
 @media (max-width:900px) { .sidebar { width:208px; min-width:208px; }.settings-main-view,.access-view { padding:1.5rem; }.access-layout { grid-template-columns:1fr; max-width:800px; }.access-artwork { order:-1; max-width:320px; width:100%; }.header-brand .version { display:none; } }
 
