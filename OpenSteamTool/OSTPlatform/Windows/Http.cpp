@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <winhttp.h>
 
+#include <algorithm>
 #include <chrono>
 #include <format>
 #include <string>
@@ -67,7 +68,8 @@ Result Execute(const wchar_t* method,
                uint32_t timeoutResolve,
                uint32_t timeoutConnect,
                uint32_t timeoutSend,
-               uint32_t timeoutRecv) {
+               uint32_t timeoutRecv,
+               uint32_t maxBodyBytes) {
     Result r;
 
     ParsedUrl pu = ParseUrl(url);
@@ -153,17 +155,21 @@ Result Execute(const wchar_t* method,
             }
             if (!avail) break;
 
+            if (maxBodyBytes == 0 || r.body.size() >= maxBodyBytes) break;
+
             const size_t off = r.body.size();
-            r.body.resize(off + avail);
+            const size_t remaining = static_cast<size_t>(maxBodyBytes) - off;
+            const DWORD toRead = static_cast<DWORD>(std::min<size_t>(avail, remaining));
+            r.body.resize(off + toRead);
             DWORD read = 0;
-            if (!WinHttpReadData(hRequest, r.body.data() + off, avail, &read)) {
+            if (!WinHttpReadData(hRequest, r.body.data() + off, toRead, &read)) {
                 OSTP_LOG_WARN("{} - WinHttpReadData(size={}) failed (error={})",
-                              url ? url : "", avail, GetLastError());
+                              url ? url : "", toRead, GetLastError());
                 r.body.resize(off);
                 break;
             }
             r.body.resize(off + read);
-            if (r.body.size() > 256 * 1024) break;
+            if (read < toRead || r.body.size() >= maxBodyBytes) break;
         }
 
         if (r.status < 200 || r.status >= 300) {
@@ -172,8 +178,8 @@ Result Execute(const wchar_t* method,
                              r.status,
                              r.body.size() > 512 ? r.body.substr(0, 512) + "..." : r.body);
         } else {
-            OSTP_LOG_TRACE("{} - response body={} ({}bytes)",
-                           url ? url : "", r.body, r.body.size());
+            OSTP_LOG_TRACE("{} - response status={} body_bytes={}",
+                           url ? url : "", r.status, r.body.size());
         }
         r.ok = true;
     }

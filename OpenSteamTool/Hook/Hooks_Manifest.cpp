@@ -1,6 +1,8 @@
 #include "Hooks_Manifest.h"
 #include "HookMacros.h"
 #include "dllmain.h"
+#include "Utils/SteamMetadata/ManifestCache.h"
+#include <chrono>
 #include <format>
 
 // ═══════════════════════════════════════════════════════════════════
@@ -10,10 +12,41 @@
 // ═══════════════════════════════════════════════════════════════════
 namespace {
 
+    // Keep Steam's dependency-building path responsive. The first few archive
+    // requests are allowed a short wait; remaining depots continue in workers.
+    constexpr uint32_t kPreseedFetchTimeoutMs = 2000;
+    constexpr int64_t  kPreseedBudgetMs = 5000;
+
     std::string DepotEntryDebug(const DepotEntry& e) {
         return std::format("DepotId={} AppId={} Gid={} Size={} Dlc={} Lcs={} Carry={} Shared={}",
             e.DepotId, e.AppId, e.ManifestGid, e.ManifestSize, e.DlcAppId,
             (int)e.LcsRequired, (int)e.bNotNewTarget, (int)e.SharedInstall);
+    }
+
+    void PreseedDepots(
+        AppId_t appId,
+        const CUtlVector<DepotEntry>* depots,
+        const std::unordered_map<uint64_t, LuaConfig::ManifestOverride>& overrides,
+        std::chrono::steady_clock::time_point deadline)
+    {
+        if (!depots) return;
+
+        for (uint32 i = 0; i < depots->m_Size; ++i) {
+            const DepotEntry& depotEntry = depots->m_Memory.m_pMemory[i];
+            if (!depotEntry.DepotId || !depotEntry.ManifestGid) continue;
+
+            const bool pinned = overrides.count(depotEntry.DepotId) != 0;
+            const bool unlocked = LuaConfig::HasDepot(depotEntry.DepotId, false) &&
+                                  !LuaConfig::IsOwned(depotEntry.AppId);
+            if (!pinned && !unlocked) continue;
+
+            const AppId_t app = appId;
+            const uint32 depot = depotEntry.DepotId;
+            const uint64 gid = depotEntry.ManifestGid;
+
+            if (std::chrono::steady_clock::now() >= deadline) break;
+            ManifestCache::EnsureCached(app, depot, gid, kPreseedFetchTimeoutMs);
+        }
     }
 
     HOOK_FUNC(BuildDepotDependency, bool, void* pUserAppMgr, AppId_t AppId,
@@ -43,9 +76,8 @@ namespace {
         if (!result) return result;
 
         const auto& overrides = LuaConfig::GetManifestOverrides();
-        if (overrides.empty()) return result;
 
-        if (pDepotInfo && pDepotInfo->m_Size) {
+        if (!overrides.empty() && pDepotInfo && pDepotInfo->m_Size) {
             for (uint32 i = 0; i < pDepotInfo->m_Size; ++i) {
                 DepotEntry& e = pDepotInfo->m_Memory.m_pMemory[i];
                 auto it = overrides.find(e.DepotId);
@@ -60,6 +92,11 @@ namespace {
                 }
             }
         }
+
+        const auto deadline = std::chrono::steady_clock::now() +
+                              std::chrono::milliseconds(kPreseedBudgetMs);
+        PreseedDepots(AppId, pDepotInfo, overrides, deadline);
+        PreseedDepots(AppId, pSharedDepotInfo, overrides, deadline);
         return result;
     }
 

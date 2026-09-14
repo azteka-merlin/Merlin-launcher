@@ -4502,6 +4502,11 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
 .browser-toolbar { min-height:48px; padding:.48rem .75rem; border-bottom-color:rgba(68,89,129,.45); background:#0d1524; }.nav-btn { width:32px; height:32px; border-radius:7px; }.nav-btn:hover { transform:translateY(-1px); background:#202b45; }.nav-btn:active { transform:scale(.96); }.add-game-mode-btn { min-height:32px; border-radius:7px; transition:transform var(--merlin-transition),background var(--merlin-transition),border-color var(--merlin-transition); }.add-game-mode-btn:hover { transform:translateY(-1px); }.add-game-mode-btn:active { transform:scale(.98); }.steam-context-bar { min-height:52px; padding:.5rem .95rem; border-bottom-color:rgba(73,93,135,.45); background:#101a2c; }.steam-context-bar .btn { min-height:34px; padding:.35rem .7rem; }
 @keyframes merlin-popover-in { from { opacity:0; transform:translateY(-5px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+/* Maintenance actions share one row; the legacy last-child rule must not
+   expand Restart Steam to a full-width row. */
+.settings-main-view .config-section .maintenance-actions .btn:last-child { grid-column: auto !important; }
+
 @media (max-width:900px) { .sidebar { width:208px; min-width:208px; }.settings-main-view,.access-view { padding:1.5rem; }.access-layout { grid-template-columns:1fr; max-width:800px; }.access-artwork { order:-1; max-width:320px; width:100%; }.header-brand .version { display:none; } }
 
 /* Alignment pass: SVGs have fixed boxes, and plan art is always rendered whole. */

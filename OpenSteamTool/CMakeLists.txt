@@ -111,6 +111,7 @@ add_library(OpenSteamTool SHARED
     Utils/Logging/Log.cpp
     Utils/SteamMetadata/MerlinLocalFallback.cpp
     Utils/SteamMetadata/IPCLoader.cpp
+    Utils/SteamMetadata/ManifestCache.cpp
     Utils/SteamMetadata/ManifestClient.cpp
     Utils/SteamMetadata/PatternLoader.cpp
     Utils/SteamMetadata/RemoteToml.cpp
