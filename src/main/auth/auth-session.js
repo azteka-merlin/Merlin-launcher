@@ -168,6 +168,7 @@ function createAuthSession({
                     name: data.license.name,
                     expiresAt: data.license.expiresAt,
                     status: data.license.status,
+                    planTier: data.license.planTier || null,
                     billing: normalizeBilling(data.license.billing || data.billing)
                 }
             };
@@ -284,6 +285,34 @@ function createAuthSession({
         }
     }
 
+    async function createAccessHandoff() {
+        const accessToken = await getAccessToken();
+        try {
+            const response = await axios.post(
+                `${baseUrl}/public/access/launcher-handoff`,
+                {},
+                {
+                    timeout: 15_000,
+                    httpsAgent,
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${accessToken}`,
+                        'User-Agent': 'Merlin/2.0'
+                    }
+                }
+            );
+            const token = String(response.data?.token || '').trim();
+            if (!token) return { ok: false, code: 'invalid_handoff' };
+            return { ok: true, token, expiresAt: response.data?.expiresAt || null };
+        } catch (error) {
+            if (error?.response?.status === 401) {
+                await handleUnauthorized();
+                return createAccessHandoff();
+            }
+            return { ok: false, code: 'handoff_failed' };
+        }
+    }
+
     async function handleUnauthorized() {
         if (session) session.accessTokenExpiresAt = 0;
         try {
@@ -297,7 +326,7 @@ function createAuthSession({
         }
     }
 
-    return { createBillingPortalSession, getAccessToken, handleUnauthorized, hasStoredSession, login, logout, status };
+    return { createAccessHandoff, createBillingPortalSession, getAccessToken, handleUnauthorized, hasStoredSession, login, logout, status };
 }
 
 module.exports = { AuthError, createAuthSession };

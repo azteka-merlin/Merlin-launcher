@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { getPlansUrl, registerAuthIpc } = require('../src/main/ipc/register-auth-ipc');
+const { getAccessUrl, getPlansUrl, registerAuthIpc } = require('../src/main/ipc/register-auth-ipc');
 
 test('registers auth IPC channels', () => {
     const channels = [];
@@ -20,8 +20,16 @@ test('registers auth IPC channels', () => {
         'auth:logout',
         'auth:manage-subscription',
         'auth:open-signup',
-        'auth:open-plans'
+        'auth:open-plans',
+        'auth:open-access'
     ]);
+});
+
+test('opens the public access page', () => {
+    assert.equal(
+        getAccessUrl('https://staging.api-merlin.com/api'),
+        'https://staging.api-merlin.com/meu-acesso'
+    );
 });
 
 test('opens the public plans section with an explicit focus target', () => {

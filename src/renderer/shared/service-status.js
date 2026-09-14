@@ -1,5 +1,6 @@
 ﻿window.merlinI18n.register({
     ptbr: {
+        service_status_normal: 'Serviços normais',
         service_status_badge: 'Instabilidade',
         service_status_title: 'Instabilidade temporária',
         service_status_message: 'Algumas magias do Merlin estão instáveis no momento. Buscas, ativações e correções podem falhar temporariamente.',
@@ -7,6 +8,7 @@
         service_status_acknowledge: 'Entendi'
     },
     en: {
+        service_status_normal: 'Services normal',
         service_status_badge: 'Instability',
         service_status_title: 'Temporary instability',
         service_status_message: 'Some Merlin features are unstable right now. Searches, activations, and corrections may fail temporarily.',
@@ -14,6 +16,7 @@
         service_status_acknowledge: 'Understood'
     },
     es: {
+        service_status_normal: 'Servicios normales',
         service_status_badge: 'Inestabilidad',
         service_status_title: 'Inestabilidad temporal',
         service_status_message: 'Algunas funciones de Merlin están inestables en este momento. Las búsquedas, activaciones y correcciones pueden fallar temporalmente.',
@@ -21,6 +24,7 @@
         service_status_acknowledge: 'Entendido'
     },
     fr: {
+        service_status_normal: 'Services normaux',
         service_status_badge: 'Instabilité',
         service_status_title: 'Instabilité temporaire',
         service_status_message: 'Certaines fonctions de Merlin sont instables pour le moment. Les recherches, activations et correctifs peuvent échouer temporairement.',
@@ -28,6 +32,7 @@
         service_status_acknowledge: 'Compris'
     },
     de: {
+        service_status_normal: 'Dienste normal',
         service_status_badge: 'Instabilität',
         service_status_title: 'Vorübergehende Instabilität',
         service_status_message: 'Einige Merlin-Funktionen sind derzeit instabil. Suchen, Aktivierungen und Korrekturen können vorübergehend fehlschlagen.',
@@ -58,10 +63,16 @@
         const message = document.getElementById('serviceStatusMessage');
         const hint = document.getElementById('serviceStatusHint');
         const acknowledge = document.getElementById('serviceStatusAcknowledgeBtn');
-        if (!badge || !badgeText || !title || !message || !hint || !acknowledge) return;
+        if (!title || !message || !hint || !acknowledge) return;
 
-        badge.hidden = !hasIssues();
-        badgeText.textContent = t('service_status_badge');
+        // A healthy service deliberately has no header chip. The amber chip is
+        // reserved for a real degradation, so it remains meaningful.
+        if (badge) {
+            const degraded = hasIssues();
+            badge.hidden = !degraded;
+            badge.classList.toggle('has-issues', degraded);
+        }
+        if (badgeText) badgeText.textContent = hasIssues() ? t('service_status_badge') : t('service_status_normal');
         title.textContent = t('service_status_title');
         message.textContent = t('service_status_message');
         hint.textContent = t('service_status_hint');
@@ -157,9 +168,13 @@
             if (event.key === 'Escape' && modal && !modal.hidden) closeModal();
         });
         window.addEventListener('merlin-language-changed', render);
-        void checkHealth();
-        window.setInterval(() => {
+        if (window.electronAPI?.qa?.simulateServiceIssue) {
+            report('qa-service-health');
+        } else {
             void checkHealth();
+        }
+        window.setInterval(() => {
+            if (!window.electronAPI?.qa?.simulateServiceIssue) void checkHealth();
         }, HEALTH_CHECK_INTERVAL_MS);
     });
 })();

@@ -759,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let items = [];
     let loaded = false;
     let loading = false;
+    let loadGeneration = 0;
     let currentPage = 1;
     let activeOperation = null;
     let tooltipState = null;
@@ -1508,6 +1509,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadPremium(force = false) {
         if (loading) return;
+        const generation = ++loadGeneration;
         loading = true;
         elements.refresh.disabled = true;
         elements.refresh.classList.toggle('loading', force);
@@ -1528,6 +1530,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 : Promise.resolve();
             const [result] = await Promise.all([request, minimumLoadingTime]);
 
+            // A logout can invalidate an in-flight catalog request. Never let
+            // the previous account paint its catalog after a new login.
+            if (generation !== loadGeneration) return;
+
             if (!result.success) {
                 window.merlinServiceStatus?.report?.('premium-catalog');
                 notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
@@ -1547,15 +1553,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.merlinServiceStatus?.clear?.('premium-catalog');
             }
         } catch (_) {
+            if (generation !== loadGeneration) return;
             window.merlinServiceStatus?.report?.('premium-catalog');
             notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
             elements.loading.hidden = true;
         } finally {
-            loading = false;
-            elements.refresh.disabled = false;
-            elements.refresh.classList.remove('loading');
-            elements.refreshLabel.textContent = tr('premium_refresh');
-            render();
+            if (generation === loadGeneration) {
+                loading = false;
+                elements.refresh.disabled = false;
+                elements.refresh.classList.remove('loading');
+                elements.refreshLabel.textContent = tr('premium_refresh');
+                render();
+            }
         }
     }
 
@@ -1805,8 +1814,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.addEventListener('merlin-view-changed', syncVisibility);
     window.addEventListener('merlin-logout', () => {
+        loadGeneration += 1;
         items = [];
         loaded = false;
+        loading = false;
         currentPage = 1;
         closeTooltip();
         if (elements.globalCooldown) {
@@ -1814,6 +1825,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.globalCooldown.dataset.expiry = '';
             elements.globalCooldown.dataset.kind = '';
         }
+        render();
     });
     window.addEventListener('merlin-authenticated', () => {
         if (!loaded && !loading) {

@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const webview = document.getElementById('webview');
     const addGamesView = document.getElementById('addGamesView');
     const browserToolbar = document.querySelector('.browser-toolbar');
-    const steamActionsCard = document.getElementById('steamActionsCard');
+    const steamContextBar = document.getElementById('steamContextBar');
     const linkInput = document.getElementById('gameLinkInput');
     const suggestions = document.getElementById('gameSuggestions');
     const autoUpdateToggle = document.getElementById('autoUpdateToggle');
@@ -363,11 +363,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         addGamesView.hidden = !showAddGames;
         webview.hidden = !showSteamStore;
         if (!showSteamStore) webview.blur();
-        browserToolbar.hidden = currentView === 'library'
-            || currentView === 'corrections'
-            || currentView === 'premium';
+        browserToolbar.hidden = !showAddGames && !showSteamStore;
         browserToolbar.classList.toggle('native-content-active', showAddGames);
-        steamActionsCard.hidden = !showSteamStore;
+        if (steamContextBar) steamContextBar.hidden = !showSteamStore || !window.merlinSteamContext?.hasAppId?.();
         addGamesNavBtn.classList.toggle('active', showAddGames || showSteamStore);
         addGamesNavBtn.setAttribute('aria-pressed', String(showAddGames || showSteamStore));
         linkModeBtn.classList.toggle('active', showAddGames);

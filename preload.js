@@ -2,6 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // direct APIs to renderer in a secure way
 contextBridge.exposeInMainWorld('electronAPI', {
+    // Development-only QA switches. They are unset in packaged builds and
+    // allow staging to reproduce transient UI states without changing APIs.
+    qa: {
+        simulateServiceIssue: process.env.MERLIN_SIMULATE_SERVICE_ISSUE === '1'
+    },
     // settings
     getConfig: () => ipcRenderer.invoke('get-config'),
     saveConfig: (config) => ipcRenderer.invoke('save-config', config),
@@ -32,8 +37,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         login: (licenseKey) => ipcRenderer.invoke('auth:login', licenseKey),
         logout: () => ipcRenderer.invoke('auth:logout'),
         manageSubscription: () => ipcRenderer.invoke('auth:manage-subscription'),
-        openSignup: () => ipcRenderer.invoke('auth:open-signup'),
-        openPlans: () => ipcRenderer.invoke('auth:open-plans'),
+    openSignup: () => ipcRenderer.invoke('auth:open-signup'),
+    openPlans: () => ipcRenderer.invoke('auth:open-plans'),
+    openAccess: () => ipcRenderer.invoke('auth:open-access'),
         onRequired: (callback) => ipcRenderer.on('auth:required', (_event, data) => callback(data))
     },
 

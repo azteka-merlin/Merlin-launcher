@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,20 +8,14 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <div class="logo-section">
+                <div class="header-brand">
                     <img class="logo-icon" src="assets/merlin-icon-compact.png" alt="Merlin">
-                    <h1 class="title">Merlin</h1>
-                    <span id="appVersion" class="version">v--</span>
-                    <button id="updateNoticeBadge" class="update-notice-badge" type="button" hidden>
-                        <span class="update-notice-dot" aria-hidden="true"></span>
-                        <span id="updateNoticeBadgeText">Update</span>
-                    </button>
+                    <div><h1 class="title">Merlin</h1><span id="appVersion" class="version">v--</span></div>
                     <button id="serviceStatusBadge" class="service-status-badge" type="button" hidden>
                         <span class="service-status-dot" aria-hidden="true"></span>
-                        <span id="serviceStatusBadgeText">Instability</span>
+                        <span id="serviceStatusBadgeText">Instabilidade</span>
                     </button>
                 </div>
                 <div class="header-controls">
@@ -29,40 +23,28 @@
                         <span class="poll-notice-dot" aria-hidden="true"></span>
                         <span id="pollNoticeBadgeText" data-i18n="poll_badge_new">Nova enquete</span>
                     </button>
-                    <nav class="header-navigation" aria-label="Main navigation" data-i18n-aria-label="main_navigation_label">
-                        <button id="addGamesNavBtn" class="header-nav-btn active" type="button" aria-pressed="true">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14"></path>
-                            </svg>
-                            <span data-i18n="add_game_source">Add game</span>
+                    <button id="steamHeaderStatus" class="header-status-control" type="button">
+                        <span class="status-dot"></span><span id="steamHeaderStatusText" data-i18n="steam_ready">Steam pronta</span>
+                    </button>
+                    <button id="updateNoticeBadge" class="update-notice-badge" type="button" hidden>
+                        <span class="update-notice-dot" aria-hidden="true"></span>
+                        <span id="updateNoticeBadgeText">Update</span>
+                    </button>
+                    <div class="account-menu">
+                        <button id="accountMenuTrigger" type="button" aria-expanded="false" aria-controls="accountMenuPopover">
+                            <img class="account-menu-trigger-icon" src="node_modules/lucide-static/icons/circle-user-round.svg" alt="">
+                            <span id="accountMenuName" data-i18n="account_menu">Minha conta</span>
+                            <img class="account-menu-chevron" src="node_modules/lucide-static/icons/chevron-down.svg" alt="">
                         </button>
-                        <button id="libraryBtn" class="header-nav-btn" type="button" aria-pressed="false">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
-                            </svg>
-                            <span data-i18n="library_button">Library</span>
-                        </button>
-                        <button id="correctionsBtn" class="header-nav-btn" type="button" aria-pressed="false">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 3v6M12 15v6M5.64 5.64l4.24 4.24M14.12 14.12l4.24 4.24M3 12h6M15 12h6M5.64 18.36l4.24-4.24M14.12 9.88l4.24-4.24"></path>
-                            </svg>
-                            <span data-i18n="corrections_button">Corrections</span>
-                        </button>
-                        <button id="premiumBtn" class="header-nav-btn" type="button" aria-pressed="false">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="m12 3 2.8 5.67 6.2.9-4.5 4.39 1.06 6.18L12 17.2l-5.56 2.94 1.06-6.18L3 9.57l6.2-.9Z"></path>
-                            </svg>
-                            <span data-i18n="premium_button">Premium</span>
-                        </button>
-                    </nav>
-                    <select id="languageSelect" class="language-selector">
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="de">Deutsch</option>
-                        <option value="fr">Français</option>
-                        <option value="ptbr">Português (Brasil)</option>
-                    </select>
-                    <button id="logoutBtn" class="logout-btn" type="button" data-i18n="logout_button">Sair</button>
+                        <div id="accountMenuPopover" class="account-menu-popover" role="menu" hidden>
+                            <button id="accountAccessBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/user-round.svg" alt=""><span data-i18n="my_access">Meu acesso</span></button>
+                            <div class="account-menu-divider" role="separator"></div>
+                            <button id="accountTutorialBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/book-open.svg" alt=""><span data-i18n="tutorial_menu">Tutorial</span></button>
+                            <button id="accountFaqBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/circle-help.svg" alt=""><span data-i18n="faq_menu">FAQ</span></button>
+                            <div class="account-menu-divider" role="separator"></div>
+                            <button id="logoutBtn" class="account-menu-item logout-btn" type="button"><img src="node_modules/lucide-static/icons/log-out.svg" alt=""><span data-i18n="logout_menu">Sair</span></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -71,9 +53,44 @@
         <div class="main-content">
             <!-- Sidebar -->
             <aside class="sidebar">
-                <div class="config-section card">
-                    <h2 class="section-title" data-i18n="config">Configuration</h2>
+                <nav class="sidebar-navigation" aria-label="Navegação principal">
+                    <button id="addGamesNavBtn" class="side-nav-btn active" type="button" aria-pressed="true"><img src="node_modules/lucide-static/icons/plus.svg" alt=""><span data-i18n="add_game_source">Add game</span></button>
+                    <button id="libraryBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/library.svg" alt=""><span data-i18n="library_button">Library</span></button>
+                    <button id="correctionsBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="corrections_button">Corrections</span></button>
+                    <button id="premiumBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/crown.svg" alt=""><span data-i18n="premium_button">Premium</span></button>
+                </nav>
+                <div class="sidebar-divider"></div>
+                <nav class="sidebar-navigation sidebar-secondary" aria-label="Conta e configurações">
+                    <button id="accessNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/badge-dollar-sign.svg" alt=""><span data-i18n="my_access">Meu acesso</span><small id="sidePlanLabel"></small></button>
+                    <button id="settingsNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/settings.svg" alt=""><span data-i18n="config">Configuration</span></button>
+                </nav>
+                <div id="steamStatusPopover" class="steam-status-popover" hidden>
+                    <strong data-i18n="steam_integration">Integração Steam</strong>
+                    <div class="steam-popover-row"><span id="steamPopoverSteamDot" class="status-dot"></span><span id="steamStatusPopoverText">Verificando integração…</span></div>
+                    <div class="steam-popover-row"><span id="steamPopoverFilesDot" class="status-dot"></span><span id="steamFilesPopoverText">Verificando arquivos…</span></div>
+                    <button id="openSettingsFromSteamBtn" type="button" data-i18n="open_settings">Abrir configurações</button>
+                </div>
+                <section id="settingsView" class="settings-side-view" hidden>
+                    <header class="settings-page-header">
+                        <h2 data-i18n="config">Configurações</h2>
+                        <p data-i18n="settings_subtitle">Ajuste a integração do Merlin com a Steam.</p>
+                    </header>
+                    <div class="config-section">
                     <div class="config-info">
+                        <section class="settings-section" aria-labelledby="settingsGeneralTitle">
+                        <p id="settingsGeneralTitle" class="config-kicker" data-i18n="settings_general">GERAL</p>
+                        <label class="settings-language-row"><span data-i18n="settings_launcher_language">Idioma do launcher</span>
+                            <span class="settings-language-select-wrap"><select id="settingsLanguageSelect" class="language-selector">
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                                <option value="de">Deutsch</option>
+                                <option value="fr">Français</option>
+                                <option value="ptbr">Português (Brasil)</option>
+                            </select><img class="select-chevron" src="node_modules/lucide-static/icons/chevron-down.svg" alt=""></span>
+                        </label>
+                        </section>
+                        <section class="settings-section" aria-labelledby="settingsSteamTitle">
+                        <p id="settingsSteamTitle" class="config-kicker" data-i18n="settings_steam">STEAM</p>
                         <div class="info-item">
                             <span class="label" data-i18n="steam_path">Steam Path</span>
                             <span id="steamPathDisplay"
@@ -82,83 +99,36 @@
                                 Not configured
                             </span>
                         </div>
-                        <div class="button-group">
+                        <div class="button-group steam-actions">
                             <button id="detectSteamBtn"
-                                    class="btn btn-secondary"
-                                    data-i18n="detect_steam">
-                                Auto Detect
+                                    class="btn btn-secondary">
+                                <img src="node_modules/lucide-static/icons/search.svg" alt=""><span data-i18n="detect_steam">Auto Detect</span>
                             </button>
 
                             <button id="selectSteamBtn"
-                                    class="btn btn-secondary"
-                                    data-i18n="select_steam">
-                                Browse
+                                    class="btn btn-secondary">
+                                <img src="node_modules/lucide-static/icons/folder-open.svg" alt=""><span data-i18n="select_steam">Browse</span>
                             </button>
+                        </div>
+                        </section>
+                        <section class="settings-section settings-maintenance" aria-labelledby="settingsMaintenanceTitle">
+                        <p id="settingsMaintenanceTitle" class="config-kicker" data-i18n="settings_maintenance">MANUTENÇÃO</p>
+                        <div class="button-group maintenance-actions">
 
                             <button id="verifyFilesBtn"
-                                    class="btn btn-secondary"
-                                    data-i18n="verify_files">
-                                Repair
+                                    class="btn btn-secondary">
+                                <img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="verify_files">Repair</span>
+                            </button>
+                            <button id="restartSteamSettingsBtn"
+                                    class="btn btn-secondary">
+                                <img src="node_modules/lucide-static/icons/rotate-cw.svg" alt=""><span data-i18n="restart_steam">Restart Steam</span>
                             </button>
                         </div>
+                        </section>
                     </div>
                 </div>
 
-                <div class="status-section card">
-                    <h2 class="section-title" data-i18n="status">Status</h2>
-                    <div class="status-info">
-                        <div class="status-item">
-                            <span class="label">Steam</span>
-                            <div class="status-indicator-wrapper">
-                                <span class="status-dot" id="steamStatus"></span>
-                                <span id="steamStatusText" data-i18n="steam_offline">Not detected</span>
-                            </div>
-                        </div>
-                        <div class="status-item">
-                            <span class="label" data-i18n="app_id">App ID</span>
-                            <span id="appIdDisplay" class="app-id">—</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label" data-i18n="files_label">Files</span>
-                            <div class="status-indicator-wrapper">
-                                <span class="status-dot" id="filesStatus"></span>
-                                <span id="filesStatusText" data-i18n="files_missing">Files missing</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="billingCard" class="billing-section card" hidden>
-                    <h2 class="section-title" data-i18n="billing_title">Assinatura</h2>
-                    <p class="billing-description" data-i18n="billing_description">
-                        Gerencie sua mensalidade, cartão e cancelamento pelo portal seguro.
-                    </p>
-                    <button id="manageSubscriptionBtn" class="btn btn-secondary billing-manage-btn" type="button" data-i18n="billing_manage">
-                        Gerenciar assinatura
-                    </button>
-                </div>
-
-                <div id="steamActionsCard" class="actions-section card" hidden>
-                    <h2 class="section-title" data-i18n="actions">Actions</h2>
-                    <div class="button-group vertical">
-                        <button id="addToSteamBtn" class="btn btn-primary" disabled data-i18n="add_to_steam">
-                            Add to Steam
-                        </button>
-                        <button id="restartSteamBtn" class="btn btn-danger" data-i18n="restart_steam">
-                            Restart Steam
-                        </button>
-                    </div>
-                </div>
-
-                <div class="gamepad-indicator card" id="gamepadIndicator">
-                    <div class="gamepad-icon-wrapper">
-                        <svg class="gamepad-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 12h4m2 0h4m-7 3h4m-2-6h.01M6 9h.01M18 9h.01M18 12h.01"></path>
-                            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
-                        </svg>
-                    </div>
-                    <span data-i18n="gamepad_connected">Controller Connected</span>
-                </div>
+                </section>
             </aside>
 
             <!-- Browser Panel -->
@@ -203,6 +173,13 @@
                         <option value="add-games" selected data-i18n="add_game_source">Adicionar jogo</option>
                         <option value="https://store.steampowered.com" data-i18n="steam_store_source">Steam Store</option>
                     </select>
+                </div>
+                <div id="steamContextBar" class="steam-context-bar" hidden>
+                    <span id="steamContextAppId">App ID detectado</span>
+                    <div>
+                        <button id="addToSteamBtn" class="btn btn-primary" disabled data-i18n="add_to_steam">Add to Steam</button>
+                        <button id="restartSteamBtn" class="btn btn-secondary" data-i18n="restart_steam">Restart Steam</button>
+                    </div>
                 </div>
                 <div class="browser-content">
                     <webview id="webview"
@@ -479,6 +456,50 @@
                             </footer>
                         </div>
                     </section>
+                    <section id="accessView" class="access-view" aria-labelledby="accessTitle" hidden>
+                        <div class="access-layout">
+                            <div class="access-content">
+                                <header class="access-header">
+                                    <p class="access-eyebrow" data-i18n="access_eyebrow">CONTA MERLIN</p>
+                                    <h2 id="accessTitle" data-i18n="my_access">Meu acesso</h2>
+                                    <p data-i18n="access_subtitle">Detalhes reais da sua licença e dos benefícios disponíveis.</p>
+                                </header>
+                                <div id="accessLoading" class="access-loading">
+                                    <span data-i18n="access_loading">Consultando seu acesso…</span>
+                                    <div class="access-loading-skeleton" aria-hidden="true">
+                                        <div class="access-skeleton-block access-skeleton-license"><span></span><span></span><span></span></div>
+                                        <div class="access-skeleton-block access-skeleton-benefits"><span></span><span></span><span></span><span></span></div>
+                                        <div class="access-skeleton-block access-skeleton-usage"><span></span><span></span></div>
+                                    </div>
+                                </div>
+                                <div id="accessError" class="access-error" hidden data-i18n="access_error">Não foi possível atualizar os detalhes do seu acesso agora.</div>
+                                <div id="accessDetails" hidden>
+                                    <section class="access-license-card">
+                                        <div><p class="access-label" data-i18n="access_current">SEU ACESSO ATUAL</p><h3 id="accessPlanName">—</h3><p id="accessLicenseStatus"></p></div>
+                                        <span id="accessExpiry"></span>
+                                    </section>
+                                    <section class="access-benefits-card">
+                                        <h3 data-i18n="access_benefits_title">Como funciona seu acesso</h3>
+                                        <ul id="accessBenefits"></ul>
+                                    </section>
+                                    <section id="accessUsageCard" class="access-usage-card" hidden>
+                                        <h3 data-i18n="access_usage_title">Uso no ciclo atual</h3>
+                                        <p id="accessUsageText"></p>
+                                    </section>
+                                    <section id="accessCooldownCard" class="access-cooldown-card" hidden>
+                                        <h3 data-i18n="access_cooldown_title">Ativação em andamento</h3>
+                                        <p id="accessCooldownText"></p>
+                                    </section>
+                                    <div class="access-actions">
+                                        <button id="accessManageBtn" class="btn btn-primary" type="button" hidden data-i18n="access_manage_subscription">Gerenciar assinatura</button>
+                                        <button id="accessPlansBtn" class="btn btn-secondary" type="button" data-i18n="access_view_plans">Ver planos</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <aside id="accessArtwork" class="access-artwork" aria-hidden="true"><img id="accessArtworkImage" class="access-artwork-image" alt="" hidden></aside>
+                        </div>
+                    </section>
+                    <section id="settingsMainView" class="settings-main-view" aria-label="Configurações" hidden></section>
                 </div>
                 <div class="progress-container" id="progressContainer" style="display: none;">
                     <div class="progress-info">
@@ -1053,7 +1074,9 @@
         </div>
     </div>
     <script src="src/renderer/auth/license-gate.js"></script>
+    <script src="node_modules/@floating-ui/dom/dist/floating-ui.dom.umd.min.js"></script>
     <script src="renderer.js"></script>
+    <script src="src/renderer/shared/account-menu.js"></script>
     <script src="src/renderer/shared/restart-prompt.js"></script>
     <script src="src/renderer/shared/game-install-prompt.js"></script>
     <script src="src/renderer/shared/welcome-compatibility.js"></script>
@@ -1068,6 +1091,7 @@
     <script src="src/renderer/library/library.js"></script>
     <script src="src/renderer/corrections/corrections.js"></script>
     <script src="src/renderer/premium/premium.js"></script>
+    <script src="src/renderer/access/access.js"></script>
     <script src="gamepad.js"></script>
 </body>
 </html>

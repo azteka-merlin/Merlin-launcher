@@ -29,10 +29,12 @@
     "javascript-obfuscator": "^5.4.3"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
     "7zip-bin": "^5.2.0",
     "adm-zip": "^0.5.10",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
+    "lucide-static": "^1.45.0",
     "node-unrar-js": "^2.0.2"
   },
   "build": {

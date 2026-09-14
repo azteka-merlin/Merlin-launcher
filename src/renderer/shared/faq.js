@@ -452,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.electronAPI.onOpenFaq(openFaq);
+    window.merlinFaq = { open: openFaq };
     window.addEventListener('merlin-language-changed', () => {
         syncSidebar();
         render();

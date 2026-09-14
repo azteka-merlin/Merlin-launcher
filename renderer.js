@@ -2,6 +2,20 @@
 const translations = {
     ptbr: {
         config: 'Configuração',
+        steam_ready: 'Steam pronta',
+        steam_not_detected: 'Steam não detectada',
+        account_menu: 'Minha conta',
+        my_access: 'Meu acesso',
+        tier_bronze: 'Bronze', tier_prata: 'Prata', tier_ouro: 'Ouro',
+        tutorial_menu: 'Tutorial', faq_menu: 'FAQ', logout_menu: 'Sair',
+        settings_subtitle: 'Ajuste a integração do Merlin com a Steam.',
+        steam_integration: 'Integração Steam', open_settings: 'Abrir configurações',
+        steam_detected_here: 'Steam detectada neste computador.', steam_not_detected_here: 'Steam não detectada neste computador.',
+        steam_files_installed: 'Arquivos do Merlin instalados.', steam_files_repair: 'Arquivos do Merlin precisam de reparo.',
+        settings_general: 'GERAL',
+        settings_steam: 'STEAM',
+        settings_maintenance: 'MANUTENÇÃO',
+        settings_launcher_language: 'Idioma do launcher',
         steam_path: 'Caminho do Steam',
         steam_not_configured: 'Não configurado',
         detect_steam: 'Detecção automática',
@@ -68,6 +82,20 @@ const translations = {
 
     en: {
         config: 'Configuration',
+        steam_ready: 'Steam ready',
+        steam_not_detected: 'Steam not detected',
+        account_menu: 'My account',
+        my_access: 'My access',
+        tier_bronze: 'Bronze', tier_prata: 'Silver', tier_ouro: 'Gold',
+        tutorial_menu: 'Tutorial', faq_menu: 'FAQ', logout_menu: 'Sign out',
+        settings_subtitle: 'Adjust Merlin’s integration with Steam.',
+        steam_integration: 'Steam integration', open_settings: 'Open settings',
+        steam_detected_here: 'Steam is detected on this computer.', steam_not_detected_here: 'Steam is not detected on this computer.',
+        steam_files_installed: 'Merlin files are installed.', steam_files_repair: 'Merlin files need repair.',
+        settings_general: 'GENERAL',
+        settings_steam: 'STEAM',
+        settings_maintenance: 'MAINTENANCE',
+        settings_launcher_language: 'Launcher language',
         steam_path: 'Steam Path',
         steam_not_configured: 'Not configured',
         detect_steam: 'Auto Detect',
@@ -134,6 +162,20 @@ const translations = {
 
     es: {
         config: 'Configuración',
+        steam_ready: 'Steam lista',
+        steam_not_detected: 'Steam no detectada',
+        account_menu: 'Mi cuenta',
+        my_access: 'Mi acceso',
+        tier_bronze: 'Bronce', tier_prata: 'Plata', tier_ouro: 'Oro',
+        tutorial_menu: 'Tutorial', faq_menu: 'FAQ', logout_menu: 'Salir',
+        settings_subtitle: 'Ajusta la integración de Merlin con Steam.',
+        steam_integration: 'Integración de Steam', open_settings: 'Abrir configuración',
+        steam_detected_here: 'Steam está detectada en este equipo.', steam_not_detected_here: 'Steam no está detectada en este equipo.',
+        steam_files_installed: 'Los archivos de Merlin están instalados.', steam_files_repair: 'Los archivos de Merlin necesitan reparación.',
+        settings_general: 'GENERAL',
+        settings_steam: 'STEAM',
+        settings_maintenance: 'MANTENIMIENTO',
+        settings_launcher_language: 'Idioma del launcher',
         steam_path: 'Ruta de Steam',
         steam_not_configured: 'No configurado',
         detect_steam: 'Auto-detectar',
@@ -200,6 +242,20 @@ const translations = {
 
     fr: {
         config: 'Configuration',
+        steam_ready: 'Steam prête',
+        steam_not_detected: 'Steam non détectée',
+        account_menu: 'Mon compte',
+        my_access: 'Mon accès',
+        tier_bronze: 'Bronze', tier_prata: 'Argent', tier_ouro: 'Or',
+        tutorial_menu: 'Tutoriel', faq_menu: 'FAQ', logout_menu: 'Se déconnecter',
+        settings_subtitle: 'Ajustez l’intégration de Merlin avec Steam.',
+        steam_integration: 'Intégration Steam', open_settings: 'Ouvrir les paramètres',
+        steam_detected_here: 'Steam est détectée sur cet ordinateur.', steam_not_detected_here: 'Steam n’est pas détectée sur cet ordinateur.',
+        steam_files_installed: 'Les fichiers Merlin sont installés.', steam_files_repair: 'Les fichiers Merlin nécessitent une réparation.',
+        settings_general: 'GÉNÉRAL',
+        settings_steam: 'STEAM',
+        settings_maintenance: 'MAINTENANCE',
+        settings_launcher_language: 'Langue du launcher',
         steam_path: 'Chemin Steam',
         steam_not_configured: 'Non configuré',
         detect_steam: 'Auto-détection',
@@ -266,6 +322,20 @@ const translations = {
 
     de: {
         config: 'Einstellungen',
+        steam_ready: 'Steam bereit',
+        steam_not_detected: 'Steam nicht erkannt',
+        account_menu: 'Mein Konto',
+        my_access: 'Mein Zugang',
+        tier_bronze: 'Bronze', tier_prata: 'Silber', tier_ouro: 'Gold',
+        tutorial_menu: 'Tutorial', faq_menu: 'FAQ', logout_menu: 'Abmelden',
+        settings_subtitle: 'Passen Sie Merlins Steam-Integration an.',
+        steam_integration: 'Steam-Integration', open_settings: 'Einstellungen öffnen',
+        steam_detected_here: 'Steam wurde auf diesem Computer erkannt.', steam_not_detected_here: 'Steam wurde auf diesem Computer nicht erkannt.',
+        steam_files_installed: 'Die Merlin-Dateien sind installiert.', steam_files_repair: 'Die Merlin-Dateien müssen repariert werden.',
+        settings_general: 'ALLGEMEIN',
+        settings_steam: 'STEAM',
+        settings_maintenance: 'WARTUNG',
+        settings_launcher_language: 'Sprache des Launchers',
         steam_path: 'Steam-Pfad',
         steam_not_configured: 'Nicht konfiguriert',
         detect_steam: 'Auto-Erkennung',
@@ -663,7 +733,7 @@ async function loadConfig() {
     updateSteamStatus(isDetected);
     updateFilesStatus(Boolean(filesStatus?.ok));
 
-    document.getElementById('languageSelect').value = currentLanguage;
+    document.querySelectorAll('.language-selector').forEach(select => { select.value = currentLanguage; });
 }
 
 function updateSteamStatus(isDetected) {
@@ -671,12 +741,22 @@ function updateSteamStatus(isDetected) {
     const text = document.getElementById('steamStatusText');
 
     if (isDetected) {
-        indicator.classList.add('online');
-        text.textContent = t('steam_online');
+        indicator?.classList.add('online');
+        if (text) text.textContent = t('steam_online');
     } else {
-        indicator.classList.remove('online');
-        text.textContent = t('steam_offline');
+        indicator?.classList.remove('online');
+        if (text) text.textContent = t('steam_offline');
     }
+
+    const headerStatus = document.getElementById('steamHeaderStatus');
+    const popoverText = document.getElementById('steamStatusPopoverText');
+    if (headerStatus) {
+        headerStatus.classList.toggle('is-offline', !isDetected);
+        headerStatus.lastElementChild.textContent = isDetected ? t('steam_ready') : t('steam_not_detected');
+    }
+    if (popoverText) popoverText.textContent = isDetected ? t('steam_detected_here') : t('steam_not_detected_here');
+    const popoverDot = document.getElementById('steamPopoverSteamDot');
+    popoverDot?.classList.toggle('online', isDetected);
 }
 
 function setBillingPortalBusy(isBusy) {
@@ -701,6 +781,7 @@ async function refreshBillingPortalCard() {
     try {
         const session = await window.electronAPI.auth.status();
         renderBillingPortalCard(session);
+        renderAccountIdentity(session);
     } catch (_) {
         renderBillingPortalCard(null);
     }
@@ -886,11 +967,64 @@ function updateLanguage(lang) {
     });
 
     updateSteamPathDisplay();
+    void refreshStatusIndicators();
+    const sidePlan = document.getElementById('sidePlanLabel');
+    const tier = sidePlan?.dataset.tier;
+    if (sidePlan && tier) sidePlan.textContent = `· ${t(`tier_${tier}`)}`;
     window.dispatchEvent(new CustomEvent('merlin-language-changed'));
 }
 
 // Setup event listeners
 function setupEventListeners() {
+    const settingsView = document.getElementById('settingsView');
+    const settingsMainView = document.getElementById('settingsMainView');
+    if (settingsView && settingsMainView) settingsMainView.appendChild(settingsView);
+
+    const setUtilityView = (view) => {
+        const isSettings = view === 'settings';
+        document.getElementById('settingsMainView').hidden = !isSettings;
+        if (settingsView) settingsView.hidden = !isSettings;
+        document.getElementById('accessView').hidden = view !== 'access';
+        document.getElementById('settingsNavBtn')?.classList.toggle('active', isSettings);
+        document.getElementById('accessNavBtn')?.classList.toggle('active', view === 'access');
+        document.getElementById('settingsNavBtn')?.setAttribute('aria-pressed', String(isSettings));
+        document.getElementById('accessNavBtn')?.setAttribute('aria-pressed', String(view === 'access'));
+    };
+    window.addEventListener('merlin-view-changed', (event) => setUtilityView(event.detail?.view));
+    document.getElementById('settingsNavBtn')?.addEventListener('click', () => window.merlinView.set('settings'));
+    document.getElementById('accessNavBtn')?.addEventListener('click', () => window.merlinView.set('access'));
+    document.getElementById('accountAccessBtn')?.addEventListener('click', () => {
+        window.merlinView.set('access');
+    });
+    document.getElementById('openSettingsFromSteamBtn')?.addEventListener('click', () => {
+        window.merlinView.set('settings');
+        document.getElementById('steamStatusPopover').hidden = true;
+    });
+    const steamHeaderStatus = document.getElementById('steamHeaderStatus');
+    const steamStatusPopover = document.getElementById('steamStatusPopover');
+    const closeSteamStatusPopover = () => {
+        if (steamStatusPopover) steamStatusPopover.hidden = true;
+    };
+    steamHeaderStatus?.addEventListener('click', () => {
+        if (!steamStatusPopover) return;
+        const willOpen = steamStatusPopover.hidden;
+        closeSteamStatusPopover();
+        if (willOpen) {
+            window.dispatchEvent(new CustomEvent('merlin-popover-open', { detail: { name: 'steam' } }));
+            steamStatusPopover.hidden = false;
+        }
+    });
+    document.addEventListener('pointerdown', event => {
+        if (steamStatusPopover?.hidden) return;
+        if (steamStatusPopover.contains(event.target) || steamHeaderStatus?.contains(event.target)) return;
+        closeSteamStatusPopover();
+    }, true);
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeSteamStatusPopover();
+    });
+    window.addEventListener('merlin-popover-open', event => {
+        if (event.detail?.name !== 'steam') closeSteamStatusPopover();
+    });
     const discordSupportLink = document.getElementById('discordSupportLink');
     if (discordSupportLink) {
         discordSupportLink.addEventListener('click', () => {
@@ -945,12 +1079,15 @@ function setupEventListeners() {
     });
 
     // Language change
-    document.getElementById('languageSelect').addEventListener('change', async (e) => {
-        currentLanguage = e.target.value;
-        await window.electronAPI.saveConfig({ language: currentLanguage });
-        await window.electronAPI.setMenuLanguage(currentLanguage);
-        updateLanguage(currentLanguage);
-        showNotification(t('config_saved'));
+    document.querySelectorAll('.language-selector').forEach(select => {
+        select.addEventListener('change', async (e) => {
+            currentLanguage = e.target.value;
+            document.querySelectorAll('.language-selector').forEach(other => { other.value = currentLanguage; });
+            await window.electronAPI.saveConfig({ language: currentLanguage });
+            await window.electronAPI.setMenuLanguage(currentLanguage);
+            updateLanguage(currentLanguage);
+            showNotification(t('config_saved'));
+        });
     });
 
     // Detect Steam
@@ -1080,6 +1217,10 @@ function setupEventListeners() {
         }
     });
 
+    document.getElementById('restartSteamSettingsBtn').addEventListener('click', () => {
+        document.getElementById('restartSteamBtn').click();
+    });
+
     // Webview navigation
     document.getElementById('backBtn').addEventListener('click', () => {
         if (webview.canGoBack()) webview.goBack();
@@ -1145,30 +1286,56 @@ function extractAppId(url) {
     // Update App ID
     if (appId) {
         currentAppId = appId;
-        document.getElementById('appIdDisplay').textContent = appId;
         document.getElementById('addToSteamBtn').disabled = false;
+        document.getElementById('steamContextAppId').textContent = `App ID ${appId} detectado`;
+        const bar = document.getElementById('steamContextBar');
+        if (bar && window.merlinView?.get?.() === 'steam-store') bar.hidden = false;
         showNotification(`${t('app_detected')} ${appId}`, 'success');
     } else {
         currentAppId = null;
-        document.getElementById('appIdDisplay').textContent = '-';
         document.getElementById('addToSteamBtn').disabled = true;
+        document.getElementById('steamContextBar').hidden = true;
     }
 }
+
+function renderAccountIdentity(session) {
+    const accountName = document.getElementById('accountMenuName');
+    const sidePlan = document.getElementById('sidePlanLabel');
+    if (accountName) accountName.textContent = t('account_menu');
+    const tier = String(session?.license?.planTier || '').toLowerCase();
+    const hasTier = ['bronze', 'prata', 'ouro'].includes(tier);
+    if (sidePlan) {
+        sidePlan.dataset.tier = hasTier ? tier : '';
+        sidePlan.textContent = hasTier ? `· ${t(`tier_${tier}`)}` : '';
+    }
+}
+
+window.merlinSteamContext = {
+    hasAppId: () => Boolean(currentAppId)
+};
 
 function updateFilesStatus(ok) {
     const dot = document.getElementById('filesStatus');
     const text = document.getElementById('filesStatusText');
 
+    const popoverDot = document.getElementById('steamPopoverFilesDot');
+    const popoverText = document.getElementById('steamFilesPopoverText');
     if (ok) {
-        dot.classList.add('online');
-        dot.classList.remove('offline');
-        text.setAttribute('data-i18n', 'files_ok');
-        text.textContent = t('files_ok');
+        dot?.classList.add('online');
+        dot?.classList.remove('offline');
+        text?.setAttribute('data-i18n', 'files_ok');
+        if (text) text.textContent = t('files_ok');
+        popoverDot?.classList.add('online');
+        popoverDot?.classList.remove('offline');
+        if (popoverText) popoverText.textContent = t('steam_files_installed');
     } else {
-        dot.classList.remove('online');
-        dot.classList.add('offline');
-        text.setAttribute('data-i18n', 'files_missing');
-        text.textContent = t('files_missing');
+        dot?.classList.remove('online');
+        dot?.classList.add('offline');
+        text?.setAttribute('data-i18n', 'files_missing');
+        if (text) text.textContent = t('files_missing');
+        popoverDot?.classList.remove('online');
+        popoverDot?.classList.add('offline');
+        if (popoverText) popoverText.textContent = t('steam_files_repair');
     }
 }
 

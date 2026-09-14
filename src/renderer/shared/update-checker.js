@@ -140,7 +140,7 @@
     };
 
     function getLanguageText() {
-        const language = document.getElementById('languageSelect')?.value || 'en';
+        const language = document.getElementById('settingsLanguageSelect')?.value || 'en';
         return translations[language] || translations.en;
     }
 
