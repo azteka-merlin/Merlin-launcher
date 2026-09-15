@@ -76,7 +76,7 @@ Parte do launcher ja usa `MERLIN_API_BASE_URL`.
 
 Atualmente confirmado:
 
-- Auth: `${MERLIN_API_BASE_URL}/auth/login`
+- Auth: `${MERLIN_API_BASE_URL}/auth/login` e `${MERLIN_API_BASE_URL}/auth/reset-hwid`
 - Game search: `${MERLIN_API_BASE_URL}/games/search`
 - Manifests: `MERLIN_API_URL` ou `${MERLIN_API_BASE_URL}/manifests`
 - Manifest status: `${manifestApiUrl}/status`

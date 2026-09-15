@@ -7,6 +7,8 @@ Este arquivo registra regras de negocio observadas no launcher. Ele nao deve ser
 - A chave deve seguir o formato `MERLIN-XXXX-XXXX-XXXX`.
 - Letras ambiguas sao evitadas pelo regex atual.
 - Login envia `licenseKey` e `hwid` para `/auth/login`.
+- O reset de dispositivo usa `POST /auth/reset-hwid` somente depois de uma chave completa ser informada no portao. Ele desvincula o HWID anterior, apaga a sessao local e exige um novo login explicito para vincular o computador atual.
+- Cada licenca possui uma cota de um reset por 30 dias. Quando indisponivel, a API devolve `retryAt`, que a interface apresenta em horario de Brasilia. O Admin pode liberar uma nova cota sem remover o HWID atual.
 - Sessao local e criptografada com `safeStorage`.
 - Token e renovado quando esta perto de expirar.
 - Erros importantes mapeados:

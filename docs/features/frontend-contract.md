@@ -11,7 +11,7 @@
 | Grupo | Metodos |
 | --- | --- |
 | Config/app | `getConfig`, `saveConfig`, `setMenuLanguage`, `getVersion`, update e links sociais |
-| Auth | `hasSession`, `status`, `login`, `logout`, assinatura, signup, planos |
+| Auth | `hasSession`, `status`, `login`, `resetHwid`, `logout`, assinatura, signup, planos |
 | Steam | detectar/selecionar, status, fechar/iniciar, readiness e repair |
 | Games | resolver/buscar, fila, instalar e restart |
 | Library | listar, refresh, remover, abrir pasta e restart |

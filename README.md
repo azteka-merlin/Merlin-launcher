@@ -19,6 +19,16 @@
 - **Experimental Gamepad Support** - Control the entire app with Xbox/PlayStation controllers
 - **Multi-language** - Available in Brazilian Portuguese, English, French, Spanish, and German
 - **Modern UI** - Clean, minimalist design with smooth transitions
+- **Protected License Activation** - A desktop activation gate validates the license against the current computer before opening the app
+
+### License and Device Reset
+
+Merlin binds an activated license to one computer. If the user changes or
+formats the computer, the activation gate offers **Reset device** after a valid
+license key is entered. A reset disconnects the prior computer, clears the
+local session, and requires an explicit new key validation to bind the current
+computer. Each license can request one reset every 30 days; when unavailable,
+the app shows the next available date in Brasília time.
 
 ### Technical
 - Built with **Electron 33** for cross-platform desktop experience

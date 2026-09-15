@@ -547,8 +547,9 @@
     <div id="licenseGate" class="license-gate is-checking" role="dialog" aria-modal="true" aria-labelledby="licenseGateTitle" aria-busy="true">
         <div class="license-gate-glow" aria-hidden="true"></div>
         <section class="license-gate-card">
-            <div class="license-gate-mark" aria-hidden="true">
-                <span></span>
+            <div class="license-gate-brand" aria-label="Merlin">
+                <img src="assets/merlin-wizard-logo.png" alt="">
+                <strong>Merlin</strong>
             </div>
             <p id="licenseGateEyebrow" class="license-gate-eyebrow">ACESSO MERLIN</p>
             <h2 id="licenseGateTitle">Ative sua licença</h2>
@@ -578,6 +579,15 @@
                     <span id="licenseGateSubmitText">Validar chave</span>
                     <span class="license-gate-spinner" aria-hidden="true"></span>
                 </button>
+                <div class="license-gate-reset">
+                    <span>Já ativou em outro computador?</span>
+                    <span class="license-gate-reset-action" data-tooltip="Informe sua chave para habilitar o reset.">
+                        <button id="licenseGateReset" type="button" disabled>
+                            <img src="node_modules/lucide-static/icons/rotate-cw.svg" alt="">
+                            Resetar dispositivo
+                        </button>
+                    </span>
+                </div>
                 <p class="license-gate-signup">
                     <span id="licenseGateSignupText">Ainda n&atilde;o tem uma licen&ccedil;a?</span>
                     <button id="licenseGateSignupLink" class="license-gate-signup-link" type="button">Obter licen&ccedil;a</button>
@@ -586,6 +596,19 @@
             <p id="licenseGatePrivacy" class="license-gate-privacy">
                 A chave fica protegida neste computador.
             </p>
+        </section>
+    </div>
+
+    <div id="licenseGateResetModal" class="license-reset-modal" role="dialog" aria-modal="true" aria-labelledby="licenseGateResetTitle" hidden>
+        <section class="license-reset-modal-card">
+            <p class="license-gate-eyebrow">ACESSO MERLIN</p>
+            <h2 id="licenseGateResetTitle">Resetar dispositivo?</h2>
+            <p>Isso desvinculará sua licença do computador anterior. Depois, valide sua chave novamente para ativar este computador.</p>
+            <small>Limite: 1 reset por licença a cada 30 dias.</small>
+            <div class="license-reset-modal-actions">
+                <button id="licenseGateResetCancel" class="license-reset-cancel" type="button">Cancelar</button>
+                <button id="licenseGateResetConfirm" class="license-reset-confirm" type="button">Resetar e continuar</button>
+            </div>
         </section>
     </div>
 

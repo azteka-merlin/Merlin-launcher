@@ -7,6 +7,7 @@ Auditoria da API completa: `src/index.ts`, rotas OpenAPI, endpoints e biblioteca
 | Rota | Consumidor no launcher | Contrato que o front deve preservar |
 | --- | --- | --- |
 | `POST /api/auth/login` | Auth | chave + HWID; token, expiracao, licenca e billing; erros de sessao normalizados |
+| `POST /api/auth/reset-hwid` | portao de ativacao | chave + HWID; desvincula apenas o dispositivo anterior, apaga a sessao local apos sucesso e pode devolver `409` com `code: hwid_reset_unavailable` e `retryAt` |
 | `POST /api/games/search` | busca de jogos/Biblioteca | autenticada; ate quatro sugestoes no fluxo visual, nome/capa/App ID validos |
 | `GET /api/public/catalog` | catalogo local de metadados | bootstrap e refresh de nomes/capas; nao e permissao de ativacao |
 | `GET /api/manifests/status` | policy de auto-update | autenticada; `requiresVersionPin` e `automaticUpdatesEnabled` |

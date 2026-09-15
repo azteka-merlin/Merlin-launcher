@@ -19,6 +19,7 @@ function registerAuthIpc({ ipcMain, authSession, shell, apiBaseUrl, onLogout }) 
     ipcMain.handle('auth:has-session', () => authSession.hasStoredSession());
     ipcMain.handle('auth:status', async () => authSession.status());
     ipcMain.handle('auth:login', async (_event, licenseKey) => authSession.login(licenseKey));
+    ipcMain.handle('auth:reset-hwid', async (_event, licenseKey) => authSession.resetHwid(licenseKey));
     ipcMain.handle('auth:logout', () => {
         const result = authSession.logout();
         onLogout?.();

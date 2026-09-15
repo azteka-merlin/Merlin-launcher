@@ -220,6 +220,24 @@ function createAuthSession({
         }
     }
 
+    async function resetHwid(rawLicenseKey) {
+        const licenseKey = String(rawLicenseKey || '').trim().toUpperCase();
+        if (!LICENSE_KEY_PATTERN.test(licenseKey)) return { ok: false, code: 'invalid_key' };
+        try {
+            const hwid = await machineIdentity.getHwid();
+            const response = await axios.post(`${baseUrl}/auth/reset-hwid`, { licenseKey, hwid }, {
+                timeout: 15_000,
+                httpsAgent,
+                headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'Merlin/2.0' }
+            });
+            clearStoredSession();
+            return { ok: true, ...response.data };
+        } catch (error) {
+            if (error?.response?.status === 409) return { ok: false, code: 'hwid_reset_unavailable', retryAt: error.response.data?.retryAt || null };
+            return { ok: false, code: errorFromResponse(error).code || 'server_error' };
+        }
+    }
+
     function logout() {
         refreshPromise = null;
         clearStoredSession();
@@ -326,7 +344,7 @@ function createAuthSession({
         }
     }
 
-    return { createAccessHandoff, createBillingPortalSession, getAccessToken, handleUnauthorized, hasStoredSession, login, logout, status };
+    return { createAccessHandoff, createBillingPortalSession, getAccessToken, handleUnauthorized, hasStoredSession, login, logout, resetHwid, status };
 }
 
 module.exports = { AuthError, createAuthSession };

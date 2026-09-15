@@ -17,6 +17,7 @@ test('registers auth IPC channels', () => {
         'auth:has-session',
         'auth:status',
         'auth:login',
+        'auth:reset-hwid',
         'auth:logout',
         'auth:manage-subscription',
         'auth:open-signup',

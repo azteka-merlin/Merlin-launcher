@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         hasSession: () => ipcRenderer.invoke('auth:has-session'),
         status: () => ipcRenderer.invoke('auth:status'),
         login: (licenseKey) => ipcRenderer.invoke('auth:login', licenseKey),
+        resetHwid: (licenseKey) => ipcRenderer.invoke('auth:reset-hwid', licenseKey),
         logout: () => ipcRenderer.invoke('auth:logout'),
         manageSubscription: () => ipcRenderer.invoke('auth:manage-subscription'),
     openSignup: () => ipcRenderer.invoke('auth:open-signup'),

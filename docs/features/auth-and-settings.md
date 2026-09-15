@@ -5,6 +5,8 @@
 - O portao de licenca bloqueia a interface ate `auth:status` concluir com sessao valida.
 - A chave aceita `MERLIN-XXXX-XXXX-XXXX`, sem caracteres ambiguos, e e normalizada em maiusculas.
 - Login envia chave e HWID para `/auth/login`; HWID e calculado somente no main process.
+- O usuario pode solicitar `auth:reset-hwid` no portao de ativacao depois de informar uma chave valida. A chamada envia chave e HWID para `/auth/reset-hwid`, mas o servidor apenas desvincula o computador anterior; ela nao faz login nem vincula o HWID atual.
+- Em reset bem-sucedido, a sessao local e apagada e o usuario precisa validar a chave explicitamente para ativar o computador atual. O servidor limita cada licenca a um reset a cada 30 dias e devolve `retryAt` quando o proximo reset ainda nao esta liberado.
 - A sessao contem token, expiracao e dados publicos da licenca. E persistida em `userData/auth-session.json`, criptografada por `safeStorage`.
 - Token e renovado quando faltam menos de 60 segundos. Uma sessao corrompida/indescriptografavel e removida.
 - `invalid_key`, `expired`, `revoked` e `hwid_mismatch` apagam a sessao; falha temporaria a preserva para nova tentativa.
@@ -17,6 +19,7 @@
 | `missing` | pedir chave |
 | `invalid_key`, `expired`, `revoked`, `hwid_mismatch` | explicar acesso invalido e manter portao aberto |
 | `rate_limited` | informar limite temporario |
+| `hwid_reset_unavailable` | informar que o reset mensal ainda nao esta liberado e exibir `retryAt`, quando valido, no horario de Brasilia |
 | `unavailable`, `server_error`, `invalid_response` | mensagem generica de conectividade/validacao |
 | `device_error` | informar que o computador nao pode ser identificado |
 
@@ -46,4 +49,4 @@ Recursos autenticados podem renovar token uma vez em 401. Se a renovacao falhar,
 
 ## IPC
 
-`auth.hasSession`, `auth.status`, `auth.login`, `auth.logout`, `auth.manageSubscription`, `auth.openSignup`, `auth.openPlans`, `auth.onRequired`; `getConfig`, `saveConfig`, `setMenuLanguage`.
+`auth.hasSession`, `auth.status`, `auth.login`, `auth.resetHwid`, `auth.logout`, `auth.manageSubscription`, `auth.openSignup`, `auth.openPlans`, `auth.onRequired`; `getConfig`, `saveConfig`, `setMenuLanguage`.

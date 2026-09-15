@@ -151,6 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const description = document.getElementById('licenseGateDescription');
     const signupText = document.getElementById('licenseGateSignupText');
     const signupLink = document.getElementById('licenseGateSignupLink');
+    const resetButton = document.getElementById('licenseGateReset');
+    const resetModal = document.getElementById('licenseGateResetModal');
+    const resetCancel = document.getElementById('licenseGateResetCancel');
+    const resetConfirm = document.getElementById('licenseGateResetConfirm');
     let language = 'ptbr';
     let busy = true;
     let mode = 'checking';
@@ -159,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setApplicationLocked(locked) {
         for (const element of document.body.children) {
-            if (element !== gate && element.tagName !== 'SCRIPT') element.inert = locked;
+            if (element !== gate && element !== resetModal && element.tagName !== 'SCRIPT') element.inert = locked;
         }
     }
 
@@ -186,6 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSubmitState() {
         submit.disabled = busy || isRateLimited() || !isCompleteKey(input.value);
+        resetButton.disabled = busy || !isCompleteKey(input.value);
+    }
+
+    function formatResetAvailability(retryAt) {
+        const date = new Date(retryAt || '');
+        if (Number.isNaN(date.getTime())) return '';
+        return new Intl.DateTimeFormat('pt-BR', {
+            dateStyle: 'long',
+            timeStyle: 'short',
+            timeZone: 'America/Sao_Paulo'
+        }).format(date);
     }
 
     function renderRateLimitCountdown() {
@@ -330,6 +345,40 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             signupLink.disabled = false;
         }
+    });
+
+    function closeResetModal() {
+        resetModal.hidden = true;
+    }
+
+    resetButton.addEventListener('click', () => {
+        if (!busy && isCompleteKey(input.value)) resetModal.hidden = false;
+    });
+    resetCancel.addEventListener('click', closeResetModal);
+    resetModal.addEventListener('click', event => {
+        if (event.target === resetModal) closeResetModal();
+    });
+    resetConfirm.addEventListener('click', async () => {
+        closeResetModal();
+        setBusy(true, 'Redefinindo dispositivo...');
+        const result = await window.electronAPI.auth.resetHwid(normalizeLicenseKey(input.value));
+        if (result?.ok) {
+            feedback.dataset.type = 'success';
+            feedback.textContent = 'Dispositivo desvinculado. Valide sua chave para ativar este computador.';
+            setBusy(false);
+            input.focus();
+            return;
+        }
+        feedback.dataset.type = 'error';
+        if (result?.code === 'hwid_reset_unavailable') {
+            const availability = formatResetAvailability(result.retryAt);
+            feedback.textContent = availability
+                ? `O reset mensal desta licença ficará disponível em ${availability}.`
+                : 'O reset mensal desta licença ainda não está disponível.';
+        } else {
+            feedback.textContent = 'Não foi possível resetar este dispositivo. Confira a chave e tente novamente.';
+        }
+        setBusy(false);
     });
 
     form.addEventListener('submit', async event => {
