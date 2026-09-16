@@ -934,18 +934,37 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.confirmModal.hidden = true;
     }
 
+    function loadOfferCover(item) {
+        const cover = elements.offerCover;
+        const fallback = fallbackCoverUrl(item.appId);
+        const candidates = [...new Set([item.imageUrl, fallback].filter(Boolean))];
+
+        cover.hidden = true;
+        cover.removeAttribute('src');
+
+        const loadNext = () => {
+            const url = candidates.shift();
+            if (!url) {
+                cover.onload = null;
+                cover.onerror = null;
+                cover.hidden = true;
+                return;
+            }
+            cover.src = url;
+        };
+
+        cover.onload = () => {
+            cover.hidden = false;
+        };
+        cover.onerror = loadNext;
+        loadNext();
+    }
+
     function showOfferModal(item, resolve) {
         pendingOffer = { item, resolve };
         elements.offerGame.textContent = item.gameName;
         elements.offerFile.textContent = item.correction.filename;
-        elements.offerCover.hidden = true;
-        elements.offerCover.removeAttribute('src');
-
-        const coverUrl = item.imageUrl || fallbackCoverUrl(item.appId);
-        if (coverUrl) {
-            elements.offerCover.src = coverUrl;
-            elements.offerCover.hidden = false;
-        }
+        loadOfferCover(item);
 
         elements.offerModal.hidden = false;
         elements.offerDownload.focus();
@@ -1259,16 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     elements.offerLater.addEventListener('click', () => finishOffer('later', { notifyLater: true }));
     elements.offerDownload.addEventListener('click', runOfferDownload);
-    elements.offerCover.addEventListener('error', () => {
-        const fallback = fallbackCoverUrl(offerState.current?.appId);
-        if (fallback && !elements.offerCover.dataset.ryuuFallbackApplied && elements.offerCover.src !== fallback) {
-            elements.offerCover.dataset.ryuuFallbackApplied = 'true';
-            elements.offerCover.src = fallback;
-            elements.offerCover.hidden = false;
-            return;
-        }
-        elements.offerCover.hidden = true;
-    });
     elements.progressCancel.addEventListener('click', async () => {
         if (!activeOperation) return;
         elements.progressCancel.disabled = true;

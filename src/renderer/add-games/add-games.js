@@ -1,6 +1,6 @@
 window.merlinI18n.register({
     ptbr: {
-        add_games_description: 'Cole o link da Steam, digite o nome do jogo ou informe o AppID.',
+        add_games_description: 'Adicione jogos à sua biblioteca Steam pelo Merlin. O download e a instalação são feitos pela própria Steam.',
         add_games_link_label: 'Link da Steam, nome do jogo ou AppID',
         add_games_link_placeholder: 'https://store.steampowered.com/app/... ou nome do jogo',
         games_searching: 'Pesquisando jogos...',
@@ -13,7 +13,7 @@ window.merlinI18n.register({
         auto_update_locked_hint: 'Este jogo está fixado em uma versão específica para garantir o funcionamento da correção disponível.'
     },
     en: {
-        add_games_description: 'Paste a Steam link, type a game name, or enter an AppID.',
+        add_games_description: 'Add games to your Steam Library with Merlin. Steam handles game downloads and installation.',
         add_games_link_label: 'Steam link, game name, or AppID',
         add_games_link_placeholder: 'https://store.steampowered.com/app/... or game name',
         games_searching: 'Searching games...',
@@ -26,7 +26,7 @@ window.merlinI18n.register({
         auto_update_locked_hint: 'This game is pinned to a specific version to help the available correction work properly.'
     },
     es: {
-        add_games_description: 'Pegue un enlace de Steam, escriba el nombre del juego o introduzca el AppID.',
+        add_games_description: 'Agrega juegos a tu biblioteca de Steam con Merlin. Steam realiza la descarga e instalación del juego.',
         add_games_link_label: 'Enlace de Steam, nombre del juego o AppID',
         add_games_link_placeholder: 'https://store.steampowered.com/app/... o nombre del juego',
         games_searching: 'Buscando juegos...',
@@ -39,7 +39,7 @@ window.merlinI18n.register({
         auto_update_locked_hint: 'Este juego está fijado en una versión específica para garantizar el funcionamiento de la corrección disponible.'
     },
     fr: {
-        add_games_description: 'Collez un lien Steam, saisissez le nom du jeu ou entrez l’AppID.',
+        add_games_description: 'Ajoutez des jeux à votre bibliothèque Steam avec Merlin. Steam assure le téléchargement et l’installation du jeu.',
         add_games_link_label: 'Lien Steam, nom du jeu ou AppID',
         add_games_link_placeholder: 'https://store.steampowered.com/app/... ou nom du jeu',
         games_searching: 'Recherche de jeux...',
@@ -52,7 +52,7 @@ window.merlinI18n.register({
         auto_update_locked_hint: 'Ce jeu est bloqué sur une version spécifique afin de garantir le bon fonctionnement du correctif disponible.'
     },
     de: {
-        add_games_description: 'Fügen Sie einen Steam-Link ein, geben Sie den Spielnamen oder die AppID ein.',
+        add_games_description: 'Fügen Sie Spiele mit Merlin zu Ihrer Steam-Bibliothek hinzu. Steam übernimmt Download und Installation des Spiels.',
         add_games_link_label: 'Steam-Link, Spielname oder AppID',
         add_games_link_placeholder: 'https://store.steampowered.com/app/... oder Spielname',
         games_searching: 'Spiele werden gesucht...',
@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let searchTimer = null;
     let searchRequestId = 0;
     let searchLoading = false;
+    let feedbackTranslation = null;
 
     const localErrorTranslations = {
         ptbr: {
@@ -164,9 +165,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function showFeedback(message = '', type = 'info') {
+        feedbackTranslation = null;
         feedback.textContent = message;
         feedback.dataset.type = type;
         feedback.hidden = !message;
+    }
+
+    function showFeedbackTranslation(key, values = {}, type = 'info') {
+        feedbackTranslation = { key, values, type };
+        feedback.textContent = tr(key, values);
+        feedback.dataset.type = type;
+        feedback.hidden = false;
     }
 
     function isSteamLink(value) {
@@ -477,7 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             setSelectedGame(null);
             resetAutoUpdate();
             clearSuggestions();
-            showFeedback(tr('games_install_success', { name: result.item.name }), 'success');
+            showFeedbackTranslation('games_install_success', { name: result.item.name }, 'success');
             await window.merlinCorrections?.offerFor?.(result.item.appId);
             setRequestBusy(false);
             if (await window.merlinRestartPrompt.ask({
@@ -627,6 +636,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             message: progressMessage(progress.message, progress.stage),
             percent: progress.percent
         }));
+    });
+    window.addEventListener('merlin-language-changed', () => {
+        if (!feedbackTranslation) return;
+        feedback.textContent = tr(feedbackTranslation.key, feedbackTranslation.values);
+        feedback.dataset.type = feedbackTranslation.type;
     });
 
     try {

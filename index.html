@@ -177,8 +177,8 @@
                 <div id="steamContextBar" class="steam-context-bar" hidden>
                     <span id="steamContextAppId">App ID detectado</span>
                     <div>
-                        <button id="addToSteamBtn" class="btn btn-primary" disabled data-i18n="add_to_steam">Add to Steam</button>
-                        <button id="restartSteamBtn" class="btn btn-secondary" data-i18n="restart_steam">Restart Steam</button>
+                        <button id="addToSteamBtn" class="btn btn-primary" disabled><img src="assets/icons/steam-mark.svg" alt="" aria-hidden="true"><span data-i18n="add_to_steam">Add to Steam</span></button>
+                        <button id="restartSteamBtn" class="btn btn-secondary"><img src="node_modules/lucide-static/icons/rotate-cw.svg" alt="" aria-hidden="true"><span data-i18n="restart_steam">Restart Steam</span></button>
                     </div>
                 </div>
                 <div class="browser-content">
@@ -190,8 +190,8 @@
                     <section id="addGamesView" class="add-games-view" aria-labelledby="addGamesTitle">
                         <div class="add-games-card">
                             <header class="add-games-header">
-                                <h2 id="addGamesTitle" data-i18n="add_games_title">Adicionar jogo da Steam</h2>
-                                <p data-i18n="add_games_description">Cole o link da página do jogo na Steam.</p>
+                                <h2 id="addGamesTitle" data-i18n="add_games_title">Adicionar jogo à Steam</h2>
+                                <p data-i18n="add_games_description">Adicione jogos à sua biblioteca Steam pelo Merlin. O download e a instalação são feitos pela própria Steam.</p>
                             </header>
 
                             <div class="add-games-input-group">
@@ -226,7 +226,7 @@
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                         <path d="M13 2 5 14h6l-1 8 9-13h-6V2Z"></path>
                                     </svg>
-                                    <span data-i18n="install_now">Instalar agora</span>
+                                    <span data-i18n="install_now">Adicionar à Steam</span>
                                 </button>
                                 <button id="addToQueueBtn" class="add-games-btn add-games-btn-secondary" type="button">
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -255,7 +255,7 @@
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"></path>
                                 </svg>
-                                <span data-i18n="install_all">Instalar todos</span>
+                                <span data-i18n="install_all">Adicionar todos à Steam</span>
                                 <span id="installAllCount">(0)</span>
                             </button>
                         </div>
@@ -847,50 +847,43 @@
             <div class="premium-intro-progress" aria-hidden="true">
                 <span id="premiumIntroStepOneDot" class="active"></span>
                 <span id="premiumIntroStepTwoDot"></span>
-                <span id="premiumIntroStepThreeDot"></span>
             </div>
             <section id="premiumIntroOverviewStep" class="premium-intro-step">
-                <p class="premium-intro-lead" data-i18n="premium_intro_overview_message">A aba Premium é um catálogo especial mantido pelo Merlin para jogos que precisam de um fluxo mais cuidadoso.</p>
+                <p class="premium-intro-lead" data-i18n="premium_intro_overview_message">O Premium reúne jogos disponíveis por ativação no Merlin.</p>
                 <div class="premium-intro-overview">
-                    <article class="premium-intro-feature premium-intro-feature-primary">
-                        <strong data-i18n="premium_intro_overview_catalog_title">Catálogo exclusivo</strong>
-                        <p data-i18n="premium_intro_overview_catalog_text">Os jogos daqui dependem de compra, preparação e disponibilidade mantidas pelo Merlin.</p>
+                    <div class="premium-intro-visual-column">
+                    <div class="premium-intro-feature premium-intro-feature-primary" aria-hidden="true"></div>
+                    <article class="premium-intro-feature premium-intro-catalog">
+                        <strong data-i18n="premium_intro_catalog_title">Catálogo mantido pelo Merlin</strong>
+                        <p data-i18n="premium_intro_catalog_text">Os jogos Premium são adquiridos pelo Merlin. Por isso, alguns títulos podem não estar disponíveis no catálogo.</p>
+                    </article>
+                    </div>
+                    <div class="premium-intro-overview-details">
+                    <article class="premium-intro-feature">
+                        <strong data-i18n="premium_intro_availability_title">Disponibilidade por plano</strong>
+                        <p data-i18n="premium_intro_availability_text">Alguns jogos são liberados em momentos diferentes conforme o plano.</p>
                     </article>
                     <article class="premium-intro-feature">
-                        <strong data-i18n="premium_intro_overview_access_title">Acesso mais difícil</strong>
-                        <p data-i18n="premium_intro_overview_access_text">A ideia é atender jogos que não possuem uma alternativa simples de acesso e organização.</p>
+                        <strong data-i18n="premium_intro_slots_title">Vagas temporárias</strong>
+                        <p data-i18n="premium_intro_slots_text">Cada ativação ocupa uma vaga por 24 horas.</p>
                     </article>
                     <article class="premium-intro-feature">
-                        <strong data-i18n="premium_intro_overview_launch_title">Lançamentos podem aparecer</strong>
-                        <p data-i18n="premium_intro_overview_launch_text">Como o fluxo depende da compra e preparo do jogo, o Merlin pode trazer títulos recentes quando houver disponibilidade.</p>
+                        <strong data-i18n="premium_intro_wait_title">Ative uma vez</strong>
+                        <p data-i18n="premium_intro_wait_text">Depois de ativado, o jogo continua disponível para você. Siga as recomendações para evitar precisar ativá-lo novamente.</p>
                     </article>
+                    </div>
                 </div>
-                <p class="premium-intro-footnote" data-i18n="premium_intro_overview_footer">Hoje essa área faz parte do Merlin, mas futuramente pode se tornar um serviço mensal de valor simbólico, já que o custo operacional do Merlin é mínimo.</p>
-            </section>
-            <section id="premiumIntroCommunityStep" class="premium-intro-step" hidden>
-                <p class="premium-intro-lead" data-i18n="premium_intro_community_message">A escolha de novos jogos também pode nascer da própria comunidade Merlin.</p>
-                <div class="premium-intro-community">
-                    <article class="premium-intro-community-card premium-intro-community-card-wide">
-                        <strong data-i18n="premium_intro_community_poll_title">Enquetes dentro do Merlin</strong>
-                        <p data-i18n="premium_intro_community_poll_text">Quando muitos usuários demonstrarem interesse em um jogo, o Merlin poderá abrir enquetes para medir prioridade e demanda.</p>
-                    </article>
-                    <article class="premium-intro-community-card">
-                        <strong data-i18n="premium_intro_community_fund_title">Ação coletiva</strong>
-                        <p data-i18n="premium_intro_community_fund_text">Em alguns casos, a comunidade poderá se organizar para juntar o valor necessário e disponibilizar o jogo para todos no futuro.</p>
-                    </article>
-                    <article class="premium-intro-community-card">
-                        <strong data-i18n="premium_intro_community_optional_title">Participação opcional</strong>
-                        <p data-i18n="premium_intro_community_optional_text">Participar de arrecadações nunca será obrigatório. A ideia é apenas criar um caminho coletivo para jogos muito pedidos.</p>
-                    </article>
-                </div>
-                <p class="premium-intro-footnote" data-i18n="premium_intro_community_footer">A arrecadação também pode servir para comprar mais cópias de um jogo já disponível. Cada cópia adiciona 5 vagas ao jogo.</p>
             </section>
             <section id="premiumIntroDetailsStep" class="premium-intro-step" hidden>
-                <p class="premium-intro-lead" data-i18n="premium_intro_message">Leia estes pontos para evitar perder uma ativação sem necessidade.</p>
+                <p class="premium-intro-lead" data-i18n="premium_intro_message">Confira estes pontos para evitar interrupções durante a ativação.</p>
                 <div class="premium-intro-grid">
                     <article class="premium-intro-item premium-intro-highlight">
-                        <strong data-i18n="premium_intro_slots_title">Vagas e cooldown</strong>
-                        <p data-i18n="premium_intro_slots_text">Cada cópia disponível do jogo adiciona 5 vagas. Ao concluir, sua vaga fica ocupada por 24 horas.</p>
+                        <strong data-i18n="premium_intro_steam_title">Steam e jogo instalado</strong>
+                        <p data-i18n="premium_intro_steam_text">A Steam precisa estar pronta e o jogo já deve estar instalado.</p>
+                    </article>
+                    <article class="premium-intro-item premium-intro-highlight">
+                        <strong data-i18n="premium_intro_open_soon_title">Abra o jogo em seguida</strong>
+                        <p data-i18n="premium_intro_open_soon_text">Abra o jogo até 30 minutos após a ativação. Se não abrir nesse prazo, ela não será aplicada e você perderá a ativação.</p>
                     </article>
                     <article class="premium-intro-item">
                         <strong data-i18n="premium_intro_stability_title">Evite mudanças desnecessárias</strong>
@@ -902,11 +895,11 @@
                     </article>
                     <article class="premium-intro-item">
                         <strong data-i18n="premium_intro_saves_title">Cuide dos saves</strong>
-                        <p data-i18n="premium_intro_saves_text">Uma nova ativação pode criar outro ID de save em alguns jogos. Faça backup antes de atualizar ou reativar.</p>
+                        <p data-i18n="premium_intro_saves_text">Faça backup dos seus saves antes de atualizar o jogo.</p>
                     </article>
                     <article class="premium-intro-item">
                         <strong data-i18n="premium_intro_launch_title">Como iniciar</strong>
-                        <p data-i18n="premium_intro_launch_text">Alguns jogos abrem pela Steam; outros precisam ser abertos pelo executável indicado após a ativação.</p>
+                        <p data-i18n="premium_intro_launch_text">Alguns jogos precisam ser abertos pela pasta de instalação porque o método de ativação não permite iniciá-los pela Steam.</p>
                     </article>
                 </div>
             </section>
@@ -1075,10 +1068,10 @@
                 </div>
                 <div class="discord-announcement-content">
                     <h2 id="discordAnnouncementTitle" data-i18n="discord_announcement_title">🏰 Bem-vindo à Casa do Merlin!</h2>
-                    <p data-i18n="discord_announcement_subtitle">O servidor oficial do Merlin já está disponível.</p>
+                    <p data-i18n="discord_announcement_subtitle">A comunidade oficial do Merlin está no WhatsApp.</p>
                     <p data-i18n="discord_announcement_message">Acompanhe as novidades do projeto, receba suporte oficial, relate bugs, envie sugestões e converse com a comunidade.</p>
                     <p class="discord-announcement-closing" data-i18n="discord_announcement_closing">Esperamos você por lá!</p>
-                    <p class="discord-announcement-footer-note" data-i18n="discord_announcement_footer_note">Quer entrar depois? Sem problema. O Discord continuará disponível no rodapé do Merlin Launcher.</p>
+                    <p class="discord-announcement-footer-note" data-i18n="discord_announcement_footer_note">Quer entrar depois? Sem problema. O WhatsApp continuará disponível no rodapé do Merlin Launcher.</p>
                     <label class="discord-announcement-reminder">
                         <input id="discordAnnouncementDontRemind" type="checkbox">
                         <span data-i18n="discord_announcement_dont_remind">Não me lembre novamente</span>
@@ -1086,10 +1079,13 @@
                     <div class="library-modal-actions discord-announcement-actions">
                         <button id="discordAnnouncementLaterBtn" class="btn btn-secondary" type="button" data-i18n="discord_announcement_later">Agora não</button>
                         <button id="discordAnnouncementJoinBtn" class="btn btn-primary discord-announcement-button" type="button">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <svg class="discord-announcement-discord-icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M19.27 5.33A17.04 17.04 0 0 0 15.04 4l-.2.4a12.2 12.2 0 0 1 3.01 1.5 14.2 14.2 0 0 0-4.38-1.3 14.6 14.6 0 0 0-5.17.36c-.18.05-.36.1-.54.16a12.15 12.15 0 0 1 3.2-1.65L10.76 4c-1.48.26-2.9.72-4.23 1.33C3.86 9.28 3.14 13.13 3.5 16.92A17.2 17.2 0 0 0 8.68 19.5l.62-.85a10.79 10.79 0 0 1-3.24-1.53l.77.36c.03.02.06.03.1.04 3.16 1.4 6.6 1.4 9.72 0 .5-.23 1-.5 1.47-.82a10.96 10.96 0 0 1-3.34 1.95l.62.85a17.16 17.16 0 0 0 5.19-2.58c.43-4.4-.73-8.2-3.32-11.6ZM9.23 14.6c-1 0-1.82-.9-1.82-2s.8-2 1.82-2c1 0 1.83.9 1.82 2 0 1.1-.8 2-1.82 2Zm5.55 0c-1 0-1.82-.9-1.82-2s.8-2 1.82-2c1 0 1.83.9 1.82 2 0 1.1-.8 2-1.82 2Z"></path>
                             </svg>
-                            <span data-i18n="discord_announcement_join">Entrar no Discord</span>
+                            <svg class="discord-announcement-whatsapp-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12.04 2a9.82 9.82 0 0 0-8.48 14.77L2 22l5.38-1.51A9.96 9.96 0 1 0 12.04 2Zm0 17.94a8.04 8.04 0 0 1-4.1-1.12l-.3-.18-3.19.9.85-3.1-.2-.32a8.09 8.09 0 1 1 6.94 3.82Zm4.43-6.03c-.24-.12-1.42-.7-1.64-.78-.22-.08-.38-.12-.54.12-.16.23-.62.77-.76.93-.14.16-.28.18-.52.06-.24-.12-1.02-.37-1.94-1.18-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.4h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.7 2.6 4.12 3.65.58.25 1.03.4 1.38.52.58.18 1.1.15 1.51.09.46-.07 1.42-.58 1.62-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z"></path>
+                            </svg>
+                            <span data-i18n="discord_announcement_join">Entrar no WhatsApp</span>
                         </button>
                     </div>
                 </div>
