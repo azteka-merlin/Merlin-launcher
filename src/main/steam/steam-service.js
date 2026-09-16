@@ -141,7 +141,10 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
                 const steamExe = path.join(steamPath, 'steam.exe');
                 exec(`"${steamExe}" -shutdown`, () => {
                     setTimeout(() => {
-                        exec('taskkill /F /IM steam.exe', () => resolve(true));
+                        // Steam can leave helper processes alive, which keep its DLLs locked.
+                        exec('taskkill /F /T /IM steam.exe', () => {
+                            setTimeout(async () => resolve(!(await isRunning())), 500);
+                        });
                     }, 3000);
                 });
             } else {

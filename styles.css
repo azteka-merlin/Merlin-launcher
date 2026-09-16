@@ -28,7 +28,7 @@
 .header-controls { display: flex; align-items: center; gap: .55rem; }
 .header-status-control { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid #27334a; background: #121a29; color: #e7edf9; border-radius: 7px; padding: .48rem .7rem; font-size: .78rem; }
 .header-status-control .status-dot { width: .45rem; height: .45rem; background: #20d39b; box-shadow: 0 0 10px rgba(32,211,155,.55); }
-.header-status-control.is-offline .status-dot { background: #f4ae3d; box-shadow: none; }
+.header-status-control.is-offline .status-dot { background: #f87171; box-shadow: 0 0 10px rgba(248,113,113,.4); }
 .account-menu { position: relative; }
 .account-menu summary { list-style: none; cursor: pointer; min-width: 130px; display: flex; gap: .5rem; align-items: center; justify-content: space-between; border: 1px solid #27334a; border-radius: 7px; padding: .48rem .7rem; font-size: .8rem; }
 .account-menu summary::-webkit-details-marker { display: none; }

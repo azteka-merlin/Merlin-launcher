@@ -4,6 +4,7 @@ const translations = {
         config: 'Configuração',
         steam_ready: 'Steam pronta',
         steam_not_detected: 'Steam não detectada',
+        steam_settings_pending: 'Configurações pendentes',
         account_menu: 'Minha conta',
         my_access: 'Meu acesso',
         tier_bronze: 'Bronze', tier_prata: 'Prata', tier_ouro: 'Ouro',
@@ -76,6 +77,8 @@ const translations = {
         billing_portal_failed: 'Não foi possível abrir o portal de assinatura.',
         files_verified: 'Arquivos verificados com sucesso',
         files_already_ok: 'Tudo já está configurado.',
+        repair_steam_close_failed: 'Não foi possível fechar a Steam por completo. Feche-a pelo Gerenciador de Tarefas e tente Reparar novamente.',
+        repair_steam_files_locked: 'A Steam ainda está usando um arquivo do Merlin. Feche-a por completo e tente Reparar novamente.',
         activation_path_invalid: 'O caminho configurado não é uma instalação válida do Steam.',
         activation_files_missing: 'Os arquivos obrigatórios não estão instalados. Clique em Reparar primeiro.'
     },
@@ -84,6 +87,7 @@ const translations = {
         config: 'Configuration',
         steam_ready: 'Steam ready',
         steam_not_detected: 'Steam not detected',
+        steam_settings_pending: 'Setup pending',
         account_menu: 'My account',
         my_access: 'My access',
         tier_bronze: 'Bronze', tier_prata: 'Silver', tier_ouro: 'Gold',
@@ -156,6 +160,8 @@ const translations = {
         billing_portal_failed: 'Could not open the subscription portal.',
         files_verified: 'Files verified successfully',
         files_already_ok: 'Everything is already set up.',
+        repair_steam_close_failed: 'Steam could not be closed completely. Close it in Task Manager and try Repair again.',
+        repair_steam_files_locked: 'Steam is still using a Merlin file. Close Steam completely and try Repair again.',
         activation_path_invalid: 'The configured path is not a valid Steam installation.',
         activation_files_missing: 'Required files are not installed. Click Repair first.'
     },
@@ -164,6 +170,7 @@ const translations = {
         config: 'Configuración',
         steam_ready: 'Steam lista',
         steam_not_detected: 'Steam no detectada',
+        steam_settings_pending: 'Configuración pendiente',
         account_menu: 'Mi cuenta',
         my_access: 'Mi acceso',
         tier_bronze: 'Bronce', tier_prata: 'Plata', tier_ouro: 'Oro',
@@ -236,6 +243,8 @@ const translations = {
         billing_portal_failed: 'No se pudo abrir el portal de suscripción.',
         files_verified: 'Archivos verificados con éxito',
         files_already_ok: 'Todo ya está configurado.',
+        repair_steam_close_failed: 'No se pudo cerrar Steam por completo. Ciérrela desde el Administrador de tareas e intente Reparar de nuevo.',
+        repair_steam_files_locked: 'Steam sigue usando un archivo de Merlin. Cierre Steam por completo e intente Reparar de nuevo.',
         activation_path_invalid: 'La ruta configurada no es una instalación válida de Steam.',
         activation_files_missing: 'Los archivos obligatorios no están instalados. Use Reparar primero.'
     },
@@ -244,6 +253,7 @@ const translations = {
         config: 'Configuration',
         steam_ready: 'Steam prête',
         steam_not_detected: 'Steam non détectée',
+        steam_settings_pending: 'Configuration requise',
         account_menu: 'Mon compte',
         my_access: 'Mon accès',
         tier_bronze: 'Bronze', tier_prata: 'Argent', tier_ouro: 'Or',
@@ -316,6 +326,8 @@ const translations = {
         billing_portal_failed: 'Impossible d’ouvrir le portail d’abonnement.',
         files_verified: 'Fichiers vérifiés avec succès',
         files_already_ok: 'Tout est déjà configuré.',
+        repair_steam_close_failed: 'Steam n’a pas pu être fermée complètement. Fermez-la dans le Gestionnaire des tâches puis réessayez Réparer.',
+        repair_steam_files_locked: 'Steam utilise encore un fichier Merlin. Fermez Steam complètement puis réessayez Réparer.',
         activation_path_invalid: 'Le chemin configuré n’est pas une installation Steam valide.',
         activation_files_missing: 'Les fichiers requis ne sont pas installés. Utilisez Réparer.'
     },
@@ -324,6 +336,7 @@ const translations = {
         config: 'Einstellungen',
         steam_ready: 'Steam bereit',
         steam_not_detected: 'Steam nicht erkannt',
+        steam_settings_pending: 'Einrichtung erforderlich',
         account_menu: 'Mein Konto',
         my_access: 'Mein Zugang',
         tier_bronze: 'Bronze', tier_prata: 'Silber', tier_ouro: 'Gold',
@@ -396,6 +409,8 @@ const translations = {
         billing_portal_failed: 'Das Abonnement-Portal konnte nicht geöffnet werden.',
         files_verified: 'Dateien erfolgreich verifiziert',
         files_already_ok: 'Alles ist bereits eingerichtet.',
+        repair_steam_close_failed: 'Steam konnte nicht vollständig geschlossen werden. Schließen Sie Steam im Task-Manager und versuchen Sie die Reparatur erneut.',
+        repair_steam_files_locked: 'Steam verwendet noch eine Merlin-Datei. Schließen Sie Steam vollständig und versuchen Sie die Reparatur erneut.',
         activation_path_invalid: 'Der konfigurierte Pfad ist keine gültige Steam-Installation.',
         activation_files_missing: 'Erforderliche Dateien fehlen. Verwenden Sie zuerst Reparieren.'
     }
@@ -615,6 +630,8 @@ let config = {};
 let currentAppId = null;
 let webview;
 let billingPortalBusy = false;
+let steamIsDetected = false;
+let steamFilesAreReady = false;
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -737,6 +754,7 @@ async function loadConfig() {
 }
 
 function updateSteamStatus(isDetected) {
+    steamIsDetected = Boolean(isDetected);
     const indicator = document.getElementById('steamStatus');
     const text = document.getElementById('steamStatusText');
 
@@ -750,13 +768,21 @@ function updateSteamStatus(isDetected) {
 
     const headerStatus = document.getElementById('steamHeaderStatus');
     const popoverText = document.getElementById('steamStatusPopoverText');
-    if (headerStatus) {
-        headerStatus.classList.toggle('is-offline', !isDetected);
-        headerStatus.lastElementChild.textContent = isDetected ? t('steam_ready') : t('steam_not_detected');
-    }
+    updateSteamHeaderStatus();
     if (popoverText) popoverText.textContent = isDetected ? t('steam_detected_here') : t('steam_not_detected_here');
     const popoverDot = document.getElementById('steamPopoverSteamDot');
     popoverDot?.classList.toggle('online', isDetected);
+}
+
+function updateSteamHeaderStatus() {
+    const headerStatus = document.getElementById('steamHeaderStatus');
+    if (!headerStatus) return;
+
+    const isReady = steamIsDetected && steamFilesAreReady;
+    const statusKey = isReady ? 'steam_ready' : 'steam_settings_pending';
+    headerStatus.classList.toggle('is-offline', !isReady);
+    headerStatus.lastElementChild.setAttribute('data-i18n', statusKey);
+    headerStatus.lastElementChild.textContent = t(statusKey);
 }
 
 function setBillingPortalBusy(isBusy) {
@@ -1124,7 +1150,6 @@ function setupEventListeners() {
         }
 
         try {
-            let steamWasClosedForRepair = false;
             const filesStatus = await window.electronAPI.checkFilesStatus();
             if (filesStatus?.ok) {
                 await refreshStatusIndicators();
@@ -1136,9 +1161,11 @@ function setupEventListeners() {
                 const shouldCloseSteam = await askToCloseSteamForRepair();
                 if (!shouldCloseSteam) return;
                 showNotification(t('closing_steam'));
-                await window.electronAPI.closeSteam();
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                steamWasClosedForRepair = true;
+                const closed = await window.electronAPI.closeSteam();
+                if (!closed || await window.electronAPI.isSteamRunning()) {
+                    showNotification(t('repair_steam_close_failed'), 'error');
+                    return;
+                }
             }
 
             const result = await window.electronAPI.verifyFiles();
@@ -1154,7 +1181,11 @@ function setupEventListeners() {
                 showNotification(t('files_already_ok'));
             }
         } catch (error) {
-            showNotification(`${t('download_error')}: ${error.message}`, 'error');
+            const isSteamFileLocked = /Steam appears to be using/i.test(error?.message || '');
+            showNotification(
+                isSteamFileLocked ? t('repair_steam_files_locked') : `${t('download_error')}: ${error.message}`,
+                'error'
+            );
         }
     });
 
@@ -1315,6 +1346,7 @@ window.merlinSteamContext = {
 };
 
 function updateFilesStatus(ok) {
+    steamFilesAreReady = Boolean(ok);
     const dot = document.getElementById('filesStatus');
     const text = document.getElementById('filesStatusText');
 
@@ -1337,6 +1369,8 @@ function updateFilesStatus(ok) {
         popoverDot?.classList.add('offline');
         if (popoverText) popoverText.textContent = t('steam_files_repair');
     }
+
+    updateSteamHeaderStatus();
 }
 
 // Download and install a game
