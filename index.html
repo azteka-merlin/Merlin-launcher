@@ -48,6 +48,10 @@
                 </div>
             </div>
         </header>
+        <section id="expiredAccessNotice" class="expired-access-notice" hidden role="status">
+            <span id="expiredAccessNoticeText">Seu acesso expirou. Acesse Minha conta para regularizar seu plano e continuar usando o Merlin.</span>
+            <button id="expiredAccessPlansBtn" type="button">Regularizar acesso</button>
+        </section>
 
         <!-- Main Content -->
         <div class="main-content">
@@ -1092,6 +1096,7 @@
             </div>
         </div>
     </div>
+    <script src="src/renderer/auth/entitlement-monitor.js"></script>
     <script src="src/renderer/auth/license-gate.js"></script>
     <script src="node_modules/@floating-ui/dom/dist/floating-ui.dom.umd.min.js"></script>
     <script src="renderer.js"></script>

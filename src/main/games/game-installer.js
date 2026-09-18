@@ -136,6 +136,8 @@ function createGameInstaller({
     function getApiErrorCode(error) {
         const payload = getApiErrorPayload(error);
         const code = payload.code || error?.code || '';
+        const detail = getApiErrorDetail(error).toLowerCase();
+        if (error?.response?.status === 401 && detail.includes('license expired')) return 'expired';
         return typeof code === 'string' ? code : '';
     }
 
@@ -230,6 +232,8 @@ function createGameInstaller({
                         break;
                     }
                 } catch (error) {
+                    const apiErrorCode = getApiErrorCode(error);
+                    if (apiErrorCode === 'expired') error.code = 'expired';
                     console.error(`Attempt ${i + 1} failed (${source.name}):`, error.message);
                     if (
                         isNormalTestLimitError(error)

@@ -41,17 +41,19 @@ function registerAuthIpc({ ipcMain, authSession, shell, apiBaseUrl, onLogout }) 
         await shell.openExternal(url);
         return { ok: true, url };
     });
-    ipcMain.handle('auth:open-access', async () => {
+    ipcMain.handle('auth:open-access', async (_event, options = {}) => {
         let url = getAccessUrl(apiBaseUrl);
-        try {
-            const handoff = await authSession.createAccessHandoff?.();
-            if (handoff?.ok && handoff.token) {
-                // Keep the opaque handoff token in the URL fragment. Browsers
-                // do not send fragments in HTTP requests or server logs.
-                url = `${url}#handoff=${encodeURIComponent(handoff.token)}`;
+        if (options?.handoff !== false) {
+            try {
+                const handoff = await authSession.createAccessHandoff?.();
+                if (handoff?.ok && handoff.token) {
+                    // Keep the opaque handoff token in the URL fragment. Browsers
+                    // do not send fragments in HTTP requests or server logs.
+                    url = `${url}#handoff=${encodeURIComponent(handoff.token)}`;
+                }
+            } catch (_) {
+                // The public page remains available as a safe fallback.
             }
-        } catch (_) {
-            // The public page remains available as a safe fallback.
         }
         await shell.openExternal(url);
         return { ok: true, url };

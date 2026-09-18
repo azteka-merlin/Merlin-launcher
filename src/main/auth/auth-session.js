@@ -118,6 +118,18 @@ function createAuthSession({
         };
     }
 
+    // An expired entitlement must block server operations, but it is not a
+    // device-security event. Keeping the local session lets the user see the
+    // launcher and renew through their account without entering the key again.
+    function preserveExpiredSession() {
+        const stored = loadStoredSession();
+        if (!stored) return null;
+        stored.license = { ...stored.license, status: 'expired' };
+        session = stored;
+        persistSession();
+        return { ...publicSession(), expired: true };
+    }
+
     function normalizeBilling(rawBilling) {
         return {
             accessType: rawBilling?.accessType || 'free',
@@ -204,7 +216,10 @@ function createAuthSession({
         try {
             return await refresh();
         } catch (error) {
-            if (['invalid_key', 'expired', 'revoked', 'hwid_mismatch'].includes(error.code)) {
+            if (error.code === 'expired') {
+                return preserveExpiredSession() || { authenticated: false, code: 'expired' };
+            }
+            if (['invalid_key', 'revoked', 'hwid_mismatch'].includes(error.code)) {
                 clearStoredSession();
             }
             return { authenticated: false, code: error.code || 'server_error' };
@@ -260,7 +275,11 @@ function createAuthSession({
             await refresh();
             return session.accessToken;
         } catch (error) {
-            if (['invalid_key', 'expired', 'revoked', 'hwid_mismatch'].includes(error.code)) {
+            if (error.code === 'expired') {
+                preserveExpiredSession();
+                throw error;
+            }
+            if (['invalid_key', 'revoked', 'hwid_mismatch'].includes(error.code)) {
                 clearStoredSession();
                 onAuthRequired(error.code);
             }
@@ -334,9 +353,20 @@ function createAuthSession({
     async function handleUnauthorized() {
         if (session) session.accessTokenExpiresAt = 0;
         try {
-            await refresh();
+            const refreshed = await refresh();
+            // Login is intentionally allowed for an expired license so it can
+            // browse and renew. A protected endpoint must still stop here,
+            // rather than retrying the request and disguising expiry as 401.
+            if (refreshed?.license?.status === 'expired') {
+                preserveExpiredSession();
+                throw new AuthError('expired', 'This license has expired.');
+            }
         } catch (error) {
-            if (['invalid_key', 'expired', 'revoked', 'hwid_mismatch'].includes(error.code)) {
+            if (error.code === 'expired') {
+                preserveExpiredSession();
+                throw error;
+            }
+            if (['invalid_key', 'revoked', 'hwid_mismatch'].includes(error.code)) {
                 clearStoredSession();
             }
             onAuthRequired(error.code || 'invalid_key');

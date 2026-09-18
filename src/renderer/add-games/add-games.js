@@ -102,27 +102,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         ptbr: {
             games_error_catalog_not_found: 'Nenhum jogo foi encontrado para essa busca.',
             games_error_resolve_failed: 'Não foi possível interpretar esse link da Steam.',
-            games_error_test_limit_normal: 'O limite de ativações normais desta licença de teste foi atingido.'
+            games_error_test_limit_normal: 'O limite de ativações normais desta licença de teste foi atingido.',
+            games_error_expired: 'Sua licença expirou. Renove para instalar jogos.'
         },
         en: {
             games_error_catalog_not_found: 'No game was found for this search.',
             games_error_resolve_failed: 'Could not understand this Steam link.',
-            games_error_test_limit_normal: 'This test license has reached its normal activation limit.'
+            games_error_test_limit_normal: 'This test license has reached its normal activation limit.',
+            games_error_expired: 'Your license has expired. Renew it to install games.'
         },
         es: {
             games_error_catalog_not_found: 'No se encontró ningún juego para esta búsqueda.',
             games_error_resolve_failed: 'No se pudo interpretar este enlace de Steam.',
-            games_error_test_limit_normal: 'Esta licencia de prueba alcanzó su límite de activaciones normales.'
+            games_error_test_limit_normal: 'Esta licencia de prueba alcanzó su límite de activaciones normales.',
+            games_error_expired: 'Tu licencia ha caducado. Renuévala para instalar juegos.'
         },
         fr: {
             games_error_catalog_not_found: 'Aucun jeu n’a été trouvé pour cette recherche.',
             games_error_resolve_failed: 'Impossible d’interpréter ce lien Steam.',
-            games_error_test_limit_normal: 'Cette licence de test a atteint sa limite d’activations normales.'
+            games_error_test_limit_normal: 'Cette licence de test a atteint sa limite d’activations normales.',
+            games_error_expired: 'Votre licence a expiré. Renouvelez-la pour installer des jeux.'
         },
         de: {
             games_error_catalog_not_found: 'Für diese Suche wurde kein Spiel gefunden.',
             games_error_resolve_failed: 'Dieser Steam-Link konnte nicht verarbeitet werden.',
-            games_error_test_limit_normal: 'Diese Testlizenz hat ihr Limit für normale Aktivierungen erreicht.'
+            games_error_test_limit_normal: 'Diese Testlizenz hat ihr Limit für normale Aktivierungen erreicht.',
+            games_error_expired: 'Ihre Lizenz ist abgelaufen. Erneuern Sie sie, um Spiele zu installieren.'
         }
     };
 
@@ -416,7 +421,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (requestId !== searchRequestId) return;
 
         if (!result.success) {
-            if (result.code === 'search_failed') {
+            if (result.code === 'expired') {
+                // Expiry is an entitlement state, never a catalog outage.
+                window.merlinServiceStatus?.clear?.('catalog-search');
+            } else if (result.code === 'search_failed') {
                 window.merlinServiceStatus?.report?.('catalog-search');
             }
             clearSuggestions();

@@ -140,9 +140,11 @@ function createPremiumService({
                 };
             }
 
-            const code = error?.code === 'missing'
-                ? 'auth_required'
-                : (error?.response?.status === 401 ? 'auth_required' : 'refresh_failed');
+            const code = error?.code === 'expired'
+                ? 'expired'
+                : (error?.code === 'missing'
+                    ? 'auth_required'
+                    : (error?.response?.status === 401 ? 'auth_required' : 'refresh_failed'));
             return { success: false, code, message: error?.message || 'Could not load premium catalog' };
         }
     }
@@ -191,6 +193,9 @@ function createPremiumService({
                 : error?.message || '';
         const normalized = detail.toLowerCase();
 
+        if (error?.code === 'expired' || normalized.includes('license expired')) {
+            return { code: 'expired', message: detail };
+        }
         if (error?.code === 'missing' || status === 401) {
             return { code: 'auth_required', message: detail };
         }

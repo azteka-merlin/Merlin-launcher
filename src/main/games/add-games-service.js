@@ -14,7 +14,7 @@ function friendlyInstallResult(result) {
         };
     }
 
-    if (['rate_limited', 'manifest_unavailable', 'manifest_sources_unavailable'].includes(result.reason)) {
+    if (['rate_limited', 'manifest_unavailable', 'manifest_sources_unavailable', 'expired'].includes(result.reason)) {
         return {
             ...result,
             code: result.reason

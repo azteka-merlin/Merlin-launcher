@@ -29,6 +29,7 @@ window.merlinI18n.register({
         corrections_admin_note_done: 'Fechar',
         corrections_error_vote_failed: 'Não foi possível registrar sua avaliação agora.',
         corrections_error_auth_required: 'Faça login novamente para avaliar esta correção.',
+        corrections_error_expired: 'Sua licença expirou. Renove para baixar ou aplicar correções.',
         correction_offer_eyebrow: 'CORREÇÃO DISPONÍVEL',
         correction_offer_title: 'Este jogo possui uma correção',
         correction_offer_description: 'Esta correção da comunidade pode ser necessária para abrir o jogo ou utilizar seus recursos online.',
@@ -118,6 +119,7 @@ window.merlinI18n.register({
         corrections_admin_note_done: 'Close',
         corrections_error_vote_failed: 'Could not save your vote right now.',
         corrections_error_auth_required: 'Please sign in again to rate this correction.',
+        corrections_error_expired: 'Your license has expired. Renew it to download or apply corrections.',
         correction_offer_eyebrow: 'CORRECTION AVAILABLE',
         correction_offer_title: 'This game has a correction',
         correction_offer_description: 'This community correction may be required to launch the game or use its online features.',
@@ -207,6 +209,7 @@ window.merlinI18n.register({
         corrections_admin_note_done: 'Cerrar',
         corrections_error_vote_failed: 'No se pudo registrar su valoración ahora.',
         corrections_error_auth_required: 'Vuelva a iniciar sesión para valorar esta corrección.',
+        corrections_error_expired: 'Tu licencia ha caducado. Renuévala para descargar o aplicar correcciones.',
         correction_offer_eyebrow: 'CORRECCIÓN DISPONIBLE',
         correction_offer_title: 'Este juego tiene una corrección',
         correction_offer_description: 'Esta corrección de la comunidad puede ser necesaria para iniciar el juego o utilizar sus funciones en línea.',
@@ -296,6 +299,7 @@ window.merlinI18n.register({
         corrections_admin_note_done: 'Fermer',
         corrections_error_vote_failed: 'Impossible d’enregistrer votre vote pour le moment.',
         corrections_error_auth_required: 'Reconnectez-vous pour évaluer ce correctif.',
+        corrections_error_expired: 'Votre licence a expiré. Renouvelez-la pour télécharger ou appliquer des correctifs.',
         correction_offer_eyebrow: 'CORRECTIF DISPONIBLE',
         correction_offer_title: 'Ce jeu dispose d’un correctif',
         correction_offer_description: 'Ce correctif communautaire peut être nécessaire pour lancer le jeu ou utiliser ses fonctionnalités en ligne.',
@@ -385,6 +389,7 @@ window.merlinI18n.register({
         corrections_admin_note_done: 'Schließen',
         corrections_error_vote_failed: 'Ihre Bewertung konnte gerade nicht gespeichert werden.',
         corrections_error_auth_required: 'Melden Sie sich erneut an, um diese Korrektur zu bewerten.',
+        corrections_error_expired: 'Ihre Lizenz ist abgelaufen. Erneuern Sie sie, um Korrekturen herunterzuladen oder anzuwenden.',
         correction_offer_eyebrow: 'KORREKTUR VERFÜGBAR',
         correction_offer_title: 'Für dieses Spiel ist eine Korrektur verfügbar',
         correction_offer_description: 'Diese Community-Korrektur kann erforderlich sein, um das Spiel zu starten oder seine Online-Funktionen zu nutzen.',
@@ -1173,9 +1178,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await api.vote({ appId: item.appId, vote });
             if (!result?.success) {
-                const key = result?.code === 'auth_required'
-                    ? 'corrections_error_auth_required'
-                    : 'corrections_error_vote_failed';
+            const key = result?.code === 'expired'
+                    ? 'corrections_error_expired'
+                    : result?.code === 'auth_required'
+                        ? 'corrections_error_auth_required'
+                        : 'corrections_error_vote_failed';
                 notify(tr(key), 'error');
                 return;
             }

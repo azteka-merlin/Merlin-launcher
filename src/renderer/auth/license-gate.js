@@ -15,7 +15,8 @@ const licenseGateTranslations = {
         signupFailed: 'Não foi possível abrir o cadastro. Tente novamente.',
         privacy: 'A chave fica protegida neste computador.',
         invalid_key: 'A chave informada não é válida.',
-        expired: 'Esta licença expirou. Fale com o administrador para renovar.',
+        expired: 'Seu acesso expirou. Acesse Minha conta para regularizar seu plano e continuar usando o Merlin.',
+        expiredAction: 'Regularizar acesso',
         revoked: 'Esta licença foi revogada.',
         hwid_mismatch: 'Esta chave já está vinculada a outro computador.',
         unavailable: 'Não foi possível conectar à Merlin API. Tente novamente.',
@@ -43,7 +44,8 @@ const licenseGateTranslations = {
         signupFailed: 'Could not open signup. Try again.',
         privacy: 'Your key is protected on this computer.',
         invalid_key: 'The key you entered is invalid.',
-        expired: 'This license has expired. Contact the administrator to renew it.',
+        expired: 'Your access has expired. Open My Account to regularize your plan and keep using Merlin.',
+        expiredAction: 'Regularize access',
         revoked: 'This license has been revoked.',
         hwid_mismatch: 'This key is already linked to another computer.',
         unavailable: 'Could not connect to the Merlin API. Try again.',
@@ -71,7 +73,8 @@ const licenseGateTranslations = {
         signupFailed: 'No se pudo abrir el registro. Inténtalo de nuevo.',
         privacy: 'Tu clave está protegida en este equipo.',
         invalid_key: 'La clave introducida no es válida.',
-        expired: 'Esta licencia ha caducado. Contacta al administrador para renovarla.',
+        expired: 'Tu acceso ha caducado. Accede a Mi cuenta para regularizar tu plan y seguir usando Merlin.',
+        expiredAction: 'Regularizar acceso',
         revoked: 'Esta licencia ha sido revocada.',
         hwid_mismatch: 'Esta clave ya está vinculada a otro equipo.',
         unavailable: 'No se pudo conectar con Merlin API. Inténtalo de nuevo.',
@@ -99,7 +102,8 @@ const licenseGateTranslations = {
         signupFailed: 'Impossible d’ouvrir l’inscription. Réessayez.',
         privacy: 'Votre clé est protégée sur cet ordinateur.',
         invalid_key: 'La clé saisie est invalide.',
-        expired: 'Cette licence a expiré. Contactez l’administrateur pour la renouveler.',
+        expired: 'Votre accès a expiré. Ouvrez Mon compte pour régulariser votre forfait et continuer à utiliser Merlin.',
+        expiredAction: 'Régulariser l’accès',
         revoked: 'Cette licence a été révoquée.',
         hwid_mismatch: 'Cette clé est déjà liée à un autre ordinateur.',
         unavailable: 'Connexion à Merlin API impossible. Réessayez.',
@@ -127,7 +131,8 @@ const licenseGateTranslations = {
         signupFailed: 'Registrierung konnte nicht geöffnet werden. Versuchen Sie es erneut.',
         privacy: 'Ihr Schlüssel ist auf diesem Computer geschützt.',
         invalid_key: 'Der eingegebene Schlüssel ist ungültig.',
-        expired: 'Diese Lizenz ist abgelaufen. Wenden Sie sich zur Verlängerung an den Administrator.',
+        expired: 'Ihr Zugang ist abgelaufen. Öffnen Sie Mein Konto, um Ihren Plan zu regulieren und Merlin weiter zu nutzen.',
+        expiredAction: 'Zugang regulieren',
         revoked: 'Diese Lizenz wurde widerrufen.',
         hwid_mismatch: 'Dieser Schlüssel ist bereits mit einem anderen Computer verknüpft.',
         unavailable: 'Verbindung zur Merlin API fehlgeschlagen. Versuchen Sie es erneut.',
@@ -155,6 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetModal = document.getElementById('licenseGateResetModal');
     const resetCancel = document.getElementById('licenseGateResetCancel');
     const resetConfirm = document.getElementById('licenseGateResetConfirm');
+    const expiredAccessNotice = document.getElementById('expiredAccessNotice');
+    const expiredAccessNoticeText = document.getElementById('expiredAccessNoticeText');
+    const expiredAccessPlansBtn = document.getElementById('expiredAccessPlansBtn');
+    const entitlementMonitor = window.MerlinEntitlementMonitor.createEntitlementMonitor({
+        getStatus: () => window.electronAPI.auth.status(),
+        onAuthenticated: applyEntitlementStatus
+    });
     let language = 'ptbr';
     let busy = true;
     let mode = 'checking';
@@ -181,6 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('licenseGatePrivacy').textContent = text.privacy;
         signupText.textContent = text.signupText;
         signupLink.textContent = text.signupLink;
+        expiredAccessNoticeText.textContent = text.expired;
+        expiredAccessPlansBtn.textContent = text.expiredAction;
         if (isRateLimited()) renderRateLimitCountdown();
     }
 
@@ -285,7 +299,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showError(code) {
+        entitlementMonitor.stop();
         setApplicationLocked(true);
+        expiredAccessNotice.hidden = true;
         gate.hidden = false;
         gate.classList.remove('is-authenticated');
         setMode('prompt');
@@ -301,13 +317,24 @@ document.addEventListener('DOMContentLoaded', () => {
         input.focus();
     }
 
-    function unlock() {
+    function unlock(sessionData = null) {
         gate.classList.add('is-authenticated');
         setApplicationLocked(false);
-        window.dispatchEvent(new CustomEvent('merlin-authenticated'));
+        applyEntitlementStatus(sessionData);
+        entitlementMonitor.start();
+        window.dispatchEvent(new CustomEvent('merlin-authenticated', { detail: { expired: isExpiredSession(sessionData) } }));
         setTimeout(() => {
             gate.hidden = true;
         }, 260);
+    }
+
+    function isExpiredSession(sessionData) {
+        return sessionData?.license?.status === 'expired' || sessionData?.expired === true;
+    }
+
+    function applyEntitlementStatus(sessionData = null) {
+        const expired = isExpiredSession(sessionData);
+        expiredAccessNotice.hidden = !expired;
     }
 
     input.addEventListener('input', () => {
@@ -344,6 +371,21 @@ document.addEventListener('DOMContentLoaded', () => {
             feedback.dataset.type = 'error';
         } finally {
             signupLink.disabled = false;
+        }
+    });
+
+    expiredAccessPlansBtn.addEventListener('click', async () => {
+        if (expiredAccessPlansBtn.disabled) return;
+        const originalLabel = expiredAccessPlansBtn.textContent;
+        expiredAccessPlansBtn.disabled = true;
+        try {
+      // The handoff identifies the exact license in the public account page.
+      // Expired licenses are allowed to create this read-only handoff, while
+      // revoked licenses remain blocked by the API.
+      await window.electronAPI.auth.openAccess();
+        } finally {
+            expiredAccessPlansBtn.disabled = false;
+            expiredAccessPlansBtn.textContent = originalLabel;
         }
     });
 
@@ -391,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await window.electronAPI.auth.login(normalizeLicenseKey(input.value));
             if (result.authenticated) {
                 input.value = '';
-                unlock();
+                unlock(result);
                 return;
             }
             showError(result.code);
@@ -403,8 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.auth.onRequired(data => showError(data?.code || 'invalid_key'));
     window.addEventListener('merlin-language-changed', loadLanguage);
     window.addEventListener('merlin-logout', () => {
+        entitlementMonitor.stop();
         input.value = '';
+        expiredAccessNotice.hidden = true;
         showError('missing');
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') entitlementMonitor.check();
     });
 
     setApplicationLocked(true);
@@ -428,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await window.electronAPI.auth.status();
             if (result.authenticated) {
-                unlock();
+                unlock(result);
                 return;
             }
             showError(result.code);

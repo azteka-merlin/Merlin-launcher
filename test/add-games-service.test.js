@@ -135,3 +135,25 @@ test('preserves test license normal activation limit errors', async () => {
     assert.equal(install.code, 'test_limit_normal');
     assert.equal(install.message, 'O limite de ativacoes normais desta licenca de teste foi atingido.');
 });
+
+test('preserves an expired license error instead of reducing it to a generic installation failure', async () => {
+    const service = createAddGamesService({
+        parseSteamGameLink: link => ({ appId: link, fallbackName: `Game ${link}` }),
+        nameResolver: { resolve: async (_appId, fallback) => fallback },
+        catalogService: {
+            resolveByAppId: async appId => ({ appId, name: `Catalog ${appId}`, coverUrl: null }),
+            search: async () => []
+        },
+        queue: createGameQueue(),
+        gameInstaller: {
+            install: async () => ({ success: false, reason: 'expired', message: 'License expired' })
+        },
+        configStore: { get: () => ({ steamPath: 'C:\\Steam' }) },
+        steamService: {}
+    });
+
+    const install = await service.installNow({ selected: { appId: '10', name: 'God of War' } });
+
+    assert.equal(install.success, false);
+    assert.equal(install.code, 'expired');
+});

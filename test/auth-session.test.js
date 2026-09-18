@@ -207,3 +207,77 @@ test('auth session logout clears persisted access', async () => {
     assert.equal(session.hasStoredSession(), false);
     await assert.rejects(() => session.getAccessToken(), { code: 'missing' });
 });
+
+test('expired license keeps the local launcher session but blocks token refresh', async () => {
+    let loginAttempts = 0;
+    const fs = createMemoryFs();
+    const session = createAuthSession({
+        app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
+        safeStorage: createSafeStorage(),
+        fs,
+        path,
+        axios: {
+            post: async () => {
+                loginAttempts += 1;
+                if (loginAttempts === 1) {
+                    return {
+                        data: {
+                            accessToken: 'token-expired',
+                            expiresIn: 0,
+                            license: { name: 'Azteka', expiresAt: '2026-09-01', status: 'active' }
+                        }
+                    };
+                }
+                const error = new Error('License expired');
+                error.response = { status: 401, data: { message: 'License expired' } };
+                throw error;
+            }
+        },
+        httpsAgent: {},
+        machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    });
+
+    await session.login('MERLIN-ABCD-EFGH-JKLM');
+    const status = await session.status();
+    assert.equal(status.authenticated, true);
+    assert.equal(status.expired, true);
+    assert.equal(status.license.status, 'expired');
+    assert.equal(session.hasStoredSession(), true);
+
+    await assert.rejects(() => session.getAccessToken(), { code: 'expired' });
+    assert.equal(session.hasStoredSession(), true);
+});
+
+test('a protected request reports expired when its session refresh returns an expired license', async () => {
+    let loginAttempts = 0;
+    const session = createAuthSession({
+        app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
+        safeStorage: createSafeStorage(),
+        fs: createMemoryFs(),
+        path,
+        axios: {
+            post: async () => {
+                loginAttempts += 1;
+                return {
+                    data: {
+                        accessToken: loginAttempts === 1 ? 'token-active' : 'token-expired',
+                        expiresIn: 3600,
+                        license: {
+                            name: 'Azteka',
+                            expiresAt: '2026-09-01',
+                            status: loginAttempts === 1 ? 'active' : 'expired'
+                        }
+                    }
+                };
+            }
+        },
+        httpsAgent: {},
+        machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    });
+
+    await session.login('MERLIN-ABCD-EFGH-JKLM');
+    await assert.rejects(() => session.handleUnauthorized(), { code: 'expired' });
+    assert.equal((await session.status()).license.status, 'expired');
+});

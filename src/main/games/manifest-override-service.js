@@ -33,7 +33,15 @@ function createManifestOverrideService({
             } catch (error) {
                 lastError = error;
                 if (error?.response?.status === 401 && attempt === 0) {
-                    await authSession.handleUnauthorized();
+                    try {
+                        await authSession.handleUnauthorized();
+                    } catch (authError) {
+                        // An expired license can browse games, but the manifest
+                        // policy is an activation-only detail. Keep search
+                        // results visible and let the install flow block it.
+                        if (authError?.code === 'expired') return false;
+                        throw authError;
+                    }
                     continue;
                 }
                 break;

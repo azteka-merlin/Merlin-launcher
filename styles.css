@@ -24,6 +24,11 @@
 
 /* Launcher shell: navigation is intentionally separate from contextual Steam actions. */
 .header { min-height: 66px; padding: .75rem 1.25rem; }
+.expired-access-notice { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:0; padding:.65rem 1.25rem; border-bottom:1px solid rgba(244,181,64,.38); background:rgba(126,82,15,.16); color:#ffe0a1; font-size:.84rem; }
+.expired-access-notice button { flex:0 0 auto; border:1px solid rgba(244,181,64,.5); border-radius:8px; padding:.42rem .7rem; background:rgba(244,181,64,.12); color:#ffe6ad; font:inherit; font-weight:700; cursor:pointer; }
+.expired-access-notice button:hover { background:rgba(244,181,64,.22); }
+.expired-access-notice button:disabled { cursor:wait; opacity:.65; }
+@media (max-width: 640px) { .expired-access-notice { align-items:flex-start; flex-direction:column; gap:.55rem; } }
 .header-content { justify-content: flex-end; }
 .header-controls { display: flex; align-items: center; gap: .55rem; }
 .header-status-control { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid #27334a; background: #121a29; color: #e7edf9; border-radius: 7px; padding: .48rem .7rem; font-size: .78rem; }

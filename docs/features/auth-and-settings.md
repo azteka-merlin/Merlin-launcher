@@ -25,6 +25,8 @@
 
 Recursos autenticados podem renovar token uma vez em 401. Se a renovacao falhar, recebem `auth:required` e o front deve voltar ao portao, sem expor resposta HTTP.
 
+Enquanto a sessao estiver aberta, o launcher revalida a situacao da licenca a cada cinco minutos e ao retornar ao foco. Uma expiracao confirmada revela o aviso de regularizacao sem exigir novo login; indisponibilidade temporaria da API preserva a interface e a sessao local.
+
 ## Assinatura e links de conta
 
 - O botao de assinatura aparece somente com `license.billing.canManageSubscription`.

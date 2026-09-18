@@ -53,6 +53,7 @@ window.merlinI18n.register({
         premium_error_load: 'Não foi possível carregar a lista premium.',
         premium_error_refresh_failed: 'Não foi possível atualizar a lista premium.',
         premium_error_auth_required: 'Faça login novamente para usar as ativações premium.',
+        premium_error_expired: 'Sua licença expirou. Renove para continuar usando as ativações premium.',
         premium_error_busy: 'Já existe outra ativação premium em andamento.',
         premium_error_not_found: 'Este jogo premium não está mais disponível.',
         premium_error_game_not_installed: 'O jogo precisa estar instalado antes da ativação premium.',
@@ -185,6 +186,7 @@ window.merlinI18n.register({
         premium_error_load: 'Could not load the premium list.',
         premium_error_refresh_failed: 'Could not refresh the premium list.',
         premium_error_auth_required: 'Please sign in again to use premium activations.',
+        premium_error_expired: 'Your license has expired. Renew it to continue using premium activations.',
         premium_error_busy: 'Another premium activation is already running.',
         premium_error_not_found: 'This premium game is no longer available.',
         premium_error_game_not_installed: 'The game must be installed before the premium activation.',
@@ -317,6 +319,7 @@ window.merlinI18n.register({
         premium_error_load: 'No se pudo cargar la lista premium.',
         premium_error_refresh_failed: 'No se pudo actualizar la lista premium.',
         premium_error_auth_required: 'Vuelva a iniciar sesión para usar las activaciones premium.',
+        premium_error_expired: 'Tu licencia ha caducado. Renuévala para seguir usando las activaciones premium.',
         premium_error_busy: 'Ya hay otra activación premium en curso.',
         premium_error_not_found: 'Este juego premium ya no está disponible.',
         premium_error_game_not_installed: 'El juego debe estar instalado antes de la activación premium.',
@@ -449,6 +452,7 @@ window.merlinI18n.register({
         premium_error_load: 'Impossible de charger la liste premium.',
         premium_error_refresh_failed: 'Impossible d’actualiser la liste premium.',
         premium_error_auth_required: 'Reconnectez-vous pour utiliser les activations premium.',
+        premium_error_expired: 'Votre licence a expiré. Renouvelez-la pour continuer à utiliser les activations premium.',
         premium_error_busy: 'Une autre activation premium est déjà en cours.',
         premium_error_not_found: 'Ce jeu premium n’est plus disponible.',
         premium_error_game_not_installed: 'Le jeu doit être installé avant l’activation premium.',
@@ -581,6 +585,7 @@ window.merlinI18n.register({
         premium_error_load: 'Die Premium-Liste konnte nicht geladen werden.',
         premium_error_refresh_failed: 'Die Premium-Liste konnte nicht aktualisiert werden.',
         premium_error_auth_required: 'Bitte melden Sie sich erneut an, um Premium-Aktivierungen zu nutzen.',
+        premium_error_expired: 'Ihre Lizenz ist abgelaufen. Erneuern Sie sie, um Premium-Aktivierungen weiter zu nutzen.',
         premium_error_busy: 'Eine andere Premium-Aktivierung läuft bereits.',
         premium_error_not_found: 'Dieses Premium-Spiel ist nicht mehr verfügbar.',
         premium_error_game_not_installed: 'Das Spiel muss vor der Premium-Aktivierung installiert sein.',
@@ -1491,8 +1496,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (generation !== loadGeneration) return;
 
             if (!result.success) {
-                window.merlinServiceStatus?.report?.('premium-catalog');
-                notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
+                if (result.code === 'expired') {
+                    // Expiry is an account state, not a service outage.
+                    window.merlinServiceStatus?.clear?.('premium-catalog');
+                    notify(tr('premium_error_expired'), 'error');
+                } else {
+                    window.merlinServiceStatus?.report?.('premium-catalog');
+                    notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
+                }
                 elements.loading.hidden = true;
                 return;
             }

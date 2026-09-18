@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         manageSubscription: () => ipcRenderer.invoke('auth:manage-subscription'),
     openSignup: () => ipcRenderer.invoke('auth:open-signup'),
     openPlans: () => ipcRenderer.invoke('auth:open-plans'),
-    openAccess: () => ipcRenderer.invoke('auth:open-access'),
+    openAccess: (options) => ipcRenderer.invoke('auth:open-access', options),
         onRequired: (callback) => ipcRenderer.on('auth:required', (_event, data) => callback(data))
     },
 
