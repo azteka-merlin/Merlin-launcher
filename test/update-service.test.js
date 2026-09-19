@@ -1,7 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createUpdateService } = require('../src/main/updates/update-service');
+const { createUpdateService, isAllowedDownloadUrl } = require('../src/main/updates/update-service');
+
+test('allows release downloads only from the renamed launcher repository', () => {
+    assert.equal(isAllowedDownloadUrl('https://github.com/azteka-merlin/Merlin-launcher/releases/download/v1.6.5/Merlin.Setup.1.6.5.exe'), true);
+    assert.equal(isAllowedDownloadUrl('https://github.com/azteka-merlin/Merlin-luncher/releases/download/v1.6.5/Merlin.Setup.1.6.5.exe'), false);
+});
 
 test('exposes an available update when the explicit development simulation is enabled', async () => {
     const previous = {

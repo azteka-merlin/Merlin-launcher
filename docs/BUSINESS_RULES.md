@@ -112,7 +112,7 @@ Codigos esperados:
 - Download URL precisa ser permitido explicitamente.
 - Atualmente URLs permitidas:
   - `https://api-merlin.com/api/updates/download`
-  - GitHub releases em `/azteka-merlin/Merlin-luncher/releases/download/`
+  - GitHub releases em `/azteka-merlin/Merlin-launcher/releases/download/`
 - Arquivo baixado precisa ser `.exe` para abrir como update.
 
 ## Compatibilidade E FAQ

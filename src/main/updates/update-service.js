@@ -26,7 +26,7 @@ function isAllowedDownloadUrl(value, allowedApiDownloadUrl = UPDATE_DOWNLOAD_API
             return true;
         }
         return url.hostname === 'github.com'
-            && url.pathname.startsWith('/azteka-merlin/Merlin-luncher/releases/download/');
+            && url.pathname.startsWith('/azteka-merlin/Merlin-launcher/releases/download/');
     } catch {
         return false;
     }
@@ -152,4 +152,4 @@ function createUpdateService({
     return { cancelDownload, check, downloadUpdate, openDownload, openDownloadedFile, openDownloadedFolder };
 }
 
-module.exports = { createUpdateService, compareVersions, normalizeVersion };
+module.exports = { createUpdateService, compareVersions, isAllowedDownloadUrl, normalizeVersion };

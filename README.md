@@ -53,7 +53,7 @@ the app shows the next available date in Brasília time.
 
 ### Option 1: Executable (Recommended)
 
-Download the latest installer from the [releases](https://github.com/azteka-merlin/Merlin-luncher/releases) page and run it.
+Download the latest installer from the [releases](https://github.com/azteka-merlin/Merlin-launcher/releases) page and run it.
 
 The Windows installer requests administrator permission. If Steam is found at
 the default `C:\Program Files (x86)\Steam` location, it automatically installs
@@ -64,8 +64,8 @@ custom locations can still be configured and repaired from inside Merlin.
 
 1. **Clone the repository**
 ```bash
-   git clone https://github.com/azteka-merlin/Merlin-luncher.git
-   cd Merlin-luncher
+   git clone https://github.com/azteka-merlin/Merlin-launcher.git
+   cd Merlin-launcher
 ```
 
 2. **Install dependencies**

@@ -13,7 +13,7 @@ Quick guide to run, validate, build, and publish the Merlin desktop app.
 ## Run Locally
 
 ```powershell
-cd path\to\Merlin-luncher
+cd path\to\Merlin-launcher
 npm install
 npm run doctor
 npm start
@@ -68,7 +68,7 @@ Also supported:
 ## Pre-Release Checks
 
 ```powershell
-cd path\to\Merlin-luncher
+cd path\to\Merlin-launcher
 npm install
 npm run doctor
 npm test
