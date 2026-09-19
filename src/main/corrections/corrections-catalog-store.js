@@ -6,6 +6,9 @@ function normalizeItem(value) {
     const releaseDate = typeof value.releaseDate === 'string' && !Number.isNaN(Date.parse(value.releaseDate))
         ? value.releaseDate
         : null;
+    const manualAddedAt = typeof value.manualAddedAt === 'string' && !Number.isNaN(Date.parse(value.manualAddedAt))
+        ? value.manualAddedAt
+        : null;
     const hasDrm = value.hasDrm === true;
     const correction = value.correction && typeof value.correction === 'object'
         ? {
@@ -31,6 +34,7 @@ function normalizeItem(value) {
         gameName,
         imageUrl: imageUrl || null,
         releaseDate,
+        manualAddedAt,
         hasDrm,
         correction: {
             href: correction.href,

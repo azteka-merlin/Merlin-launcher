@@ -12,6 +12,7 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
                         appid: 10,
                         name: 'Example Game',
                         releaseDate: '2026-09-18',
+                        manualAddedAt: '2026-09-17',
                         hasDrm: true,
                         fixes: [
                             {
@@ -43,6 +44,7 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
         appId: '10',
         gameName: 'Example Game',
         releaseDate: '2026-09-18',
+        manualAddedAt: '2026-09-17',
         hasDrm: true,
         correction: {
             href: 'https://example.com/fix.zip',
@@ -72,5 +74,6 @@ test('keeps corrections without catalog metadata sortable after a cache refresh'
 
     const result = await client.download();
     assert.equal(result.items[0].releaseDate, null);
+    assert.equal(result.items[0].manualAddedAt, null);
     assert.equal(result.items[0].hasDrm, false);
 });
