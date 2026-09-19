@@ -637,12 +637,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (groupDelta !== 0) return groupDelta;
             const drmDelta = Number(right.hasDrm === true) - Number(left.hasDrm === true);
             if (drmDelta !== 0) return drmDelta;
+            const scoreDelta = Number(right?.correction?.score || 0) - Number(left?.correction?.score || 0);
+            if (priorityGroup(left) === 2 && scoreDelta !== 0) return scoreDelta;
+            const upvotesDelta = Number(right?.correction?.upvotes || 0) - Number(left?.correction?.upvotes || 0);
+            if (priorityGroup(left) === 2 && upvotesDelta !== 0) return upvotesDelta;
             const leftRelease = releaseTimestamp(left.releaseDate);
             const rightRelease = releaseTimestamp(right.releaseDate);
             if (leftRelease !== rightRelease) return rightRelease - leftRelease;
-            const scoreDelta = Number(right?.correction?.score || 0) - Number(left?.correction?.score || 0);
             if (scoreDelta !== 0) return scoreDelta;
-            const upvotesDelta = Number(right?.correction?.upvotes || 0) - Number(left?.correction?.upvotes || 0);
             if (upvotesDelta !== 0) return upvotesDelta;
             return left.gameName.localeCompare(right.gameName);
         });
