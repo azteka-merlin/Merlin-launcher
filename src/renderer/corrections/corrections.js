@@ -625,22 +625,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return [...collection].sort((left, right) => {
             const isCurrentYear = value => String(value || '').slice(0, 4) === String(new Date().getFullYear());
             const priorityGroup = item => {
-                if (isCurrentYear(item.releaseDate) || isCurrentYear(item.manualAddedAt)) return 0;
-                if (item.hasDrm === true) return 1;
+                if (item.hasDrm === true) return 0;
+                if (Number(item?.correction?.upvotes || 0) > 0 || Number(item?.correction?.downvotes || 0) > 0) return 1;
                 return 2;
             };
+            const isCurrentDenuvo = item => item.hasDrm === true
+                && (isCurrentYear(item.releaseDate) || isCurrentYear(item.manualAddedAt));
             const releaseTimestamp = value => {
                 const timestamp = Date.parse(String(value || ''));
                 return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
             };
             const groupDelta = priorityGroup(left) - priorityGroup(right);
             if (groupDelta !== 0) return groupDelta;
+            if (priorityGroup(left) === 0) {
+                const currentDenuvoDelta = Number(isCurrentDenuvo(right)) - Number(isCurrentDenuvo(left));
+                if (currentDenuvoDelta !== 0) return currentDenuvoDelta;
+            }
             const drmDelta = Number(right.hasDrm === true) - Number(left.hasDrm === true);
             if (drmDelta !== 0) return drmDelta;
             const scoreDelta = Number(right?.correction?.score || 0) - Number(left?.correction?.score || 0);
-            if (priorityGroup(left) === 2 && scoreDelta !== 0) return scoreDelta;
             const upvotesDelta = Number(right?.correction?.upvotes || 0) - Number(left?.correction?.upvotes || 0);
-            if (priorityGroup(left) === 2 && upvotesDelta !== 0) return upvotesDelta;
             const leftRelease = releaseTimestamp(left.releaseDate);
             const rightRelease = releaseTimestamp(right.releaseDate);
             if (leftRelease !== rightRelease) return rightRelease - leftRelease;
