@@ -38,10 +38,15 @@ function normalizeRemoteGame(entry) {
 
     const correction = firstEligibleCorrection(entry.fixes);
     if (!correction) return null;
+    const releaseDate = typeof entry.releaseDate === 'string' && !Number.isNaN(Date.parse(entry.releaseDate))
+        ? entry.releaseDate
+        : null;
 
     return {
         appId,
         gameName,
+        releaseDate,
+        hasDrm: entry.hasDrm === true,
         correction
     };
 }

@@ -3,6 +3,10 @@ function normalizeItem(value) {
     const appId = String(value.appId || '').trim();
     const gameName = typeof value.gameName === 'string' ? value.gameName.trim() : '';
     const imageUrl = typeof value.imageUrl === 'string' ? value.imageUrl.trim() : '';
+    const releaseDate = typeof value.releaseDate === 'string' && !Number.isNaN(Date.parse(value.releaseDate))
+        ? value.releaseDate
+        : null;
+    const hasDrm = value.hasDrm === true;
     const correction = value.correction && typeof value.correction === 'object'
         ? {
             href: typeof value.correction.href === 'string' ? value.correction.href.trim() : '',
@@ -26,6 +30,8 @@ function normalizeItem(value) {
         appId,
         gameName,
         imageUrl: imageUrl || null,
+        releaseDate,
+        hasDrm,
         correction: {
             href: correction.href,
             filename: correction.filename,

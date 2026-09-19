@@ -623,6 +623,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function sortItems(collection) {
         return [...collection].sort((left, right) => {
+            const releaseTimestamp = value => {
+                const timestamp = Date.parse(String(value || ''));
+                return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+            };
+            const leftRelease = releaseTimestamp(left.releaseDate);
+            const rightRelease = releaseTimestamp(right.releaseDate);
+            if (leftRelease !== rightRelease) return rightRelease - leftRelease;
+            const drmDelta = Number(right.hasDrm === true) - Number(left.hasDrm === true);
+            if (drmDelta !== 0) return drmDelta;
             const scoreDelta = Number(right?.correction?.score || 0) - Number(left?.correction?.score || 0);
             if (scoreDelta !== 0) return scoreDelta;
             const upvotesDelta = Number(right?.correction?.upvotes || 0) - Number(left?.correction?.upvotes || 0);

@@ -11,6 +11,8 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
                     {
                         appid: 10,
                         name: 'Example Game',
+                        releaseDate: '2026-09-18',
+                        hasDrm: true,
                         fixes: [
                             {
                                 href: 'https://example.com/hypervisor.zip',
@@ -40,6 +42,8 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
     assert.deepEqual(result.items[0], {
         appId: '10',
         gameName: 'Example Game',
+        releaseDate: '2026-09-18',
+        hasDrm: true,
         correction: {
             href: 'https://example.com/fix.zip',
             filename: 'fix.zip',
@@ -51,4 +55,22 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
             viewerVote: null
         }
     });
+});
+
+test('keeps corrections without catalog metadata sortable after a cache refresh', async () => {
+    const client = createCorrectionsCatalogClient({
+        axios: {
+            get: async () => ({
+                data: [{
+                    appid: 20,
+                    name: 'Unknown metadata game',
+                    fixes: [{ href: 'https://example.com/fix.zip', filename: 'fix.zip' }]
+                }]
+            })
+        }
+    });
+
+    const result = await client.download();
+    assert.equal(result.items[0].releaseDate, null);
+    assert.equal(result.items[0].hasDrm, false);
 });
