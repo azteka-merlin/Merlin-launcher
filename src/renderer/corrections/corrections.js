@@ -645,6 +645,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (drmDelta !== 0) return drmDelta;
             const scoreDelta = Number(right?.correction?.score || 0) - Number(left?.correction?.score || 0);
             const upvotesDelta = Number(right?.correction?.upvotes || 0) - Number(left?.correction?.upvotes || 0);
+            if (priorityGroup(left) === 1) {
+                const voteCount = item => Math.max(0, Number(item?.correction?.upvotes || 0))
+                    + Math.max(0, Number(item?.correction?.downvotes || 0));
+                const voteCountDelta = voteCount(right) - voteCount(left);
+                if (voteCountDelta !== 0) return voteCountDelta;
+            }
             const leftRelease = releaseTimestamp(left.releaseDate);
             const rightRelease = releaseTimestamp(right.releaseDate);
             if (leftRelease !== rightRelease) return rightRelease - leftRelease;
