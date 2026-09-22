@@ -4,9 +4,15 @@
     document.addEventListener('DOMContentLoaded', () => {
         const trigger = document.getElementById('accountMenuTrigger');
         const menu = document.getElementById('accountMenuPopover');
-        if (!trigger || !menu || !window.FloatingUIDOM) return;
+        if (!trigger || !menu) return;
 
         let cleanupPosition = null;
+        function positionMenu() {
+            const rect = trigger.getBoundingClientRect();
+            const menuWidth = menu.offsetWidth;
+            menu.style.left = `${Math.max(12, Math.min(window.innerWidth - menuWidth - 12, rect.right - menuWidth))}px`;
+            menu.style.top = `${Math.min(window.innerHeight - menu.offsetHeight - 12, rect.bottom + 8)}px`;
+        }
         function close() {
             menu.hidden = true;
             trigger.setAttribute('aria-expanded', 'false');
@@ -16,11 +22,9 @@
             window.dispatchEvent(new CustomEvent('merlin-popover-open', { detail: { name: 'account' } }));
             menu.hidden = false;
             trigger.setAttribute('aria-expanded', 'true');
-            const { computePosition, offset, flip, shift, autoUpdate } = window.FloatingUIDOM;
-            const update = () => computePosition(trigger, menu, {
-                placement: 'bottom-end', strategy: 'fixed', middleware: [offset(8), flip({ padding: 12 }), shift({ padding: 12 })]
-            }).then(({ x, y }) => Object.assign(menu.style, { left: `${x}px`, top: `${y}px` }));
-            update(); cleanupPosition = autoUpdate(trigger, menu, update);
+            positionMenu();
+            window.addEventListener('resize', positionMenu);
+            cleanupPosition = () => window.removeEventListener('resize', positionMenu);
         }
         trigger.addEventListener('click', () => menu.hidden ? open() : close());
         document.getElementById('accountTutorialBtn')?.addEventListener('click', () => window.merlinTutorial?.open?.());
