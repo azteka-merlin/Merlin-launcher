@@ -6718,3 +6718,221 @@ body,
         font-size: 3.3rem;
     }
 }
+
+/* Premium catalog mockup: image-led campaign cards with quota actions on demand. */
+.local-browser-preview #serviceStatusBadge {
+    display: none !important;
+}
+
+.premium-card-shell {
+    max-width: 1320px;
+    margin: 0 auto;
+}
+
+.premium-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .85rem;
+}
+
+.premium-grid .premium-entry-card {
+    position: relative;
+    min-height: 220px;
+    display: block;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid rgba(87, 101, 145, .42);
+    border-radius: 7px;
+    background: #10131e;
+    isolation: isolate;
+    cursor: default;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .16);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.premium-grid .premium-entry-card:hover,
+.premium-grid .premium-entry-card:focus,
+.premium-grid .premium-entry-card:focus-within,
+.premium-grid .premium-entry-card.show-details {
+    transform: translateY(-2px);
+    border-color: rgba(146, 91, 235, .8);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .28), 0 0 18px rgba(118, 65, 218, .16);
+    outline: none;
+}
+
+.premium-grid .correction-card-image-wrap {
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+}
+
+.premium-grid .correction-card-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .45s ease, filter .25s ease;
+}
+
+.premium-grid .premium-entry-card::after {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    content: '';
+    background: linear-gradient(180deg, transparent 22%, rgba(7, 9, 17, .22) 45%, rgba(7, 9, 17, .98) 100%);
+    transition: background .24s ease, backdrop-filter .24s ease;
+}
+
+.premium-grid .premium-entry-card:hover::after,
+.premium-grid .premium-entry-card:focus::after,
+.premium-grid .premium-entry-card:focus-within::after,
+.premium-grid .premium-entry-card.show-details::after {
+    background: linear-gradient(180deg, rgba(7, 8, 16, .18), rgba(7, 9, 17, .75) 44%, rgba(7, 9, 17, .99) 100%);
+    backdrop-filter: blur(2px);
+}
+
+.premium-grid .premium-entry-card:hover .correction-card-cover,
+.premium-grid .premium-entry-card:focus-within .correction-card-cover,
+.premium-grid .premium-entry-card.show-details .correction-card-cover {
+    transform: scale(1.035);
+    filter: saturate(.82) brightness(.72);
+}
+
+.premium-grid .correction-card-title,
+.premium-grid .correction-card-appid,
+.premium-grid .premium-availability,
+.premium-grid .premium-cooldown-hint,
+.premium-grid .premium-card-actions,
+.premium-grid .premium-mock-tier {
+    position: absolute;
+    z-index: 2;
+    left: 1rem;
+    right: 1rem;
+}
+
+.premium-grid .premium-mock-tier {
+    top: .85rem;
+    right: auto;
+    padding: .18rem .42rem;
+    border-radius: 4px;
+    color: #e8dcff;
+    background: rgba(92, 47, 160, .76);
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.premium-grid .correction-card-title {
+    bottom: 2rem;
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .8);
+    transition: bottom .22s ease;
+}
+
+.premium-grid .correction-card-appid {
+    bottom: .8rem;
+    margin: 0;
+    color: #aeb8ca;
+    font-size: .68rem;
+    transition: opacity .18s ease;
+}
+
+.premium-grid .premium-availability {
+    top: 5.1rem;
+    opacity: 0;
+    color: #f2f5ff;
+    font-size: .82rem;
+    font-weight: 700;
+    transform: translateY(7px);
+    transition: opacity .18s ease, transform .2s ease;
+}
+
+.premium-grid .premium-cooldown-hint {
+    top: 6.8rem;
+    margin: 0;
+    opacity: 0;
+    color: #b4bfd1;
+    font-size: .72rem;
+    transform: translateY(7px);
+    transition: opacity .18s ease .03s, transform .2s ease .03s;
+}
+
+.premium-grid .premium-card-actions {
+    bottom: 1rem;
+    display: flex;
+    gap: .48rem;
+    margin: 0;
+    opacity: 0;
+    transform: translateY(9px);
+    transition: opacity .18s ease .05s, transform .2s ease .05s;
+}
+
+.premium-grid .premium-card-actions .premium-card-btn {
+    width: auto;
+    min-width: 0;
+    min-height: 31px;
+    flex: 0 0 auto;
+    padding: .34rem .58rem;
+    border-radius: 6px;
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    font-size: .72rem;
+    line-height: 1;
+}
+
+.premium-grid .premium-entry-card:hover .correction-card-title,
+.premium-grid .premium-entry-card:focus .correction-card-title,
+.premium-grid .premium-entry-card:focus-within .correction-card-title,
+.premium-grid .premium-entry-card.show-details .correction-card-title {
+    bottom: 8.9rem;
+}
+
+.premium-grid .premium-entry-card:hover .correction-card-appid,
+.premium-grid .premium-entry-card:focus .correction-card-appid,
+.premium-grid .premium-entry-card:focus-within .correction-card-appid,
+.premium-grid .premium-entry-card.show-details .correction-card-appid {
+    opacity: 0;
+}
+
+.premium-grid .premium-entry-card:hover .premium-availability,
+.premium-grid .premium-entry-card:hover .premium-cooldown-hint,
+.premium-grid .premium-entry-card:hover .premium-card-actions,
+.premium-grid .premium-entry-card:focus .premium-availability,
+.premium-grid .premium-entry-card:focus .premium-cooldown-hint,
+.premium-grid .premium-entry-card:focus .premium-card-actions,
+.premium-grid .premium-entry-card:focus-within .premium-availability,
+.premium-grid .premium-entry-card:focus-within .premium-cooldown-hint,
+.premium-grid .premium-entry-card:focus-within .premium-card-actions,
+.premium-grid .premium-entry-card.show-details .premium-availability,
+.premium-grid .premium-entry-card.show-details .premium-cooldown-hint,
+.premium-grid .premium-entry-card.show-details .premium-card-actions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.premium-grid .premium-entry-card.is-redeemed {
+    border-color: rgba(77, 211, 159, .62);
+}
+
+.premium-grid .premium-entry-card.is-redeemed .premium-mock-tier {
+    color: #caffeb;
+    background: rgba(24, 128, 91, .72);
+}
+
+@media (max-width: 1120px) {
+    .premium-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .premium-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .premium-grid .premium-entry-card {
+        min-height: 230px;
+    }
+}
