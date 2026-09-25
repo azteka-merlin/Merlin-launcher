@@ -14,6 +14,9 @@ namespace OSTPlatform::Memory {
     };
 
     std::optional<ModuleImage> GetModuleImage(DynamicLibrary::ModuleHandle module);
+    // Checks every virtual-memory region covered by [address, address + bytes)
+    // before a compatibility probe dereferences an unknown Steam object.
+    bool IsReadable(const void* address, size_t bytes);
     bool WriteExecutableByte(void* target, uint8_t value);
 
 } // namespace OSTPlatform::Memory

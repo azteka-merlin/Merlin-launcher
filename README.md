@@ -119,6 +119,41 @@ To build only the DLLs during development:
 npm run build:opensteamtool
 ```
 
+### Release procedure
+
+Use this procedure for a launcher update. The executable is built in this
+repository; the Admin only receives the finished installer for distribution.
+
+1. Confirm that no prior `node`, `electron-builder`, `7za`, or `makensis`
+   process from this repository is still building. Do not start a second build
+   while one is active: concurrent builds contend for `dist/win-unpacked` and
+   can produce an invalid installer.
+2. Run the test suite:
+
+   ```bash
+   npm test
+   ```
+
+3. Run this command exactly once and wait for it to finish:
+
+   ```bash
+   npm run build:release
+   ```
+
+   It increments the patch version in `package.json`, rebuilds the native
+   DLLs, and creates `dist/Merlin Setup <version>.exe`. Console output being
+   truncated is not completion; verify that the build process has exited and
+   that the expected `.exe` exists.
+4. Verify the installer contains the current `OpenSteamTool.dll`,
+   `dwmapi.dll`, `xinput1_4.dll`, and `merlin-helper.dll` under
+   `dist/win-unpacked/resources/dlls` before publishing.
+5. Commit the release, create and push the matching Git tag (for example,
+   `v1.6.7`), create the GitHub release with the installer attached, then
+   upload that same installer and version in the Admin update screen.
+
+`npm run build:release` deliberately uses `--no-git-tag-version`; it changes
+the package version but does **not** create the Git tag automatically.
+
 ---
 
 ## Usage

@@ -29,6 +29,10 @@ struct PatternSeed {
     const char* name;
     const char* seedSig;
     uint32_t preferredRva = 0;
+    // Steam updates can change function prologues while leaving the function
+    // identity intact. Keep the previous seed and a known newer alternative so
+    // an offline helper can generate metadata for either client generation.
+    const char* alternateSeedSig = nullptr;
 };
 
 struct IpcMethodSeed {
@@ -47,28 +51,30 @@ struct IpcInterfaceSeed {
 
 constexpr PatternSeed kSteamclientPatternSeeds[] = {
     {"0x82428E37","BBuildAndAsyncSendFrame","48 8B C4 55 48 8D 68 A1 48 81 EC C0 00 00 00 48 89 70 18"},
-    {"0xC37F2D8E","BuildDepotDependency","48 8B C4 4C 89 48 20 89 50 10 48 89 48 08 55 57"},
+    {"0xC37F2D8E","BuildDepotDependency","48 8B C4 4C 89 48 20 89 50 10 48 89 48 08 55 57",0,"48 8B C4 4C 89 48 20 89 50 10 48 89 48 08 55 48 8D A8 ?? ?? FF FF 48 81 EC"},
     {"0xDB78B4AE","BuildSpawnEnvBlock","4C 89 4C 24 20 4C 89 44 24 18 48 89 54 24 10 48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 B8 FE FF FF"},
     {"0x64BF7C45","CUtlBufferEnsureCapacity","48 89 5C 24 08 57 48 83 EC 30 48 8B D9 8D 7A 01"},
-    {"0x2D945919","CUtlMemoryGrow","48 89 5C 24 10 57 48 83 EC 30 8B FA 48 8B D9 8B 51 08 8B 49 10 8D 04 39",0xE8280},
+    // This prologue is shared by several allocation helpers.  The RVA is a
+    // tie-breaker for the current Steam generation, not output metadata.
+    {"0x2D945919","CUtlMemoryGrow","48 89 5C 24 10 57 48 83 EC 30 8B FA 48 8B D9 8B 51 08 8B 49 10 8D 04 39",0xE93B0},
     {"0x4B1B1D77","CheckAppOwnership","48 8B C4 89 50 10 48 89 48 08 55 53"},
     {"0x04691B23","CloseAppCloud","48 89 5C 24 10 57 48 83 EC 30 8B FA 48 8B D9 85 D2"},
     {"0x6179E8F9","ConfigStoreGetBinary","40 53 55 56 57 48 83 EC 38 48 63 FA 49 8B E9"},
     {"0xAC76B47D","GetAppDataFromAppInfo","40 53 55 56 57 41 56 41 57 48 81 EC 78 01 00 00"},
-    {"0xA185DB47","GetAppIDForCurrentPipe","8B 81 30 0D 00 00 83 F8 FF 74 ??"},
+    {"0xA185DB47","GetAppIDForCurrentPipe","8B 81 30 0D 00 00 83 F8 FF 74 ??",0,"8B 81 D0 10 00 00 83 F8 FF 74 ??"},
     {"0xCC79542C","GetOrAddAppData","48 83 EC 58 48 8B 05 ?? ?? ?? ?? 48 89 5C 24 68 48 89 6C 24 70"},
     {"0x3B3A0F9D","GetPackageInfo","48 89 5C 24 18 89 54 24 10 55 56 57 48 83 EC 20 44 8B 49 20"},
     {"0x02DF23BC","GetPipeClient","85 D2 74 ?? 44 0F B7 CA 44 3B 49 60"},
     {"0xC3E20E29","IPCProcessMessage","48 89 5C 24 18 48 89 6C 24 20 57 41 54 41 55 41 56 41 57 48 83 EC 30"},
-    {"0xED5ED0C8","KeyValues_FindOrCreateKey","48 8B C4 57 48 81 EC 50 04 00 00"},
+    {"0xED5ED0C8","KeyValues_FindOrCreateKey","48 8B C4 57 48 81 EC 50 04 00 00",0,"48 8B C4 4C 89 48 20 57 48 81 EC 60 04 00 00"},
     {"0x2434A8BA","KeyValues_ReadAsBinary","48 8B C4 44 88 48 20 55 48 8D 68 A9"},
     {"0xB13C0C3F","LoadDepotDecryptionKey","40 53 55 56 57 48 83 EC 38 48 63 FA 49 8B E9"},
     {"0x31E49927","LoadPackage","44 89 44 24 18 53 55 56 57 41 55"},
     {"0xC451039D","MarkLicenseAsChanged","48 89 5C 24 20 89 54 24 10 55 56 57 48 83 EC 20"},
-    {"0x06631030","OptedInMask","89 54 24 10 55 53 56 57 41 54 41 55 48 8D AC 24 38 FF FF FF"},
+    {"0x06631030","OptedInMask","89 54 24 10 55 53 56 57 41 54 41 55 48 8D AC 24 38 FF FF FF",0,"89 54 24 10 55 53 56 57 41 55 41 56 48 8D AC 24 38 FF FF FF"},
     {"0x0F926D0A","PchMsgNameFromEMsg","48 89 5C 24 08 57 48 83 EC 20 8B D9 E8 ?? ?? ?? ??"},
-    {"0x103B52AA","ProcessPendingLicenseUpdates","41 56 41 57 48 83 EC 38 83 B9 98 24 00 00 00"},
-    {"0x836FF9F0","RecvPkt","48 8B C4 55 48 8D A8 98 F6 FF FF"},
+    {"0x103B52AA","ProcessPendingLicenseUpdates","41 56 41 57 48 83 EC 38 83 B9 98 24 00 00 00",0,"41 56 41 57 48 83 EC 38 83 B9 ?? ?? 00 00 00 B8 ?? ?? 00 00"},
+    {"0x836FF9F0","RecvPkt","48 8B C4 55 48 8D A8 98 F6 FF FF",0,"48 8B C4 55 48 8D A8 E8 FB FF FF"},
     {"0x68211B4D","SendCallbackToPipe","48 89 5C 24 08 57 48 83 EC 30 41 8B D9 41 8B F8"},
     {"0x7D1EC415","SpawnProcess","48 89 5C 24 18 4C 89 4C 24 20 48 89 54 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 30 FF FF FF"},
 };
@@ -79,10 +85,12 @@ constexpr PatternSeed kSteamuiPatternSeeds[] = {
     {"0x221F0661","CSteamUIAppControllerRunFrame","48 89 5C 24 10 48 89 6C 24 18 56 57 41 54 41 56 41 57 48 83 EC 40 0F 29 74 24 30"},
     {"0xB030A061","FillInAppOverview","48 89 54 24 10 48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 E1 48 81 EC B8 00 00 00"},
     {"0x3FC68546","GetAppByID","89 54 24 10 53 48 83 EC 40 48 8B 05 ?? ?? ?? ??"},
-    {"0xC89CFA75","GetTopManager","48 8B 05 19 20 B0 00 C3",0x5FEEF0},
+    {"0xC89CFA75","GetTopManager","48 8B 05 19 20 B0 00 C3",0x5FEEF0,"48 8B 05 59 CF B4 00 C3"},
     {"0xBDE16BD6","LoadModuleWithPath","48 89 5C 24 18 55 56 41 57 48 83 EC 40"},
     {"0xC7D5CACF","MarkAppChange","48 83 EC 78 48 8B 05 ?? ?? ?? ?? 48 89 74 24 70"},
-    {"0x153479F0","RepeatedFieldUint32_Add","48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 8B 31 48 8B F9 8B 49 04",0x6C3EF0},
+    // As above, this seed can occur twice; use the current function RVA only
+    // to select the seed before producing the self-contained TOML signature.
+    {"0x153479F0","RepeatedFieldUint32_Add","48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 8B 31 48 8B F9 8B 49 04",0x704230},
     {"0xD055D6C0","ShouldShowAppInLibrary","40 53 48 83 EC 20 48 8B 01 48 8B D9 FF 10 3D D6 0C 09 00"},
 };
 
@@ -425,7 +433,15 @@ std::optional<std::vector<PatternEntry>> GeneratePatterns(const std::filesystem:
     entries.reserve(seeds.size());
 
     for (const auto& seed : seeds) {
-        auto matches = FindAllMatches(bytes, ParseSignatureTokens(seed.seedSig));
+        const char* matchedSignature = seed.seedSig;
+        auto matches = FindAllMatches(bytes, ParseSignatureTokens(matchedSignature));
+        if (matches.size() != 1 && seed.alternateSeedSig) {
+            const auto alternateMatches = FindAllMatches(bytes, ParseSignatureTokens(seed.alternateSeedSig));
+            if (alternateMatches.size() == 1) {
+                matches = alternateMatches;
+                matchedSignature = seed.alternateSeedSig;
+            }
+        }
         if (matches.size() != 1 && seed.preferredRva != 0) {
             std::vector<uint32_t> filtered;
             for (auto offset : matches) {
@@ -435,7 +451,9 @@ std::optional<std::vector<PatternEntry>> GeneratePatterns(const std::filesystem:
             matches = std::move(filtered);
         }
         if (matches.size() != 1) return std::nullopt;
-        const auto entry = BuildAutoPatternEntry(pe, bytes, seed, matches[0]);
+        PatternSeed matchedSeed = seed;
+        matchedSeed.seedSig = matchedSignature;
+        const auto entry = BuildAutoPatternEntry(pe, bytes, matchedSeed, matches[0]);
         if (!entry) return std::nullopt;
         entries.push_back(*entry);
     }

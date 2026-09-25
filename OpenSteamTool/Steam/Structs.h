@@ -207,15 +207,10 @@ struct IKeyValuesSystem {
 };
 using KeyValuesSystemSteam_t = IKeyValuesSystem* (*)();
 
-struct CNetPacket
-{
-	HCONNECTION m_hConnection;
-	uint8* m_pubData;
-	uint32 m_cubData;
-	int32 m_cRef;
-	uint8* m_pubNetworkBuffer;
-	CNetPacket* m_pNext;
-};
+// Steam changes this private layout between client builds.  Code that needs
+// packet data must use NetPkt::Data/Size from Steam/NetPacket.h instead of
+// assuming field offsets here.
+struct CNetPacket;
 
 struct MsgHdr
 {

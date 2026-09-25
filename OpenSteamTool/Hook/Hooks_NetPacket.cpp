@@ -5,6 +5,9 @@
 #include "dllmain.h"
 #include "Utils/Tickets/AppTicket.h"
 #include "Utils/Support/FnvHash.h"
+#include "Steam/NetPacket.h"
+#include "OSTPlatform/include/Memory.h"
+#include <algorithm>
 #include <chrono>
 #include <future>
 #include <unordered_map>
@@ -47,6 +50,75 @@ namespace {
         return "?";
     }
 
+    constexpr uint32 kProbeMaxPacketSize = 1u << 20;
+    constexpr uint32 kProbeMaxHeaderSize = 8192;
+    constexpr uintptr_t kProbeMinPointer = 0x10000;
+    constexpr uintptr_t kProbeMaxPointer = 0x7FFFFFFF0000ull;
+    constexpr int kProbeMaxAttempts = 512;
+
+    int g_ProbeAttempts = 0;
+    uint32 g_ProbeCandidate = NetPkt::kUnresolved;
+
+    bool ProbePacketLayout(const void* base, uint32 dataOffset) {
+        namespace Memory = OSTPlatform::Memory;
+        const auto* packet = static_cast<const uint8*>(base);
+        if (!Memory::IsReadable(packet + dataOffset, 0x10)) return false;
+
+        const auto* data = *reinterpret_cast<const uint8* const*>(packet + dataOffset);
+        const uint32 size = *reinterpret_cast<const uint32*>(packet + dataOffset + 8);
+        const int32 refCount = *reinterpret_cast<const int32*>(packet + dataOffset + 0x0C);
+        const uintptr_t address = reinterpret_cast<uintptr_t>(data);
+        if (address < kProbeMinPointer || address >= kProbeMaxPointer ||
+            size < sizeof(MsgHdr) || size > kProbeMaxPacketSize ||
+            refCount < 1 || refCount > 4096 ||
+            !Memory::IsReadable(data, sizeof(MsgHdr))) {
+            return false;
+        }
+
+        const uint32 rawMessage = *reinterpret_cast<const uint32*>(data);
+        const uint32 headerSize = *reinterpret_cast<const uint32*>(data + 4);
+        if (!(rawMessage & kMsgHdrProtoFlag) ||
+            (rawMessage & ~kMsgHdrProtoFlag) == 0 ||
+            (rawMessage & ~kMsgHdrProtoFlag) >= 0x10000 ||
+            headerSize < 2 ||
+            headerSize > (std::min)(size - static_cast<uint32>(sizeof(MsgHdr)), kProbeMaxHeaderSize) ||
+            !Memory::IsReadable(data, sizeof(MsgHdr) + headerSize)) {
+            return false;
+        }
+
+        CMsgProtoBufHeader header;
+        return header.ParseFromArray(data + sizeof(MsgHdr), static_cast<int>(headerSize));
+    }
+
+    bool ResolvePacketLayout(const CNetPacket* packet) {
+        if (NetPkt::IsDisabled()) return false;
+        if (++g_ProbeAttempts > kProbeMaxAttempts) {
+            NetPkt::Disable();
+            LOG_NETPACKET_WARN("CNetPacket layout was not identified; packet hooks are disabled for this session");
+            return false;
+        }
+
+        uint32 candidate = NetPkt::kUnresolved;
+        int matches = 0;
+        for (const auto& layout : NetPkt::kLayouts) {
+            if (ProbePacketLayout(packet, layout.dataOffset)) {
+                candidate = layout.dataOffset;
+                ++matches;
+            }
+        }
+        if (matches != 1) {
+            if (matches > 1) g_ProbeCandidate = NetPkt::kUnresolved;
+            return false;
+        }
+        if (g_ProbeCandidate != candidate) {
+            g_ProbeCandidate = candidate;
+            return false;
+        }
+
+        NetPkt::Latch(candidate);
+        return true;
+    }
+
 
     // ── Packet layout ──────────────────────────────────────────
     inline bool UnpackRaw(const uint8* data, uint32 size,
@@ -67,8 +139,8 @@ namespace {
 
         eMsg  = static_cast<EMsg>(hdr->eMsg & ~kMsgHdrProtoFlag);
         cbHdr = hdr->headerLength;
+        if (cbHdr > size - sizeof(MsgHdr)) goto fail;
         uint32 off = sizeof(MsgHdr) + cbHdr;
-        if (off > size) goto fail;
         pHdr   = data + sizeof(MsgHdr);
         pBody  = data + off;
         cbBody = size - off;
@@ -84,15 +156,15 @@ namespace {
         if (newSize > sizeof(g_RecvPacketPool[0])) return;
 
         uint8* buf = g_RecvPacketPool[g_RecvPacketPoolIdx];
-        const MsgHdr* orig = reinterpret_cast<const MsgHdr*>(p->m_pubData);
+        const MsgHdr* orig = reinterpret_cast<const MsgHdr*>(NetPkt::Data(p));
         MsgHdr* out = reinterpret_cast<MsgHdr*>(buf);
         out->eMsg         = orig->eMsg;
         out->headerLength = cbNewHdr;
         memcpy(buf + sizeof(MsgHdr), pNewHdr, cbNewHdr);
         if (cbNewBody)
             memcpy(buf + sizeof(MsgHdr) + cbNewHdr, pNewBody, cbNewBody);
-        p->m_pubData = buf;
-        p->m_cubData = newSize;
+        NetPkt::Data(p) = buf;
+        NetPkt::Size(p) = newSize;
 
         g_RecvPacketPoolIdx = (g_RecvPacketPoolIdx + 1) % kPacketPoolSize;
     }
@@ -831,13 +903,13 @@ namespace Hooks_NetPacket_RichPresence {
         if (!g_InjectPending || g_cbInjectPkt == 0) return;
         g_InjectPending = false;
 
-        uint8* origData = pCarrier->m_pubData;
-        uint32 origSize = pCarrier->m_cubData;
-        pCarrier->m_pubData = g_InjectPkt;
-        pCarrier->m_cubData = g_cbInjectPkt;
+        uint8* origData = NetPkt::Data(pCarrier);
+        uint32 origSize = NetPkt::Size(pCarrier);
+        NetPkt::Data(pCarrier) = g_InjectPkt;
+        NetPkt::Size(pCarrier) = g_cbInjectPkt;
         invokeOriginal(pThis, pCarrier);
-        pCarrier->m_pubData = origData;
-        pCarrier->m_cubData = origSize;
+        NetPkt::Data(pCarrier) = origData;
+        NetPkt::Size(pCarrier) = origSize;
         LOG_RICHPRESENCE_INFO("Delivered manufactured self-PersonaState ({} bytes)", g_cbInjectPkt);
     }
 
@@ -1078,6 +1150,11 @@ namespace {
 
     HOOK_FUNC(RecvPkt, void*, void* pThis, CNetPacket* pPacket)
     {
+        if (!pPacket) return oRecvPkt(pThis, pPacket);
+        if (!NetPkt::IsResolved() && !ResolvePacketLayout(pPacket)) {
+            return oRecvPkt(pThis, pPacket);
+        }
+
         Hooks_NetPacket_RichPresence::TryInject(
             pThis, pPacket,
             [](void* pT, CNetPacket* pP) -> bool { return oRecvPkt(pT, pP) != nullptr; });
@@ -1085,7 +1162,7 @@ namespace {
         EMsg eMsg;
         const uint8 *pBody, *pHdr;
         uint32 cbBody, cbHdr;
-        if (UnpackRaw(pPacket->m_pubData, pPacket->m_cubData,
+        if (UnpackRaw(NetPkt::Data(pPacket), NetPkt::Size(pPacket),
                      eMsg, pHdr, cbHdr, pBody, cbBody)) {
             g_ResizedInPlace = false;
             RecvJob(eMsg, pBody, cbBody, pHdr, cbHdr);
@@ -1096,7 +1173,7 @@ namespace {
                     g_NewHdr, g_cbNewHdr,
                     pBody, g_NewBodySize);
             } else if (g_ResizedInPlace) {
-                pPacket->m_cubData = sizeof(MsgHdr) + cbHdr + g_NewBodySize;
+                NetPkt::Size(pPacket) = sizeof(MsgHdr) + cbHdr + g_NewBodySize;
             } else if (g_NeedReplaceHdr || g_NeedReplaceBody) {
                 ReplaceRecvPacket(pPacket,
                     g_NeedReplaceHdr  ? g_NewHdr  : pHdr,

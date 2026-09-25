@@ -75,6 +75,18 @@ namespace {
 
         if (!result) return result;
 
+        // A PICS refresh can briefly expose an empty depot list while Steam is
+        // replacing appinfo.  Returning that transient list makes Steam persist
+        // a zero-depot configuration and mark an install complete without
+        // downloading content.  Keep the prior configuration until the next
+        // dependency pass for games managed by Merlin.
+        if (AppId != 0 &&
+            (!pDepotInfo || pDepotInfo->m_Size == 0) &&
+            LuaConfig::HasDepot(AppId, false)) {
+            LOG_MANIFEST_WARN("BuildDepotDependency: app {} returned an empty depot list during refresh; preserving the previous configuration", AppId);
+            return false;
+        }
+
         const auto& overrides = LuaConfig::GetManifestOverrides();
 
         if (!overrides.empty() && pDepotInfo && pDepotInfo->m_Size) {
