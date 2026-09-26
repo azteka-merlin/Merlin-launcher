@@ -4,15 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merlin</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=merlin-premium-showcase-9">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div class="header-content">
                 <div class="header-brand">
-                    <img class="logo-icon" src="assets/merlin-icon-compact.png" alt="Merlin">
-                    <div><h1 class="title">Merlin</h1><span id="appVersion" class="version">v--</span></div>
+                    <button id="brandVersionButton" class="header-brand-button" type="button" aria-pressed="false" aria-label="Merlin, exibir versão atual">
+                        <img class="logo-icon" src="assets/merlin-icon-compact.png" alt="">
+                        <span class="header-brand-copy">
+                            <span class="title">Merlin</span>
+                            <span id="appVersion" class="version">v1.6.5</span>
+                        </span>
+                    </button>
                     <button id="serviceStatusBadge" class="service-status-badge" type="button" hidden>
                         <span class="service-status-dot" aria-hidden="true"></span>
                         <span id="serviceStatusBadgeText">Instabilidade</span>
@@ -58,15 +63,16 @@
             <!-- Sidebar -->
             <aside class="sidebar">
                 <nav class="sidebar-navigation" aria-label="Navegação principal">
-                    <button id="addGamesNavBtn" class="side-nav-btn active" type="button" aria-pressed="true"><img src="node_modules/lucide-static/icons/plus.svg" alt=""><span data-i18n="add_game_source">Add game</span></button>
-                    <button id="libraryBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/library.svg" alt=""><span data-i18n="library_button">Library</span></button>
-                    <button id="correctionsBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="corrections_button">Corrections</span></button>
+                    <button id="homeNavBtn" class="side-nav-btn active" type="button" aria-pressed="true"><img src="node_modules/lucide-static/icons/house.svg" alt=""><span data-i18n="home_button">Início</span></button>
+                    <button id="addGamesNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/plus.svg" alt=""><span data-i18n="add_game_source">Adicionar jogo</span></button>
+                    <button id="libraryBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/library.svg" alt=""><span data-i18n="library_button">Biblioteca</span></button>
+                    <button id="correctionsBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="corrections_button">Correções</span></button>
                     <button id="premiumBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/crown.svg" alt=""><span data-i18n="premium_button">Premium</span></button>
                 </nav>
                 <div class="sidebar-divider"></div>
                 <nav class="sidebar-navigation sidebar-secondary" aria-label="Conta e configurações">
                     <button id="accessNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/badge-dollar-sign.svg" alt=""><span data-i18n="my_access">Meu acesso</span><small id="sidePlanLabel"></small></button>
-                    <button id="settingsNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/settings.svg" alt=""><span data-i18n="config">Configuration</span></button>
+                    <button id="settingsNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/settings.svg" alt=""><span data-i18n="config">Configurações</span></button>
                 </nav>
                 <div id="steamStatusPopover" class="steam-status-popover" hidden>
                     <strong data-i18n="steam_integration">Integração Steam</strong>
@@ -191,7 +197,105 @@
                              useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                              partition="persist:steaminjector" hidden></webview>
 
-                    <section id="addGamesView" class="add-games-view" aria-labelledby="addGamesTitle">
+                    <section id="homeView" class="home-view" aria-labelledby="homeTitle">
+                        <div class="home-shell">
+                            <section class="home-hero" aria-labelledby="homeTitle">
+                                <div class="home-carousel-frame">
+                                    <div id="homeCarousel" class="home-hero-copy home-carousel" aria-roledescription="carrossel" aria-label="Grandes jogos para ativar no Merlin">
+                                        <div class="home-carousel-media" aria-hidden="true">
+                                            <div class="home-carousel-layer is-active"></div>
+                                            <div class="home-carousel-layer"></div>
+                                        </div>
+                                        <img class="home-carousel-sigil" src="assets/merlin-wizard-logo.png" alt="" aria-hidden="true">
+                                        <div id="homeCarouselCopy" class="home-carousel-copy" aria-live="polite">
+                                            <span id="homeCarouselKicker" class="home-kicker">LANÇAMENTO • 24 SET 2026</span>
+                                            <h2 id="homeTitle">CONTROL Resonant</h2>
+                                            <p id="homeCarouselDescription">Uma nova ameaça paranormal transforma Manhattan em um campo de batalha sobrenatural.</p>
+                                            <div class="home-hero-actions">
+                                                <button id="homePremiumBtn" class="btn btn-primary" type="button"><span data-i18n="home_view_premium">Ver catálogo Premium</span></button>
+                                                <button id="homeAddGameBtn" class="btn btn-secondary" type="button"><span data-i18n="home_add_game">Adicionar por link</span></button>
+                                            </div>
+                                        </div>
+                                        <button id="homeCarouselPrevious" class="home-carousel-arrow home-carousel-arrow-previous" type="button" aria-label="Jogo anterior"><span aria-hidden="true">‹</span></button>
+                                        <button id="homeCarouselNext" class="home-carousel-arrow home-carousel-arrow-next" type="button" aria-label="Próximo jogo"><span aria-hidden="true">›</span></button>
+                                    </div>
+                                    <div class="home-carousel-controls" aria-label="Escolher jogo em destaque">
+                                        <div id="homeCarouselDots" class="home-carousel-dots"></div>
+                                    </div>
+                                </div>
+                                <div class="home-featured-stack" aria-label="Jogos em destaque">
+                                    <article class="home-featured-card home-featured-card-main">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg" alt="">
+                                        <div>
+                                            <span>Ouro</span>
+                                            <strong>Elden Ring</strong>
+                                            <small>RPG de ação</small>
+                                        </div>
+                                    </article>
+                                    <article class="home-featured-card">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg" alt="">
+                                        <div>
+                                            <span>Prata</span>
+                                            <strong>Red Dead Redemption 2</strong>
+                                        </div>
+                                    </article>
+                                    <article class="home-featured-card">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg" alt="">
+                                        <div>
+                                            <span>Novo</span>
+                                            <strong>Cyberpunk 2077</strong>
+                                        </div>
+                                    </article>
+                                </div>
+                            </section>
+
+                            <section class="home-section" aria-labelledby="homeLaunchesTitle">
+                                <div class="home-section-header">
+                                    <div>
+                                        <span class="home-kicker" data-i18n="home_launches_kicker">Lançamentos e destaques</span>
+                                        <h3 id="homeLaunchesTitle" data-i18n="home_launches_title">Campanhas em vitrine</h3>
+                                    </div>
+                                    <button id="homeCampaignPremiumBtn" class="home-text-btn" type="button" data-i18n="home_see_all">Ver todos</button>
+                                </div>
+                                <div class="home-game-row">
+                                    <article class="home-game-card">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/1086940/header.jpg" alt="">
+                                        <div class="home-game-meta">
+                                            <span>Ouro</span>
+                                            <strong>Baldur's Gate 3</strong>
+                                            <small>Disponível no Premium</small>
+                                        </div>
+                                    </article>
+                                    <article class="home-game-card">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/1938090/header.jpg" alt="">
+                                        <div class="home-game-meta">
+                                            <span>Campanha</span>
+                                            <strong>Call of Duty</strong>
+                                            <small>Alta procura</small>
+                                        </div>
+                                    </article>
+                                    <article class="home-game-card">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/2050650/header.jpg" alt="">
+                                        <div class="home-game-meta">
+                                            <span>Prata</span>
+                                            <strong>Resident Evil 4</strong>
+                                            <small>Sobrevivência</small>
+                                        </div>
+                                    </article>
+                                    <article class="home-game-card">
+                                        <img src="https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg" alt="">
+                                        <div class="home-game-meta">
+                                            <span>Popular</span>
+                                            <strong>Grand Theft Auto V</strong>
+                                            <small>Mundo aberto</small>
+                                        </div>
+                                    </article>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+
+                    <section id="addGamesView" class="add-games-view" aria-labelledby="addGamesTitle" hidden>
                         <div class="add-games-card">
                             <header class="add-games-header">
                                 <h2 id="addGamesTitle" data-i18n="add_games_title">Adicionar jogo à Steam</h2>
@@ -1097,16 +1201,17 @@
         </div>
     </div>
     <script src="src/renderer/auth/entitlement-monitor.js"></script>
-    <script src="src/renderer/auth/license-gate.js"></script>
+    <script src="src/renderer/auth/license-gate.js?v=2"></script>
     <script src="node_modules/@floating-ui/dom/dist/floating-ui.dom.umd.min.js"></script>
     <script src="renderer.js"></script>
-    <script src="src/renderer/shared/account-menu.js"></script>
+    <script src="src/renderer/shared/account-menu.js?v=2"></script>
     <script src="src/renderer/shared/restart-prompt.js"></script>
     <script src="src/renderer/shared/game-install-prompt.js"></script>
     <script src="src/renderer/shared/welcome-compatibility.js"></script>
     <script src="src/renderer/shared/tutorial.js"></script>
     <script src="src/renderer/shared/faq.js"></script>
     <script src="src/renderer/shared/update-checker.js"></script>
+    <script src="src/renderer/shared/brand-version.js?v=1"></script>
     <script src="src/renderer/shared/service-status.js"></script>
     <script src="src/renderer/shared/polls.js"></script>
     <script src="src/renderer/shared/announcements.js"></script>
@@ -1114,8 +1219,10 @@
     <script src="src/renderer/library/library-model.js"></script>
     <script src="src/renderer/library/library.js"></script>
     <script src="src/renderer/corrections/corrections.js"></script>
-    <script src="src/renderer/premium/premium.js"></script>
+    <script src="src/renderer/premium/premium.js?v=2"></script>
     <script src="src/renderer/access/access.js"></script>
     <script src="gamepad.js"></script>
+    <script src="src/renderer/shared/home-carousel.js?v=4"></script>
+    <script src="src/renderer/shared/local-preview.js?v=4"></script>
 </body>
 </html>

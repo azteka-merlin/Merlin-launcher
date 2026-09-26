@@ -163,6 +163,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const expiredAccessNotice = document.getElementById('expiredAccessNotice');
     const expiredAccessNoticeText = document.getElementById('expiredAccessNoticeText');
     const expiredAccessPlansBtn = document.getElementById('expiredAccessPlansBtn');
+    const isLocalBrowserPreview = !window.electronAPI?.auth
+        && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+    if (isLocalBrowserPreview) {
+        gate.hidden = true;
+        resetModal.hidden = true;
+        return;
+    }
+
     const entitlementMonitor = window.MerlinEntitlementMonitor.createEntitlementMonitor({
         getStatus: () => window.electronAPI.auth.status(),
         onAuthenticated: applyEntitlementStatus
