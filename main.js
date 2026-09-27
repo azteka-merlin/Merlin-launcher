@@ -606,6 +606,12 @@ function updateTray() {
 }
 
 function applyLoginItemSettings() {
+    // Development runs use Electron's generic app identity. Never let them
+    // create a Windows startup entry alongside the packaged Merlin app.
+    if (process.defaultApp) {
+        app.setLoginItemSettings({ openAtLogin: false });
+        return;
+    }
     const plugin = configStore.get().steamPlugin || {};
     const openAtLogin = plugin.enabled === true && plugin.startAtLogin !== false;
     app.setLoginItemSettings(openAtLogin
