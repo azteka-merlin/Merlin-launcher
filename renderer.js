@@ -1,7 +1,7 @@
 // Traductions multilingues
 const translations = {
     ptbr: {
-        config: 'Configuração',
+        config: 'Configurações',
         steam_ready: 'Steam pronta',
         steam_not_detected: 'Steam não detectada',
         steam_settings_pending: 'Configurações pendentes',
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateFilesStatus(data.ok);
     });
 
-    window.merlinView.set(document.body.dataset.merlinView || 'add-games');
+    window.merlinView.set(document.body.dataset.merlinView || 'home');
     refreshBillingPortalCard();
     maybeShowDiscordAnnouncement();
 });
@@ -925,6 +925,21 @@ window.merlinI18n = {
 };
 
 Object.assign(translations.ptbr, {
+    home_button: 'Início',
+    home_campaign_kicker: 'Campanha da semana',
+    home_campaign_title: 'Grandes jogos para ativar no Merlin',
+    home_campaign_description: 'Descubra lançamentos, veja o que combina com seu plano e escolha os próximos jogos para sua biblioteca.',
+    home_view_premium: 'Ver catálogo Premium',
+    home_add_game: 'Adicionar por link',
+    home_quick_kicker: 'Acesso rápido',
+    home_quick_title: 'O que você quer jogar hoje?',
+    home_premium_hint: 'Jogos liberados por plano',
+    home_library_hint: 'Sua coleção gerenciada',
+    home_link_title: 'Link da Steam',
+    home_link_hint: 'Adicionar jogo manualmente',
+    home_launches_kicker: 'Lançamentos e destaques',
+    home_launches_title: 'Campanhas em vitrine',
+    home_see_all: 'Ver todos',
     repair_steam_running_title: 'Fechar a Steam para continuar?',
     repair_steam_running_message: 'Para atualizar os arquivos do Merlin, a Steam precisa ser fechada por alguns instantes. Deseja fechar a Steam e continuar agora?',
     repair_steam_running_cancel: 'Cancelar',
@@ -932,6 +947,21 @@ Object.assign(translations.ptbr, {
 });
 
 Object.assign(translations.en, {
+    home_button: 'Home',
+    home_campaign_kicker: 'Weekly campaign',
+    home_campaign_title: 'Big games to activate with Merlin',
+    home_campaign_description: 'Discover launches, see what fits your plan, and choose the next games for your library.',
+    home_view_premium: 'View Premium catalog',
+    home_add_game: 'Add by link',
+    home_quick_kicker: 'Quick access',
+    home_quick_title: 'What do you want to play today?',
+    home_premium_hint: 'Games unlocked by plan',
+    home_library_hint: 'Your managed collection',
+    home_link_title: 'Steam link',
+    home_link_hint: 'Add a game manually',
+    home_launches_kicker: 'Launches and highlights',
+    home_launches_title: 'Featured campaigns',
+    home_see_all: 'See all',
     repair_steam_running_title: 'Close Steam to continue?',
     repair_steam_running_message: 'Steam needs to close for a moment so Merlin can update its files. Do you want to close Steam and continue now?',
     repair_steam_running_cancel: 'Cancel',
@@ -939,6 +969,21 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.es, {
+    home_button: 'Inicio',
+    home_campaign_kicker: 'Campaña de la semana',
+    home_campaign_title: 'Grandes juegos para activar en Merlin',
+    home_campaign_description: 'Descubre lanzamientos, revisa qué encaja con tu plan y elige los próximos juegos para tu biblioteca.',
+    home_view_premium: 'Ver catálogo Premium',
+    home_add_game: 'Agregar por enlace',
+    home_quick_kicker: 'Acceso rápido',
+    home_quick_title: '¿Qué quieres jugar hoy?',
+    home_premium_hint: 'Juegos liberados por plan',
+    home_library_hint: 'Tu colección gestionada',
+    home_link_title: 'Enlace de Steam',
+    home_link_hint: 'Agregar juego manualmente',
+    home_launches_kicker: 'Lanzamientos y destacados',
+    home_launches_title: 'Campañas destacadas',
+    home_see_all: 'Ver todos',
     repair_steam_running_title: '¿Cerrar Steam para continuar?',
     repair_steam_running_message: 'Steam debe cerrarse por un momento para que Merlin actualice sus archivos. ¿Desea cerrar Steam y continuar ahora?',
     repair_steam_running_cancel: 'Cancelar',
@@ -946,6 +991,21 @@ Object.assign(translations.es, {
 });
 
 Object.assign(translations.fr, {
+    home_button: 'Accueil',
+    home_campaign_kicker: 'Campagne de la semaine',
+    home_campaign_title: 'De grands jeux à activer avec Merlin',
+    home_campaign_description: 'Découvrez les sorties, voyez ce qui correspond à votre formule et choisissez les prochains jeux de votre bibliothèque.',
+    home_view_premium: 'Voir le catalogue Premium',
+    home_add_game: 'Ajouter par lien',
+    home_quick_kicker: 'Accès rapide',
+    home_quick_title: 'À quoi voulez-vous jouer aujourd’hui ?',
+    home_premium_hint: 'Jeux débloqués par formule',
+    home_library_hint: 'Votre collection gérée',
+    home_link_title: 'Lien Steam',
+    home_link_hint: 'Ajouter un jeu manuellement',
+    home_launches_kicker: 'Sorties et sélections',
+    home_launches_title: 'Campagnes en vitrine',
+    home_see_all: 'Tout voir',
     repair_steam_running_title: 'Fermer Steam pour continuer ?',
     repair_steam_running_message: 'Steam doit se fermer un instant pour que Merlin mette ses fichiers à jour. Voulez-vous fermer Steam et continuer maintenant ?',
     repair_steam_running_cancel: 'Annuler',
@@ -953,6 +1013,21 @@ Object.assign(translations.fr, {
 });
 
 Object.assign(translations.de, {
+    home_button: 'Start',
+    home_campaign_kicker: 'Kampagne der Woche',
+    home_campaign_title: 'Grosse Spiele mit Merlin aktivieren',
+    home_campaign_description: 'Entdecke neue Highlights, sieh was zu deinem Plan passt und waehle die naechsten Spiele fuer deine Bibliothek.',
+    home_view_premium: 'Premium-Katalog ansehen',
+    home_add_game: 'Per Link hinzufuegen',
+    home_quick_kicker: 'Schnellzugriff',
+    home_quick_title: 'Was moechtest du heute spielen?',
+    home_premium_hint: 'Spiele nach Plan freigeschaltet',
+    home_library_hint: 'Deine verwaltete Sammlung',
+    home_link_title: 'Steam-Link',
+    home_link_hint: 'Spiel manuell hinzufuegen',
+    home_launches_kicker: 'Neuheiten und Highlights',
+    home_launches_title: 'Kampagnen im Schaufenster',
+    home_see_all: 'Alle ansehen',
     repair_steam_running_title: 'Steam zum Fortfahren schliessen?',
     repair_steam_running_message: 'Steam muss kurz geschlossen werden, damit Merlin seine Dateien aktualisieren kann. Moechten Sie Steam jetzt schliessen und fortfahren?',
     repair_steam_running_cancel: 'Abbrechen',
@@ -961,10 +1036,10 @@ Object.assign(translations.de, {
 
 window.merlinView = {
     get() {
-        return document.body.dataset.merlinView || 'add-games';
+        return document.body.dataset.merlinView || 'home';
     },
     set(view) {
-        const nextView = String(view || '').trim() || 'add-games';
+        const nextView = String(view || '').trim() || 'home';
         document.body.dataset.merlinView = nextView;
         window.dispatchEvent(new CustomEvent('merlin-view-changed', {
             detail: { view: nextView }
@@ -1005,9 +1080,15 @@ function setupEventListeners() {
     const settingsView = document.getElementById('settingsView');
     const settingsMainView = document.getElementById('settingsMainView');
     if (settingsView && settingsMainView) settingsMainView.appendChild(settingsView);
+    const homeView = document.getElementById('homeView');
+    const homeNavBtn = document.getElementById('homeNavBtn');
 
     const setUtilityView = (view) => {
+        const isHome = view === 'home';
         const isSettings = view === 'settings';
+        if (homeView) homeView.hidden = !isHome;
+        homeNavBtn?.classList.toggle('active', isHome);
+        homeNavBtn?.setAttribute('aria-pressed', String(isHome));
         document.getElementById('settingsMainView').hidden = !isSettings;
         if (settingsView) settingsView.hidden = !isSettings;
         document.getElementById('accessView').hidden = view !== 'access';
@@ -1017,6 +1098,13 @@ function setupEventListeners() {
         document.getElementById('accessNavBtn')?.setAttribute('aria-pressed', String(view === 'access'));
     };
     window.addEventListener('merlin-view-changed', (event) => setUtilityView(event.detail?.view));
+    homeNavBtn?.addEventListener('click', () => window.merlinView.set('home'));
+    document.getElementById('homePremiumBtn')?.addEventListener('click', () => window.merlinView.set('premium'));
+    document.getElementById('homeCampaignPremiumBtn')?.addEventListener('click', () => window.merlinView.set('premium'));
+    document.getElementById('homeAddGameBtn')?.addEventListener('click', () => window.merlinView.set('add-games'));
+    document.querySelectorAll('[data-home-view]').forEach(button => {
+        button.addEventListener('click', () => window.merlinView.set(button.dataset.homeView));
+    });
     document.getElementById('settingsNavBtn')?.addEventListener('click', () => window.merlinView.set('settings'));
     document.getElementById('accessNavBtn')?.addEventListener('click', () => window.merlinView.set('access'));
     document.getElementById('accountAccessBtn')?.addEventListener('click', () => {

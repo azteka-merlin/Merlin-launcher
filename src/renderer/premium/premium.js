@@ -19,7 +19,8 @@ window.merlinI18n.register({
         premium_next: 'Próxima',
         premium_unknown_game: 'App {appId}',
         premium_app_id: 'App ID',
-        premium_activate_now: 'Ativar agora',
+        premium_activate_now: 'Resgatar jogo',
+        premium_view_details: 'Ver detalhes',
         premium_activating: 'Ativando...',
         premium_unavailable: 'Nenhuma vaga disponível',
         premium_plan_locked: 'Bloqueado pelo plano',
@@ -152,7 +153,8 @@ window.merlinI18n.register({
         premium_next: 'Next',
         premium_unknown_game: 'App {appId}',
         premium_app_id: 'App ID',
-        premium_activate_now: 'Activate now',
+        premium_activate_now: 'Redeem game',
+        premium_view_details: 'View details',
         premium_activating: 'Activating...',
         premium_unavailable: 'No slots available',
         premium_plan_locked: 'Plan locked',
@@ -285,7 +287,8 @@ window.merlinI18n.register({
         premium_next: 'Siguiente',
         premium_unknown_game: 'App {appId}',
         premium_app_id: 'App ID',
-        premium_activate_now: 'Activar ahora',
+        premium_activate_now: 'Canjear juego',
+        premium_view_details: 'Ver detalles',
         premium_activating: 'Activando...',
         premium_unavailable: 'No hay plazas disponibles',
         premium_plan_locked: 'Bloqueado por plan',
@@ -418,7 +421,8 @@ window.merlinI18n.register({
         premium_next: 'Suivant',
         premium_unknown_game: 'App {appId}',
         premium_app_id: 'App ID',
-        premium_activate_now: 'Activer maintenant',
+        premium_activate_now: 'Obtenir le jeu',
+        premium_view_details: 'Voir les détails',
         premium_activating: 'Activation...',
         premium_unavailable: 'Aucun créneau disponible',
         premium_plan_locked: 'Bloqué par le forfait',
@@ -551,7 +555,8 @@ window.merlinI18n.register({
         premium_next: 'Weiter',
         premium_unknown_game: 'App {appId}',
         premium_app_id: 'App ID',
-        premium_activate_now: 'Jetzt aktivieren',
+        premium_activate_now: 'Spiel freischalten',
+        premium_view_details: 'Details anzeigen',
         premium_activating: 'Aktivierung...',
         premium_unavailable: 'Keine Slots verfügbar',
         premium_plan_locked: 'Vom Plan gesperrt',
@@ -1361,6 +1366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         visible.forEach(item => {
             const card = document.createElement('article');
             card.className = 'correction-card premium-entry-card';
+            card.tabIndex = 0;
 
             const imageWrap = document.createElement('div');
             imageWrap.className = 'correction-card-image-wrap';
@@ -1425,6 +1431,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const actions = document.createElement('div');
             actions.className = 'correction-card-actions premium-card-actions';
 
+            const tierBadge = document.createElement('span');
+            tierBadge.className = 'premium-mock-tier';
+            tierBadge.textContent = tr('premium_mode_value').toUpperCase();
+
             const buttonState = buttonConfig(item);
             const actionButton = document.createElement('button');
             actionButton.type = 'button';
@@ -1441,20 +1451,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            actions.append(actionButton);
-            card.append(imageWrap, title, appId, availability, cooldownHint, actions);
-            // The existing availability tooltip remains unchanged for its original
-            // states. New plan-locked cards use their compact card copy instead.
-            if (state !== 'locked') {
-                card.addEventListener('mouseenter', () => openTooltip(item, card));
-                card.addEventListener('mouseleave', event => {
-                    if (event.relatedTarget && elements.tooltip.contains(event.relatedTarget)) return;
-                    scheduleTooltipClose();
-                });
-                card.addEventListener('mousemove', () => {
-                    if (tooltipState?.anchor === card) positionTooltip(card);
-                });
-            }
+            const detailsButton = document.createElement('button');
+            detailsButton.type = 'button';
+            detailsButton.className = 'btn btn-secondary correction-card-btn premium-card-btn';
+            detailsButton.textContent = tr('premium_view_details');
+            detailsButton.addEventListener('click', event => {
+                event.stopPropagation();
+                openTooltip(item, card);
+            });
+
+            actions.append(actionButton, detailsButton);
+            card.append(imageWrap, tierBadge, title, appId, availability, cooldownHint, actions);
             elements.grid.append(card);
         });
 
