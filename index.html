@@ -5,14 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merlin</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="home.css?v=1">
+    <link rel="stylesheet" href="release-notes.css?v=1">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div class="header-content">
                 <div class="header-brand">
-                    <img class="logo-icon" src="assets/merlin-icon-compact.png" alt="Merlin">
-                    <div><h1 class="title">Merlin</h1><span id="appVersion" class="version">v--</span></div>
+                    <button id="brandVersionButton" class="header-brand-button" type="button" aria-pressed="false" aria-label="Merlin, exibir versão atual">
+                        <img class="logo-icon" src="assets/merlin-icon-compact.png" alt="">
+                        <span class="header-brand-copy">
+                            <span class="title">Merlin</span>
+                            <span id="appVersion" class="version">v--</span>
+                        </span>
+                    </button>
                     <button id="serviceStatusBadge" class="service-status-badge" type="button" hidden>
                         <span class="service-status-dot" aria-hidden="true"></span>
                         <span id="serviceStatusBadgeText">Instabilidade</span>
@@ -39,6 +46,7 @@
                         <div id="accountMenuPopover" class="account-menu-popover" role="menu" hidden>
                             <button id="accountAccessBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/user-round.svg" alt=""><span data-i18n="my_access">Meu acesso</span></button>
                             <div class="account-menu-divider" role="separator"></div>
+                            <button id="accountNewsBtn" class="account-menu-item account-menu-news" type="button" role="menuitem" hidden><img src="node_modules/lucide-static/icons/sparkles.svg" alt=""><span data-i18n="release_notes_menu">Novidades</span><span id="accountNewsUnreadDot" class="account-menu-unread-dot" aria-label="Novidade não vista" data-i18n-aria-label="release_notes_unread" hidden></span></button>
                             <button id="accountTutorialBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/book-open.svg" alt=""><span data-i18n="tutorial_menu">Tutorial</span></button>
                             <button id="accountFaqBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/circle-help.svg" alt=""><span data-i18n="faq_menu">FAQ</span></button>
                             <div class="account-menu-divider" role="separator"></div>
@@ -58,7 +66,8 @@
             <!-- Sidebar -->
             <aside class="sidebar">
                 <nav class="sidebar-navigation" aria-label="Navegação principal">
-                    <button id="addGamesNavBtn" class="side-nav-btn active" type="button" aria-pressed="true"><img src="node_modules/lucide-static/icons/plus.svg" alt=""><span data-i18n="add_game_source">Add game</span></button>
+                    <button id="homeNavBtn" class="side-nav-btn active" type="button" aria-pressed="true"><img src="node_modules/lucide-static/icons/house.svg" alt=""><span data-i18n="home_button">Início</span></button>
+                    <button id="addGamesNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/plus.svg" alt=""><span data-i18n="add_game_source">Add game</span></button>
                     <button id="libraryBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/library.svg" alt=""><span data-i18n="library_button">Library</span></button>
                     <button id="correctionsBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="corrections_button">Corrections</span></button>
                     <button id="premiumBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/crown.svg" alt=""><span data-i18n="premium_button">Premium</span></button>
@@ -207,7 +216,62 @@
                              useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                              partition="persist:steaminjector" hidden></webview>
 
-                    <section id="addGamesView" class="add-games-view" aria-labelledby="addGamesTitle">
+                    <section id="homeView" class="home-view is-loading" aria-labelledby="homeTitle" aria-busy="true">
+                        <div class="home-shell">
+                            <div id="homeLoadState" class="home-load-state" role="status" hidden>
+                                <span id="homeLoadStateText" data-i18n="home_load_error">Não foi possível carregar a Home.</span>
+                                <button id="homeRetryBtn" type="button" data-i18n="home_try_again">Tentar novamente</button>
+                            </div>
+                            <section class="home-hero" aria-labelledby="homeTitle">
+                                <div class="home-carousel-frame">
+                                    <div id="homeCarousel" class="home-hero-copy home-carousel" aria-roledescription="carrossel" aria-label="Grandes jogos para ativar no Merlin">
+                                        <div class="home-carousel-media" aria-hidden="true">
+                                            <div class="home-carousel-layer is-active"></div>
+                                            <div class="home-carousel-layer"></div>
+                                        </div>
+                                        <div class="home-skeleton home-skeleton-hero" aria-hidden="true"></div>
+                                        <img class="home-carousel-sigil" src="assets/merlin-wizard-logo.png" alt="" aria-hidden="true">
+                                        <div id="homeCarouselCopy" class="home-carousel-copy" aria-live="polite">
+                                            <span id="homeCarouselKicker" class="home-kicker"></span>
+                                            <h2 id="homeTitle"></h2>
+                                            <p id="homeCarouselDescription"></p>
+                                            <div class="home-hero-actions">
+                                                <button id="homePremiumBtn" class="btn btn-primary" type="button" data-home-action="premium"><span data-i18n="home_view_premium">Ver catálogo Premium</span></button>
+                                                <button id="homeAddGameBtn" class="btn btn-secondary" type="button" data-home-action="add_game"><span data-i18n="home_add_game">Adicionar por link</span></button>
+                                            </div>
+                                        </div>
+                                        <button id="homeCarouselPrevious" class="home-carousel-arrow home-carousel-arrow-previous" type="button" aria-label="Jogo anterior"><span aria-hidden="true">‹</span></button>
+                                        <button id="homeCarouselNext" class="home-carousel-arrow home-carousel-arrow-next" type="button" aria-label="Próximo jogo"><span aria-hidden="true">›</span></button>
+                                    </div>
+                                    <div class="home-carousel-controls" aria-label="Escolher jogo em destaque">
+                                        <div id="homeCarouselDots" class="home-carousel-dots"><span class="home-dots-skeleton home-skeleton" aria-hidden="true"></span></div>
+                                    </div>
+                                </div>
+                                <div class="home-featured-stack" aria-label="Jogos em destaque">
+                                    <article class="home-featured-card home-featured-card-main home-skeleton-card" aria-hidden="true"><div class="home-skeleton"></div></article>
+                                    <article class="home-featured-card home-skeleton-card" aria-hidden="true"><div class="home-skeleton"></div></article>
+                                </div>
+                            </section>
+
+                            <section class="home-section" aria-labelledby="homeLaunchesTitle">
+                                <div class="home-section-header">
+                                    <div>
+                                        <span class="home-kicker" data-i18n="home_launches_kicker">Lançamentos e destaques</span>
+                                        <h3 id="homeLaunchesTitle" data-i18n="home_launches_title">Campanhas em vitrine</h3>
+                                    </div>
+                                    <button id="homeCampaignPremiumBtn" class="home-text-btn" type="button" data-i18n="home_see_all">Ver todos</button>
+                                </div>
+                                <div class="home-game-row">
+                                    <article class="home-game-card home-skeleton-card" aria-hidden="true"><div class="home-skeleton"></div></article>
+                                    <article class="home-game-card home-skeleton-card" aria-hidden="true"><div class="home-skeleton"></div></article>
+                                    <article class="home-game-card home-skeleton-card" aria-hidden="true"><div class="home-skeleton"></div></article>
+                                    <article class="home-game-card home-skeleton-card" aria-hidden="true"><div class="home-skeleton"></div></article>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+
+                    <section id="addGamesView" class="add-games-view" aria-labelledby="addGamesTitle" hidden>
                         <div class="add-games-card">
                             <header class="add-games-header">
                                 <h2 id="addGamesTitle" data-i18n="add_games_title">Adicionar jogo à Steam</h2>
@@ -629,6 +693,16 @@
                 <button id="licenseGateResetCancel" class="license-reset-cancel" type="button">Cancelar</button>
                 <button id="licenseGateResetConfirm" class="license-reset-confirm" type="button">Resetar e continuar</button>
             </div>
+        </section>
+    </div>
+
+    <div id="releaseNotesOverlay" class="release-notes-overlay" hidden>
+        <section id="releaseNotesDialog" class="release-notes-dialog" role="dialog" aria-modal="true" aria-labelledby="releaseNotesTitle" tabindex="-1">
+            <button id="releaseNotesCloseBtn" class="release-notes-close" type="button" data-i18n-aria-label="release_notes_close" aria-label="Fechar">
+                <img src="node_modules/lucide-static/icons/x.svg" alt="">
+            </button>
+            <div id="releaseNotesSummary" class="release-notes-summary"></div>
+            <div id="releaseNotesFull" class="release-notes-full" hidden></div>
         </section>
     </div>
 
@@ -1114,15 +1188,18 @@
     </div>
     <script src="src/renderer/auth/entitlement-monitor.js"></script>
     <script src="src/renderer/auth/license-gate.js"></script>
+    <script src="node_modules/@floating-ui/core/dist/floating-ui.core.umd.min.js"></script>
     <script src="node_modules/@floating-ui/dom/dist/floating-ui.dom.umd.min.js"></script>
     <script src="renderer.js"></script>
     <script src="src/renderer/shared/account-menu.js"></script>
+    <script src="src/renderer/shared/release-notes.js?v=1"></script>
     <script src="src/renderer/shared/restart-prompt.js"></script>
     <script src="src/renderer/shared/game-install-prompt.js"></script>
     <script src="src/renderer/shared/welcome-compatibility.js"></script>
     <script src="src/renderer/shared/tutorial.js"></script>
     <script src="src/renderer/shared/faq.js"></script>
     <script src="src/renderer/shared/update-checker.js"></script>
+    <script src="src/renderer/shared/brand-version.js"></script>
     <script src="src/renderer/shared/service-status.js"></script>
     <script src="src/renderer/shared/polls.js"></script>
     <script src="src/renderer/shared/announcements.js"></script>
@@ -1133,5 +1210,6 @@
     <script src="src/renderer/premium/premium.js"></script>
     <script src="src/renderer/access/access.js"></script>
     <script src="gamepad.js"></script>
+    <script src="src/renderer/shared/home-carousel.js?v=4"></script>
 </body>
 </html>

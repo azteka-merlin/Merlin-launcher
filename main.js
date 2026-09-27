@@ -8,6 +8,17 @@ const axios = require('axios');
 const AdmZip = require('adm-zip');
 const nodeUnrar = require('node-unrar-js');
 
+function preventBrokenConsolePipeCrash(stream) {
+    if (!stream?.on) return;
+    stream.on('error', error => {
+        if (error?.code === 'EPIPE') return;
+        setImmediate(() => { throw error; });
+    });
+}
+
+preventBrokenConsolePipeCrash(process.stdout);
+preventBrokenConsolePipeCrash(process.stderr);
+
 const MERLIN_WINDOW_ICON_PATH = path.join(__dirname, 'assets/merlin-window-icon.png');
 const MERLIN_TRAY_ICON_PATH = path.join(__dirname, 'assets/merlin-tray.ico');
 
@@ -20,6 +31,12 @@ const { createSpecialCorrection } = require('./src/main/corrections/special-corr
 const { createAuthSession } = require('./src/main/auth/auth-session');
 const { createAnnouncementsClient } = require('./src/main/announcements/announcements-client');
 const { createAnnouncementsService } = require('./src/main/announcements/announcements-service');
+const { createHomeContentClient } = require('./src/main/home/home-content-client');
+const { createHomeContentService } = require('./src/main/home/home-content-service');
+const { createHomeContentStore } = require('./src/main/home/home-content-store');
+const { createReleaseNotesClient } = require('./src/main/release-notes/release-notes-client');
+const { createReleaseNotesService } = require('./src/main/release-notes/release-notes-service');
+const { createReleaseNotesStore } = require('./src/main/release-notes/release-notes-store');
 const { installLuaFile } = require('./src/main/files/lua-transformer');
 const { createAddGamesService } = require('./src/main/games/add-games-service');
 const { createGameNameResolver } = require('./src/main/games/game-name-resolver');
@@ -32,6 +49,8 @@ const { registerCorrectionsIpc } = require('./src/main/ipc/register-corrections-
 const { registerExistingIpc } = require('./src/main/ipc/register-existing-ipc');
 const { registerAuthIpc } = require('./src/main/ipc/register-auth-ipc');
 const { registerAnnouncementsIpc } = require('./src/main/ipc/register-announcements-ipc');
+const { registerHomeIpc } = require('./src/main/ipc/register-home-ipc');
+const { registerReleaseNotesIpc } = require('./src/main/ipc/register-release-notes-ipc');
 const { registerGamesIpc } = require('./src/main/ipc/register-games-ipc');
 const { registerLibraryIpc } = require('./src/main/ipc/register-library-ipc');
 const { registerPremiumIpc } = require('./src/main/ipc/register-premium-ipc');
@@ -219,6 +238,14 @@ function getPremiumCatalogFilePath() {
     return path.join(app.getPath('userData'), 'premium-catalog.json');
 }
 
+function getHomeContentFilePath() {
+    return path.join(app.getPath('userData'), 'home-content.json');
+}
+
+function getReleaseNotesFilePath() {
+    return path.join(app.getPath('userData'), 'release-notes.json');
+}
+
 function getBundledSteamRuntimePath(file) {
     const root = app.isPackaged
         ? process.resourcesPath
@@ -237,6 +264,7 @@ const configStore = createConfigStore({
         tutorialPromptSeen: false,
         correctionsDisclaimerSeen: false,
         discordAnnouncementSeen: false,
+        lastSeenChangelogVersion: '',
         steamPlugin: { enabled: false, markerOwned: false, startAtLogin: false }
     }
 });
@@ -264,6 +292,8 @@ const premiumActivationEventUrl = `${apiBaseUrl}/premium/activation-events`;
 const pollsActiveUrl = `${apiBaseUrl}/polls/active`;
 const pollsVoteUrl = `${apiBaseUrl}/polls`;
 const announcementsApiUrl = `${apiBaseUrl}/announcements`;
+const homeContentApiUrl = `${apiBaseUrl}/home`;
+const releaseNotesApiUrl = `${apiBaseUrl}/release-notes`;
 const updateLatestApiUrl = `${apiBaseUrl}/updates/latest`;
 const updateDownloadApiUrl = `${apiBaseUrl}/updates/download`;
 const apiAgent = createApiAgent();
@@ -406,6 +436,20 @@ const announcementsService = createAnnouncementsService({
         axios,
         baseUrl: announcementsApiUrl
     })
+});
+const homeContentService = createHomeContentService({
+    authSession,
+    baseUrl: homeContentApiUrl,
+    client: createHomeContentClient({ axios, url: homeContentApiUrl }),
+    store: createHomeContentStore({ fs, path, getFilePath: getHomeContentFilePath })
+});
+const releaseNotesService = createReleaseNotesService({
+    authSession,
+    baseUrl: releaseNotesApiUrl,
+    client: createReleaseNotesClient({ axios, url: releaseNotesApiUrl }),
+    store: createReleaseNotesStore({ fs, path, getFilePath: getReleaseNotesFilePath }),
+    configStore,
+    launcherVersion: app.getVersion()
 });
 
 const gameInstaller = createGameInstaller({
@@ -651,6 +695,8 @@ registerSteamPluginIpc({
     onStartAtLoginChanged: applyLoginItemSettings
 });
 registerAnnouncementsIpc({ ipcMain, announcementsService });
+registerHomeIpc({ ipcMain, homeContentService });
+registerReleaseNotesIpc({ ipcMain, releaseNotesService });
 registerAuthIpc({
     ipcMain,
     authSession,

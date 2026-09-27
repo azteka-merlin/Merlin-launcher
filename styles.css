@@ -4684,9 +4684,44 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
 @keyframes merlin-artwork-skeleton { to { background-position: -220% 0; } }
 
 /* Account menu matches the compact reference: a real popover, not a native dropdown. */
-#accountMenuTrigger { min-width: 174px; justify-content: flex-start; }
-#accountMenuName { flex: 1; text-align: left; }
-.account-menu-popover { width: 310px; min-width: 310px; padding: 1rem; }
+#accountMenuTrigger {
+    width: auto;
+    min-width: 0;
+    max-width: 220px;
+    justify-content: flex-start;
+    gap: .42rem;
+    padding: 0 .52rem;
+    border-radius: 999px;
+}
+#accountMenuName {
+    flex: 0 1 auto;
+    max-width: 142px;
+    text-align: left;
+}
+.account-menu-trigger-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    opacity: .92;
+    object-fit: contain;
+}
+.account-menu-chevron {
+    width: 14px;
+    height: 14px;
+    margin-left: .15rem;
+    flex: 0 0 14px;
+    transition: transform .18s ease;
+}
+#accountMenuTrigger[aria-expanded="true"] .account-menu-chevron { transform: rotate(180deg); }
+.account-menu-popover {
+    width: 250px;
+    min-width: 250px;
+    padding: .55rem;
+    border-color: var(--merlin-shell-border);
+    border-radius: 7px;
+    background: linear-gradient(rgb(17, 19, 31) 0%, rgb(13, 15, 24) 100%);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .48);
+}
 .account-menu-popover .account-menu-item { min-height: 44px; padding: .5rem .62rem; text-align: left; }
 .account-menu-divider { margin: .62rem .1rem; }
 .settings-language-select-wrap { position: relative; display: inline-block; width: fit-content; max-width: 100%; vertical-align: top; }
@@ -4987,4 +5022,453 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
     .discord-announcement-actions .btn {
         width: 100%;
     }
+}
+
+/* Add game composition: keep every current control while removing only the outer card surface. */
+.add-games-view {
+    padding: clamp(3.5rem, 13vh, 8rem) clamp(1rem, 3vw, 3rem) clamp(2rem, 5vh, 3rem);
+}
+
+.add-games-card {
+    width: min(100%, 1180px);
+    min-height: auto;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+@media (max-width: 900px) {
+    .add-games-view {
+        padding: clamp(2rem, 6vh, 3.25rem) 1.5rem 2rem;
+    }
+
+    .add-games-card {
+        padding: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .add-games-view {
+        padding: 1.5rem 1rem 2rem;
+    }
+}
+
+/* Add game subheaders: UX-reference geometry, current Merlin shell palette. */
+body[data-merlin-view="add-games"] .browser-toolbar,
+body[data-merlin-view="steam-store"] .browser-toolbar {
+    min-height: 46px;
+    padding: .42rem 1rem;
+    border-bottom-color: var(--merlin-shell-border);
+    background: #121522;
+}
+
+body[data-merlin-view="add-games"] .nav-btn,
+body[data-merlin-view="steam-store"] .nav-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+}
+
+body[data-merlin-view="add-games"] .add-game-mode-switch,
+body[data-merlin-view="steam-store"] .add-game-mode-switch {
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid rgba(118, 133, 185, .34);
+    border-radius: 6px;
+    background: #191c2a;
+}
+
+body[data-merlin-view="add-games"] .add-game-mode-btn,
+body[data-merlin-view="steam-store"] .add-game-mode-btn {
+    min-height: 30px;
+    padding: 0 .78rem;
+    border: 0;
+    border-radius: 4px;
+    color: #b7bfd2;
+    font-size: .76rem;
+}
+
+body[data-merlin-view="add-games"] .add-game-mode-btn.active,
+body[data-merlin-view="steam-store"] .add-game-mode-btn.active {
+    border: 0;
+    background: linear-gradient(110deg, rgba(130, 82, 221, .52), rgba(77, 135, 203, .38));
+    color: #f8f4ff;
+}
+
+body[data-merlin-view="add-games"] .steam-context-bar,
+body[data-merlin-view="steam-store"] .steam-context-bar {
+    min-height: 56px;
+    padding: 0 10px;
+    border-bottom-color: var(--merlin-shell-border);
+    background: #121522;
+}
+
+/* Library composition: centered, compact, and still within the approved Merlin palette. */
+#libraryView.library-view {
+    padding: clamp(1rem, 2.4vw, 2rem);
+    background: var(--merlin-shell-background);
+}
+
+#libraryView .library-card {
+    width: min(100%, 1240px);
+    min-height: auto;
+    margin-inline: auto;
+    padding: clamp(1.25rem, 2vw, 1.9rem) clamp(1.25rem, 2.4vw, 2.35rem);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+#libraryView .library-header {
+    margin-bottom: .85rem;
+}
+
+#libraryView .library-notice {
+    margin-bottom: 1rem;
+    padding: .7rem .85rem;
+    border-color: rgba(139, 92, 246, .42);
+    background: rgba(89, 72, 149, .1);
+}
+
+#libraryView .library-notice svg {
+    stroke: #8fcfff;
+}
+
+#libraryView .library-controls {
+    gap: .85rem;
+    margin-bottom: .65rem;
+}
+
+#libraryView .library-refresh-btn,
+#libraryView .library-retry-btn {
+    border-color: var(--merlin-border);
+    border-radius: 8px;
+    background: var(--merlin-shell-footer-background);
+    color: #e4eaf5;
+}
+
+#libraryView .library-refresh-btn:hover:not(:disabled),
+#libraryView .library-retry-btn:hover:not(:disabled) {
+    border-color: rgba(137, 92, 212, .62);
+    background: rgba(122, 78, 208, .18);
+}
+
+#libraryView .library-search-wrap input {
+    border-color: var(--merlin-shell-border);
+    border-radius: 8px;
+    background: var(--merlin-shell-footer-background);
+}
+
+#libraryView .library-search-wrap input:focus {
+    border-color: #8b6ee0;
+    box-shadow: 0 0 0 3px rgba(118, 87, 206, .15);
+}
+
+#libraryView .library-table-wrap {
+    border-color: var(--merlin-shell-border);
+    border-radius: 10px;
+    background: var(--merlin-shell-footer-background);
+}
+
+#libraryView .library-table th {
+    background: rgba(115, 126, 171, .1);
+}
+
+#libraryView .library-table td {
+    border-top-color: rgba(115, 126, 171, .18);
+}
+
+#libraryView .library-explore-btn,
+#libraryView .library-unpack-btn,
+#libraryView .library-remove-btn,
+#libraryView .library-page-btn {
+    border-color: var(--merlin-border);
+    background: var(--merlin-shell-footer-background);
+}
+
+#libraryView .library-explore-btn:hover:not(:disabled),
+#libraryView .library-page-btn:hover:not(:disabled),
+#libraryView .library-page-btn.active {
+    border-color: rgba(139, 92, 246, .65);
+    background: rgba(124, 58, 237, .22);
+    color: #d8c7ff;
+}
+
+#libraryView .library-unpack-btn:hover:not(:disabled) {
+    border-color: rgba(245, 158, 11, .55);
+    background: rgba(245, 158, 11, .1);
+}
+
+#libraryView .library-remove-btn:hover {
+    background: rgba(239, 68, 68, .12);
+}
+
+#libraryView .library-footer {
+    margin-top: .65rem;
+}
+
+@media (max-width: 760px) {
+    #libraryView .library-card {
+        padding: 1.1rem;
+    }
+}
+
+/* Corrections composition: open structure with centered, premium game cards. */
+#correctionsView.corrections-view {
+    padding: clamp(.75rem, 1.4vw, 1.25rem) clamp(.75rem, 1.4vw, 1.35rem);
+    background: var(--merlin-shell-background);
+}
+
+#correctionsView .corrections-card {
+    width: min(100%, 1360px);
+    min-height: auto;
+    margin-inline: auto;
+    padding: clamp(1rem, 1.4vw, 1.25rem) clamp(1rem, 1.5vw, 1.5rem);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+#correctionsView .library-header {
+    margin-bottom: .7rem;
+}
+
+#correctionsView .library-notice {
+    margin-bottom: .8rem;
+    padding: .7rem .85rem;
+    border-color: rgba(139, 92, 246, .42);
+    background: rgba(89, 72, 149, .1);
+}
+
+#correctionsView .library-notice svg {
+    stroke: #8fcfff;
+}
+
+#correctionsView .library-controls {
+    gap: .85rem;
+    margin-bottom: .55rem;
+}
+
+#correctionsView .library-refresh-btn,
+#correctionsView .library-retry-btn {
+    border-color: var(--merlin-border);
+    border-radius: 8px;
+    background: var(--merlin-shell-footer-background);
+    color: #e4eaf5;
+}
+
+#correctionsView .library-refresh-btn:hover:not(:disabled),
+#correctionsView .library-retry-btn:hover:not(:disabled) {
+    border-color: rgba(137, 92, 212, .62);
+    background: rgba(122, 78, 208, .18);
+}
+
+#correctionsView .library-search-wrap input {
+    border-color: var(--merlin-shell-border);
+    border-radius: 8px;
+    background: var(--merlin-shell-footer-background);
+}
+
+#correctionsView .library-search-wrap input:focus {
+    border-color: #8b6ee0;
+    box-shadow: 0 0 0 3px rgba(118, 87, 206, .15);
+}
+
+#correctionsView .corrections-grid-wrap {
+    margin-top: .35rem;
+}
+
+#correctionsView .corrections-grid {
+    gap: .85rem;
+}
+
+#correctionsView .correction-card {
+    gap: .8rem;
+    padding: .95rem;
+    border-color: var(--merlin-shell-border);
+    background: linear-gradient(145deg, rgb(17, 19, 31), rgb(13, 15, 24));
+    box-shadow: inset 0 1px rgba(255, 255, 255, .025), 0 10px 24px rgba(0, 0, 0, .12);
+}
+
+#correctionsView .correction-card-note {
+    background: var(--merlin-shell-footer-background);
+}
+
+#correctionsView .correction-card-note:hover {
+    background: rgba(115, 126, 171, .12);
+}
+
+#correctionsView .correction-vote-btn {
+    border-color: var(--merlin-shell-border);
+    background: var(--merlin-shell-footer-background);
+}
+
+#correctionsView .correction-vote-btn:hover:not(:disabled) {
+    background: rgba(122, 78, 208, .14);
+}
+
+#correctionsView .correction-card .add-games-btn-secondary {
+    border-color: var(--merlin-shell-border);
+    background: var(--merlin-shell-footer-background);
+    color: #e4eaf5;
+}
+
+#correctionsView .correction-card .add-games-btn-secondary:hover:not(:disabled) {
+    border-color: rgba(137, 92, 212, .62);
+    background: rgba(122, 78, 208, .18);
+}
+
+#correctionsView .library-footer {
+    margin-top: .65rem;
+}
+
+@media (max-width: 760px) {
+    #correctionsView .corrections-card {
+        padding: 1.1rem;
+    }
+}
+
+/* Premium composition: use the open Corrections shell without changing its cards. */
+#premiumView.library-view {
+    padding: clamp(.75rem, 1.4vw, 1.25rem) clamp(.75rem, 1.4vw, 1.35rem);
+    background: var(--merlin-shell-background);
+}
+
+#premiumView .premium-card-shell {
+    width: min(100%, 1360px);
+    min-height: auto;
+    margin-inline: auto;
+    padding: clamp(1rem, 1.4vw, 1.25rem) clamp(1rem, 1.5vw, 1.5rem);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+#premiumView .premium-grid {
+    gap: .85rem;
+}
+
+#premiumView .premium-global-cooldown {
+    margin: 0 0 12px;
+}
+
+@media (max-width: 760px) {
+    #premiumView .premium-card-shell {
+        padding: 1.1rem;
+    }
+}
+
+/* Wide desktop density pass: let the content views grow together. */
+@media (min-width: 1440px) {
+    body[data-merlin-view="home"] .home-shell {
+        width: min(100%, 1600px);
+        padding: 1.15rem 1.25rem 1.75rem;
+        gap: 1.15rem;
+    }
+
+    .add-games-view {
+        padding: clamp(1.5rem, 4vh, 3.5rem) 1.35rem 2.5rem;
+    }
+
+    .add-games-card {
+        width: min(100%, 1600px);
+    }
+
+    #libraryView.library-view,
+    #correctionsView.corrections-view,
+    #premiumView.library-view {
+        padding: 1.25rem 1.35rem;
+    }
+
+    #libraryView .library-card,
+    #correctionsView .corrections-card,
+    #premiumView .premium-card-shell {
+        width: min(100%, 1600px);
+        padding: 1.25rem 1.5rem;
+    }
+}
+
+/* Shared Merlin spacing grammar: the first content block follows its shell by 20–32px. */
+:root {
+    --merlin-view-top-gap: clamp(20px, 2.5vh, 32px);
+}
+
+.add-games-view {
+    padding-top: var(--merlin-view-top-gap);
+}
+
+#libraryView.library-view,
+#correctionsView.corrections-view,
+#premiumView.library-view {
+    padding-top: 0;
+}
+
+#libraryView .library-card,
+#correctionsView .corrections-card,
+#premiumView .premium-card-shell {
+    padding-top: var(--merlin-view-top-gap);
+}
+
+@media (min-width: 1440px) {
+    #libraryView.library-view,
+    #correctionsView.corrections-view,
+    #premiumView.library-view {
+        padding-top: 0;
+    }
+
+    #libraryView .library-card,
+    #correctionsView .corrections-card,
+    #premiumView .premium-card-shell {
+        padding-top: var(--merlin-view-top-gap);
+    }
+}
+
+/* Add Games uses the available height for its empty-state composition. */
+@media (min-height: 900px) {
+    body[data-merlin-view="add-games"] .add-games-view {
+        padding-top: clamp(32px, 4.5vh, 50px);
+    }
+}
+
+/* Keep the same rhythm inside each view without imposing a shared content width. */
+.add-games-view .add-games-header {
+    margin-bottom: 16px;
+}
+
+#libraryView .library-header,
+#correctionsView .library-header,
+#premiumView .library-header {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 16px;
+}
+
+#libraryView .library-notice,
+#correctionsView .library-notice,
+#premiumView .library-notice {
+    margin-bottom: 12px;
+}
+
+#libraryView .library-controls,
+#correctionsView .library-controls,
+#premiumView .library-controls {
+    margin-bottom: 12px;
+}
+
+#libraryView .library-table-wrap,
+#correctionsView .corrections-grid-wrap,
+#premiumView .corrections-grid-wrap {
+    margin-top: 0;
+}
+
+#libraryView .library-footer,
+#correctionsView .library-footer,
+#premiumView .library-footer {
+    margin-top: 20px;
 }

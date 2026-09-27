@@ -1,0 +1,138 @@
+/* Official Merlin release notes. Kept isolated from every application view. */
+.account-menu-news { position: relative; }
+.account-menu-news > span:not(.account-menu-unread-dot) { min-width: 0; }
+.account-menu-unread-dot { width: 7px; height: 7px; margin-left: auto; border-radius: 999px; background: #a855f7; box-shadow: 0 0 0 3px rgba(168, 85, 247, .13), 0 0 10px rgba(168, 85, 247, .72); }
+.account-menu-unread-dot[hidden] { display: none; }
+
+body.release-notes-open { overflow: hidden; }
+.release-notes-overlay { position: fixed; z-index: 5000; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(2, 7, 17, .76); backdrop-filter: blur(9px) saturate(.76); -webkit-backdrop-filter: blur(9px) saturate(.76); }
+.release-notes-overlay[hidden] { display: none; }
+.release-notes-dialog { position: relative; isolation: isolate; width: min(1136px, calc(100vw - 48px)); height: min(776px, calc(100vh - 48px)); overflow: hidden; border: 1px solid rgba(123, 143, 220, .82); border-radius: 16px; outline: none; background: radial-gradient(circle at 76% 18%, rgba(112, 27, 178, .2), transparent 35%), linear-gradient(135deg, #071025 0%, #07101f 48%, #07121d 100%); color: #f7f8ff; box-shadow: 0 28px 90px rgba(0, 0, 0, .62), 0 0 30px rgba(117, 46, 221, .13), inset 0 0 42px rgba(70, 89, 166, .08); }
+.release-notes-dialog::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; border-radius: inherit; background: linear-gradient(110deg, rgba(83, 80, 192, .08), transparent 34%, rgba(141, 40, 194, .05)); }
+.release-notes-close { position: absolute; z-index: 20; top: 18px; right: 18px; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 1px solid rgba(131, 151, 204, .74); border-radius: 9px; background: rgba(11, 24, 46, .86); cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.release-notes-close img { width: 21px; height: 21px; filter: invert(92%) sepia(11%) saturate(455%) hue-rotate(187deg) brightness(108%); }
+.release-notes-close:hover { border-color: rgba(179, 118, 255, .9); background: rgba(50, 30, 85, .9); transform: translateY(-1px); }
+.release-notes-close:focus-visible,
+.release-notes-dialog button:focus-visible { outline: 2px solid #c078ff; outline-offset: 3px; }
+.release-notes-summary,
+.release-notes-full { width: 100%; height: 100%; }
+.release-notes-summary[hidden],
+.release-notes-full[hidden] { display: none; }
+
+.release-notes-major-layout { display: grid; grid-template-columns: minmax(0, 52%) minmax(0, 48%); width: 100%; height: 100%; }
+.release-notes-major-copy { position: relative; z-index: 2; display: flex; min-width: 0; flex-direction: column; padding: 38px 0 30px 50px; }
+.release-notes-major-header { display: grid; justify-items: start; }
+.release-notes-brand { display: flex; align-items: center; gap: 13px; color: #f7f8ff; font-size: 20px; font-weight: 750; letter-spacing: .17em; }
+.release-notes-brand img { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(148, 58, 255, .2)); }
+.release-notes-version { display: inline-flex; width: max-content; align-items: center; min-height: 27px; margin-top: 14px; padding: 4px 14px; border: 1px solid rgba(166, 100, 245, .7); border-radius: 7px; background: linear-gradient(135deg, rgba(103, 36, 173, .64), rgba(44, 61, 122, .62)); color: #ead7ff; box-shadow: inset 0 0 12px rgba(162, 94, 250, .12); font-size: 13px; font-weight: 800; letter-spacing: .035em; }
+.release-notes-title { max-width: 590px; margin: 11px 0 0; color: #f9faff; font-size: clamp(32px, 3vw, 43px); font-weight: 900; line-height: .98; letter-spacing: -.035em; text-transform: uppercase; text-wrap: balance; }
+.release-notes-title-accent { background: linear-gradient(135deg, #c15aff 4%, #e36cff 44%, #9c54ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 10px rgba(172, 71, 255, .16)); }
+.release-notes-subtitle { max-width: 570px; margin: 7px 0 0; color: #c2cee3; font-size: 18px; font-weight: 650; line-height: 1.35; }
+.release-notes-features { display: grid; gap: 8px; margin-top: 20px; padding-right: 16px; }
+.release-notes-feature { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; align-items: center; min-height: 72px; padding: 8px 16px 8px 12px; border: 1px solid rgba(103, 123, 180, .62); border-radius: 11px; background: linear-gradient(105deg, rgba(38, 22, 72, .76), rgba(11, 22, 42, .88)); box-shadow: inset 0 0 18px rgba(66, 70, 143, .07); transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.release-notes-feature:hover { border-color: rgba(157, 95, 234, .82); background: linear-gradient(105deg, rgba(52, 27, 91, .82), rgba(13, 26, 48, .92)); transform: translateX(2px); }
+.release-notes-feature-icon { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid rgba(137, 92, 225, .65); border-radius: 10px; background: linear-gradient(135deg, rgba(118, 44, 190, .54), rgba(35, 67, 137, .58)); box-shadow: inset 0 0 15px rgba(178, 92, 255, .12); }
+.release-notes-feature-icon img { width: 29px; height: 29px; object-fit: contain; filter: invert(76%) sepia(38%) saturate(2179%) hue-rotate(222deg) brightness(111%); }
+.release-notes-feature:nth-child(2) .release-notes-feature-icon img { filter: brightness(0) invert(1); }
+.release-notes-feature-copy { min-width: 0; }
+.release-notes-feature-copy h2 { margin: 0; color: #f4f6ff; font-size: 16px; font-weight: 780; line-height: 1.15; }
+.release-notes-feature-copy p { max-width: 430px; margin: 3px 0 0; color: #b7c2d7; font-size: 13px; line-height: 1.33; }
+.release-notes-actions { display: flex; align-items: stretch; gap: 16px; margin-top: auto; padding-top: 20px; }
+.release-notes-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 13px 28px; border-radius: 11px; color: #f7f8ff; cursor: pointer; font: inherit; font-size: 15px; font-weight: 800; transition: transform .18s ease, border-color .18s ease, filter .18s ease, box-shadow .18s ease; }
+.release-notes-actions button img { width: 20px; height: 20px; filter: brightness(0) invert(1); }
+.release-notes-actions button:hover { transform: translateY(-2px); }
+.release-notes-actions button:active { transform: translateY(0) scale(.99); }
+.release-notes-primary { border: 1px solid rgba(207, 130, 255, .82); background: linear-gradient(135deg, #7c2ee7 0%, #a644f6 100%); box-shadow: 0 9px 26px rgba(135, 43, 225, .28), inset 0 1px rgba(255, 255, 255, .14); }
+.release-notes-primary:hover { filter: brightness(1.08); box-shadow: 0 12px 32px rgba(135, 43, 225, .38), inset 0 1px rgba(255, 255, 255, .18); }
+.release-notes-secondary { border: 1px solid rgba(112, 137, 194, .78); background: rgba(11, 25, 47, .84); box-shadow: inset 0 0 16px rgba(72, 84, 146, .08); }
+.release-notes-secondary:hover { border-color: rgba(158, 112, 224, .88); background: rgba(28, 29, 61, .9); }
+
+.release-notes-major-art { position: relative; min-width: 0; overflow: hidden; }
+.release-notes-major-art::before { content: ""; position: absolute; inset: 2% -15% -10% -34%; background: radial-gradient(circle at 50% 44%, rgba(165, 49, 247, .33), transparent 57%), radial-gradient(circle at 68% 70%, rgba(255, 174, 69, .12), transparent 39%); filter: blur(25px); }
+.release-notes-major-art::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #081025 0%, rgba(8, 16, 37, .7) 6%, transparent 28%), linear-gradient(0deg, rgba(6, 13, 28, .72) 0%, transparent 25%); }
+.release-notes-major-art > img { position: absolute; z-index: 1; inset: 20px 8px 28px -28px; width: calc(100% + 32px); height: calc(100% - 32px); object-fit: contain; object-position: center bottom; filter: drop-shadow(0 0 22px rgba(157, 53, 242, .2)); }
+.release-notes-reminder { position: absolute; z-index: 3; right: 25px; bottom: 27px; left: 34px; display: flex; align-items: center; gap: 10px; min-height: 32px; color: #aab5ca; font-size: 11px; }
+.release-notes-reminder span { display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 20px; border-radius: 4px; background: linear-gradient(135deg, #7d2fe8, #b44df7); color: #fff; box-shadow: 0 0 12px rgba(174, 69, 246, .35); font-weight: 900; }
+.release-notes-reminder p { margin: 0; }
+
+.release-notes-standard-layout { display: flex; width: min(650px, calc(100% - 100px)); height: 100%; margin-inline: auto; flex-direction: column; justify-content: center; padding: 62px 0 44px; }
+.release-notes-standard-layout .release-notes-standard-eyebrow { margin: 19px 0 -5px; color: #c0cade; font-size: 14px; font-weight: 750; }
+.release-notes-standard-layout .release-notes-title { max-width: 100%; margin-top: 17px; font-size: clamp(30px, 4vw, 46px); text-transform: none; }
+.release-notes-standard-layout .release-notes-subtitle { max-width: 100%; margin-top: 12px; font-size: 16px; font-weight: 450; }
+.release-notes-standard-list { display: grid; gap: 11px; margin: 28px 0 0; padding: 20px 24px 20px 42px; border: 1px solid rgba(96, 119, 174, .5); border-radius: 12px; background: rgba(13, 25, 45, .72); color: #d5ddeb; }
+.release-notes-standard-list li::marker,
+.release-notes-full-list li::marker { color: #b34fff; }
+.release-notes-standard-layout .release-notes-actions { margin-top: 25px; justify-content: flex-end; }
+
+.release-notes-full { overflow: auto; overscroll-behavior: contain; }
+.release-notes-full-content { display: flex; width: min(760px, calc(100% - 100px)); min-height: 100%; margin-inline: auto; flex-direction: column; padding: 58px 0 42px; }
+.release-notes-full-content > h1 { margin: 18px 0 0; font-size: clamp(32px, 4vw, 48px); letter-spacing: -.035em; }
+.release-notes-full-summary { margin: 10px 0 0; color: #bdc8db; font-size: 16px; line-height: 1.5; }
+.release-notes-version-history { display: flex; gap: 8px; margin-top: 18px; overflow-x: auto; padding-bottom: 3px; }
+.release-notes-version-chip { min-height: 34px; padding: 6px 12px; border: 1px solid rgba(104, 126, 181, .58); border-radius: 999px; background: rgba(12, 25, 46, .76); color: #bdc8db; cursor: pointer; font: inherit; font-size: 12px; font-weight: 750; white-space: nowrap; }
+.release-notes-version-chip.is-active { border-color: rgba(177, 93, 250, .8); background: rgba(111, 41, 177, .35); color: #f4e9ff; }
+.release-notes-full-list { display: grid; gap: 10px; margin: 26px 0 0; padding: 22px 28px 22px 48px; border: 1px solid rgba(99, 121, 177, .56); border-radius: 13px; background: rgba(11, 23, 43, .74); color: #e0e5ef; font-size: 15px; line-height: 1.4; }
+.release-notes-full-content .release-notes-actions { justify-content: flex-end; margin-top: 24px; }
+
+@media (max-height: 820px) and (min-width: 901px) {
+    .release-notes-dialog { height: calc(100vh - 28px); }
+    .release-notes-major-copy { padding-top: 24px; padding-bottom: 20px; }
+    .release-notes-brand img { width: 42px; height: 42px; }
+    .release-notes-version { margin-top: 9px; }
+    .release-notes-title { margin-top: 8px; font-size: 35px; }
+    .release-notes-subtitle { margin-top: 4px; font-size: 15px; }
+    .release-notes-features { gap: 6px; margin-top: 13px; }
+    .release-notes-feature { min-height: 61px; padding-top: 6px; padding-bottom: 6px; }
+    .release-notes-feature-icon { width: 45px; height: 45px; }
+    .release-notes-feature-copy h2 { font-size: 14px; }
+    .release-notes-feature-copy p { font-size: 11.5px; }
+    .release-notes-actions { padding-top: 12px; }
+    .release-notes-actions button { min-height: 48px; }
+}
+
+@media (max-width: 900px) {
+    .release-notes-overlay { padding: 14px; }
+    .release-notes-dialog { width: calc(100vw - 28px); height: calc(100vh - 28px); overflow-y: auto; overscroll-behavior: contain; }
+    .release-notes-major-layout { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 100%; }
+    .release-notes-major-copy { padding: 32px 34px 24px; }
+    .release-notes-features { padding-right: 0; }
+    .release-notes-major-art { min-height: 560px; }
+    .release-notes-major-art > img { inset: 0 4% 48px; width: 92%; height: calc(100% - 48px); }
+    .release-notes-major-art::after { background: linear-gradient(0deg, rgba(6, 13, 28, .75), transparent 25%), linear-gradient(180deg, #081025 0%, transparent 18%); }
+    .release-notes-reminder { left: 34px; }
+    .release-notes-standard-layout,
+    .release-notes-full-content { width: calc(100% - 68px); min-height: 100%; height: auto; padding-top: 70px; }
+}
+
+@media (max-width: 560px) {
+    .release-notes-overlay { padding: 7px; }
+    .release-notes-dialog { width: calc(100vw - 14px); height: calc(100dvh - 14px); border-radius: 13px; }
+    .release-notes-close { position: fixed; top: 18px; right: 18px; }
+    .release-notes-major-copy { padding: 25px 18px 20px; }
+    .release-notes-brand { font-size: 16px; }
+    .release-notes-brand img { width: 40px; height: 40px; }
+    .release-notes-version { margin-top: 11px; font-size: 11px; }
+    .release-notes-title { max-width: calc(100% - 40px); font-size: 29px; }
+    .release-notes-subtitle { font-size: 15px; }
+    .release-notes-feature { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; min-height: 66px; padding: 7px 10px 7px 8px; }
+    .release-notes-feature-icon { width: 42px; height: 42px; }
+    .release-notes-feature-icon img { width: 24px; height: 24px; }
+    .release-notes-feature-copy h2 { font-size: 14px; }
+    .release-notes-feature-copy p { font-size: 11.5px; }
+    .release-notes-actions { flex-direction: column; gap: 9px; }
+    .release-notes-actions button { width: 100%; min-height: 49px; }
+    .release-notes-major-art { min-height: 420px; }
+    .release-notes-major-art > img { inset: 0 -3% 45px; width: 106%; height: calc(100% - 42px); }
+    .release-notes-reminder { right: 18px; bottom: 17px; left: 18px; }
+    .release-notes-standard-layout,
+    .release-notes-full-content { width: calc(100% - 36px); padding-top: 70px; padding-bottom: 24px; }
+    .release-notes-standard-layout .release-notes-title { font-size: 31px; }
+    .release-notes-standard-list,
+    .release-notes-full-list { padding-left: 35px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .release-notes-dialog *,
+    .release-notes-dialog *::before,
+    .release-notes-dialog *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

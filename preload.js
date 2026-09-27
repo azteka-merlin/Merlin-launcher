@@ -163,5 +163,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         eligible: () => ipcRenderer.invoke('announcements:eligible'),
         recordView: (payload) => ipcRenderer.invoke('announcements:view', payload),
         dismiss: (payload) => ipcRenderer.invoke('announcements:dismiss', payload)
+    },
+
+    home: {
+        get: (payload) => ipcRenderer.invoke('home:get', payload),
+        refresh: () => ipcRenderer.invoke('home:refresh')
+    },
+
+    releaseNotes: {
+        get: (payload) => ipcRenderer.invoke('release-notes:get', payload),
+        refresh: (payload) => ipcRenderer.invoke('release-notes:refresh', payload),
+        markSeen: (version) => ipcRenderer.invoke('release-notes:mark-seen', version)
     }
 });

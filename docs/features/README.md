@@ -11,6 +11,7 @@ Mapa de referencia para manter comportamento durante a reconstrucao do front-end
 | Corrections e Premium | [content-activation.md](content-activation.md) | catalogos, votos, downloads, ativacoes, cancelamento e seguranca de arquivos |
 | Correcao com token de licenca | [special-license-correction.md](special-license-correction.md) | fluxo isolado do AppID `4407750`, arquivo `.dlf`, templates e bloqueio de versao |
 | Experiencia do app | [app-experience.md](app-experience.md) | navegacao, modais, avisos, enquetes, anuncios, update e links externos |
+| Home e novidades | [home-and-release-notes.md](home-and-release-notes.md) | conteudo autenticado da Home e changelog por versao |
 | Efeitos do Admin | [admin-impact.md](admin-impact.md) | cada configuracao administrativa que altera a experiencia ou permissao do launcher |
 | Contratos da API | [api-impact.md](api-impact.md) | rotas da API consumidas, efeitos indiretos e rotas fora do Electron atual |
 | Integracao do front | [frontend-contract.md](frontend-contract.md) | IPC, eventos, estados transversais e roteiro de migracao |
@@ -20,6 +21,8 @@ Mapa de referencia para manter comportamento durante a reconstrucao do front-end
 Antes de mexer numa area, leia seu modulo e `../CHANGE_GUARDRAILS.md`. Mudanca em payload/canal IPC exige atualizar o modulo correspondente, `preload.js`, main e os testes de contrato.
 
 Para o AppID `4407750`, leia primeiro `special-license-correction.md`; consulte `content-activation.md` apenas para os contratos compartilhados de Corrections.
+
+Para Home ou **Novidades**, leia `home-and-release-notes.md`; nao use cache para tornar Novidades visivel quando a API estiver indisponivel.
 
 Toda troca de front tambem deve cumprir o bloco **Compatibilidade com staging** em `frontend-contract.md`.
 
