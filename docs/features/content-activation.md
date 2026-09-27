@@ -10,8 +10,12 @@
 - Aceita ZIP/RAR, bloqueia path traversal e ZIP aninhado acima de 100. Conteudo e copiado apenas para a pasta do jogo.
 - Disclaimer comunitario e mostrado uma vez; notas administrativas/instrucoes fazem parte da jornada.
 - Limpa temporarios no fim/cancelamento.
+- O AppID `4407750` usa o fluxo isolado `license_token`. O download simples continua salvando o ZIP original; somente **Baixar e instalar** prepara os arquivos.
+- Nesse fluxo, o launcher `1.6.8+` le `%ProgramData%\Electronic Arts\EA Services\License\16425884_sc.dlf` (maximo 1 MB), envia apenas esse arquivo para a API autenticada e nunca registra o conteudo ou token.
+- Depois de extrair o ZIP localmente, exige exatamente um `token.ini` e um `anadius.cfg`, cada um com uma ocorrencia literal de `RETORNO_TOKEN_MERLIN`. Ambos preservam o template e recebem somente a substituicao do placeholder antes da copia para o jogo.
+- Versoes `1.6.7` ou anteriores, versao ausente/invalida, arquivo de licenca ausente/invalido e templates incorretos bloqueiam a instalacao sem copiar arquivos parciais para o jogo.
 
-Erros relevantes: `invalid_operation`, `busy`, `not_found`, `auth_required`, `vote_failed`, `refresh_failed`, readiness Steam, `game_not_installed`, `cancelled`, `invalid_path`, `archive_invalid`, `apply_failed`, `open_failed`.
+Erros relevantes: `invalid_operation`, `busy`, `not_found`, `auth_required`, `vote_failed`, `refresh_failed`, readiness Steam, `game_not_installed`, `cancelled`, `invalid_path`, `archive_invalid`, `apply_failed`, `open_failed`, `launcher_update_required`, `license_file_missing`, `license_file_invalid`, `license_file_too_large`, `license_token_not_found`, `token_request_failed`, `token_templates_invalid`.
 
 IPC: `corrections.list`, `refresh`, `prepareInstall`, `vote`, `download`, `install`, `cancel`, `openFolder`. Evento: `corrections:progress` com jogo, arquivo, operacao, estagio e percentual.
 

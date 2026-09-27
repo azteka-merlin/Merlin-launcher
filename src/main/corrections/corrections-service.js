@@ -13,7 +13,9 @@ function createCorrectionsService({
     catalogClient,
     apiBaseUrl,
     libraryCatalogService,
-    downloadManager
+    downloadManager,
+    specialCorrection,
+    launcherVersion
 }) {
     const { createZipArchiveTools } = require('../files/zip-archive-tools');
     let cachedItems = null;
@@ -158,7 +160,8 @@ function createCorrectionsService({
             throw error;
         }
         return {
-            Authorization: `Bearer ${await authSession.getAccessToken()}`
+            Authorization: `Bearer ${await authSession.getAccessToken()}`,
+            'X-Merlin-Version': launcherVersion
         };
     }
 
@@ -652,6 +655,17 @@ function createCorrectionsService({
                 percent: 80
             });
             await extractZipToDirectory(zipPath, extractedPath, operation);
+
+            throwIfCancelled(operation);
+            if (specialCorrection?.appliesTo(item)) {
+                emitProgress(onProgress, item, {
+                    operationId,
+                    mode: 'install',
+                    stage: 'preparing_license',
+                    percent: 88
+                });
+                await specialCorrection.prepare({ item, extractedPath });
+            }
 
             throwIfCancelled(operation);
             emitProgress(onProgress, item, {

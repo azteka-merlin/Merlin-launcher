@@ -75,6 +75,9 @@ constexpr PatternSeed kSteamclientPatternSeeds[] = {
     {"0x0F926D0A","PchMsgNameFromEMsg","48 89 5C 24 08 57 48 83 EC 20 8B D9 E8 ?? ?? ?? ??"},
     {"0x103B52AA","ProcessPendingLicenseUpdates","41 56 41 57 48 83 EC 38 83 B9 98 24 00 00 00",0,"41 56 41 57 48 83 EC 38 83 B9 ?? ?? 00 00 00 B8 ?? ?? 00 00"},
     {"0x836FF9F0","RecvPkt","48 8B C4 55 48 8D A8 98 F6 FF FF",0,"48 8B C4 55 48 8D A8 E8 FB FF FF"},
+    // Per-manifest acquisition point. The Helper emits local metadata for it so
+    // a compatible Steam client never depends on a fixed address in the injected DLL.
+    {"0x2EF6D763","YldLoadDepotManifest","48 89 6C 24 ?? 56 41 54 41 55 41 56 41 57 48 83 EC 40 8B 41"},
     {"0x68211B4D","SendCallbackToPipe","48 89 5C 24 08 57 48 83 EC 30 41 8B D9 41 8B F8"},
     {"0x7D1EC415","SpawnProcess","48 89 5C 24 18 4C 89 4C 24 20 48 89 54 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 30 FF FF FF"},
 };
@@ -165,7 +168,6 @@ std::string ToHex(uint64_t value, size_t minWidth = 1)
     oss << value;
     return oss.str();
 }
-
 std::optional<std::vector<uint8_t>> ReadFileBytes(const std::filesystem::path& path)
 {
     std::ifstream ifs(path, std::ios::binary);

@@ -121,7 +121,11 @@ function createDownloadManager({ fs, path, axios, httpsAgent }) {
             const status = Number(error?.response?.status) || null;
             return {
                 success: false,
-                code: status === 401 ? 'auth_required' : 'download_failed',
+                code: status === 401
+                    ? 'auth_required'
+                    : status === 426
+                        ? 'launcher_update_required'
+                        : 'download_failed',
                 status,
                 message: error.message
             };

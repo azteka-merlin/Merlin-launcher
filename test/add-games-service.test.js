@@ -109,6 +109,35 @@ test('searches the catalog and installs a selected game with cover metadata', as
     assert.equal(receivedAutoUpdate, false);
 });
 
+test('hydrates a selected Steam-plugin game with catalog cover metadata before installation', async () => {
+    let recorded = null;
+    const service = createAddGamesService({
+        parseSteamGameLink: link => ({ appId: link, fallbackName: `Game ${link}` }),
+        nameResolver: { resolve: async (_appId, fallback) => fallback },
+        catalogService: {
+            resolveByAppId: async appId => ({
+                appId,
+                name: 'Catalog game',
+                coverUrl: `https://example.com/${appId}.jpg`,
+                coverSource: 'capsule_image'
+            }),
+            search: async () => []
+        },
+        queue: createGameQueue(),
+        gameInstaller: { install: async () => ({ success: true }) },
+        configStore: { get: () => ({ steamPath: 'C:\\Steam' }) },
+        steamService: {},
+        libraryService: { recordName: (_appId, item) => { recorded = item; } }
+    });
+
+    const result = await service.installNow({ selected: { appId: '123', name: 'Steam page title' } });
+
+    assert.equal(result.success, true);
+    assert.equal(result.item.name, 'Catalog game');
+    assert.equal(result.item.coverUrl, 'https://example.com/123.jpg');
+    assert.equal(recorded.coverUrl, 'https://example.com/123.jpg');
+});
+
 test('preserves test license normal activation limit errors', async () => {
     const service = createAddGamesService({
         parseSteamGameLink: link => ({ appId: link, fallbackName: `Game ${link}` }),

@@ -22,6 +22,7 @@ function createAuthSession({
 }) {
     let session = null;
     let refreshPromise = null;
+    let statusValidatedThisProcess = false;
 
     function sessionFilePath() {
         return path.join(app.getPath('userData'), 'auth-session.json');
@@ -211,10 +212,21 @@ function createAuthSession({
     }
 
     async function status() {
-        if (!loadStoredSession()) return { authenticated: false, code: 'missing' };
+        const stored = loadStoredSession();
+        if (!stored) return { authenticated: false, code: 'missing' };
+
+        // `auth:status` is polled by the entitlement monitor. Validate once
+        // when this Merlin process starts, then serve the cached session until
+        // the token actually needs renewal. This avoids recording a new
+        // /auth/login activity every five minutes while the launcher is open.
+        if (statusValidatedThisProcess && stored.accessTokenExpiresAt > Date.now() + TOKEN_REFRESH_MARGIN_MS) {
+            return publicSession();
+        }
 
         try {
-            return await refresh();
+            const result = await refresh();
+            statusValidatedThisProcess = result?.authenticated === true;
+            return result;
         } catch (error) {
             if (error.code === 'expired') {
                 return preserveExpiredSession() || { authenticated: false, code: 'expired' };
@@ -229,7 +241,9 @@ function createAuthSession({
     async function login(rawLicenseKey) {
         const licenseKey = String(rawLicenseKey || '').trim().toUpperCase();
         try {
-            return await performLogin(licenseKey);
+            const result = await performLogin(licenseKey);
+            statusValidatedThisProcess = result?.authenticated === true;
+            return result;
         } catch (error) {
             return { authenticated: false, code: error.code || 'server_error' };
         }
@@ -255,6 +269,7 @@ function createAuthSession({
 
     function logout() {
         refreshPromise = null;
+        statusValidatedThisProcess = false;
         clearStoredSession();
         onAuthRequired('missing');
         return { ok: true };

@@ -26,7 +26,8 @@ test('manifest HTTP reads are bounded before buffer growth', () => {
 test('manifest responses do not log binary payloads or spawn detached work', () => {
   assert.doesNotMatch(httpSource, /response body=\{\}/);
   assert.doesNotMatch(hookSource, /StartDetached/);
-  assert.match(hookSource, /kPreseedBudgetMs\s*=\s*5000/);
+  assert.match(hookSource, /kPreseedFetchTimeoutMs\s*=\s*2000/);
+  assert.match(hookSource, /HOOK_FUNC\(YldLoadDepotManifest/);
 });
 
 test('manifest cache keeps validation, negative cache and atomic writes', () => {

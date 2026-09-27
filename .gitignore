@@ -13,6 +13,10 @@ yarn-error.log*
 # Arquivos gerados pelo Electron Builder
 dist/
 
+# Pacotes e diretórios locais gerados por builds de release
+release-*/
+tmp/
+
 # Cache e saídas geradas pelo OpenSteamTool internalizado
 .deps/
 OpenSteamTool/build/

@@ -1086,6 +1086,103 @@ function setupEventListeners() {
     manageSubscriptionBtn?.addEventListener('click', openBillingPortal);
     window.addEventListener('merlin-authenticated', refreshBillingPortalCard);
 
+    const updateSteamPluginCard = async () => {
+        const statusLabel = document.getElementById('steamPluginStatus');
+        const install = document.getElementById('installSteamPluginBtn');
+        const uninstall = document.getElementById('uninstallSteamPluginBtn');
+        const startAtLogin = document.getElementById('steamPluginStartAtLogin');
+        try {
+            const plugin = await window.electronAPI.steamPlugin.status();
+            if (statusLabel) statusLabel.textContent = plugin.enabled
+                ? plugin.targetCount > 0 ? `Ativo em ${plugin.targetCount} aba(s) da Steam` : 'Instalado — aguardando a loja Steam'
+                : 'Não instalado';
+            if (install) install.hidden = plugin.enabled;
+            if (uninstall) uninstall.hidden = !plugin.enabled;
+            if (startAtLogin) {
+                startAtLogin.checked = plugin.enabled && config.steamPlugin?.startAtLogin !== false;
+                startAtLogin.disabled = !plugin.enabled;
+            }
+        } catch (_) { if (statusLabel) statusLabel.textContent = 'Indisponível'; }
+    };
+    const setSteamPluginBusy = (button, busy, label) => {
+        button.disabled = busy;
+        button.classList.toggle('is-loading', busy);
+        button.textContent = busy ? label : button.dataset.defaultLabel;
+    };
+    const offerSteamStartAfterPluginChange = async (action, result) => {
+        const completed = action === 'install' ? 'Plugin instalado' : 'Plugin removido';
+        if (!result.steamWasRunning) {
+            showNotification(`${completed}. A Steam permaneceu fechada.`, 'success');
+            return;
+        }
+        const accepted = await window.merlinRestartPrompt.ask({
+            title: completed,
+            message: `${completed} com sucesso. A Steam foi fechada durante o processo. Deseja iniciá-la novamente agora?`,
+            cancelLabel: 'Depois',
+            actionLabel: 'Iniciar Steam'
+        });
+        if (!accepted) return;
+        const started = await window.electronAPI.startSteam();
+        showNotification(started ? 'Steam iniciada.' : 'Não foi possível iniciar a Steam.', started ? 'success' : 'error');
+    };
+    document.getElementById('installSteamPluginBtn')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        button.dataset.defaultLabel = button.textContent;
+        const steamRunning = await window.electronAPI.isSteamRunning().catch(() => false);
+        const accepted = await window.merlinRestartPrompt.ask({ title: 'Instalar plugin da Steam?', message: (steamRunning ? 'A Steam será fechada durante a instalação. Ao concluir, você poderá escolher se deseja iniciá-la novamente.' : 'A Steam está fechada. Depois de instalar, abra-a manualmente para ativar a integração.') + ' O Merlin também será configurado para iniciar automaticamente com o Windows e manter o plugin disponível.', cancelLabel: 'Cancelar', actionLabel: 'Instalar' });
+        if (!accepted) return;
+        setSteamPluginBusy(button, true, 'Instalando…');
+        showNotification('Instalando o plugin da Steam…');
+        try { const result = await window.electronAPI.steamPlugin.install(); if (!result.success) throw new Error(result.message || result.code); await updateSteamPluginCard(); await offerSteamStartAfterPluginChange('install', result); }
+        catch (error) { showNotification(`Não foi possível instalar o plugin: ${error.message}`, 'error'); }
+        finally { setSteamPluginBusy(button, false); }
+    });
+    document.getElementById('uninstallSteamPluginBtn')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        button.dataset.defaultLabel = button.textContent;
+        const steamRunning = await window.electronAPI.isSteamRunning().catch(() => false);
+        const accepted = await window.merlinRestartPrompt.ask({ title: 'Desinstalar plugin da Steam?', message: steamRunning ? 'A Steam será fechada durante a desinstalação. Ao concluir, você poderá escolher se deseja iniciá-la novamente.' : 'A Steam está fechada. A desinstalação será concluída sem iniciá-la novamente.', cancelLabel: 'Cancelar', actionLabel: 'Desinstalar' });
+        if (!accepted) return;
+        setSteamPluginBusy(button, true, 'Desinstalando…');
+        showNotification('Desinstalando o plugin da Steam…');
+        try { const result = await window.electronAPI.steamPlugin.uninstall(); if (!result.success) throw new Error(result.message || result.code); await updateSteamPluginCard(); await offerSteamStartAfterPluginChange('uninstall', result); }
+        catch (error) { showNotification(`Não foi possível desinstalar o plugin: ${error.message}`, 'error'); }
+        finally { setSteamPluginBusy(button, false); }
+    });
+    document.getElementById('steamPluginStartAtLogin')?.addEventListener('change', async event => {
+        const toggle = event.currentTarget;
+        const requested = toggle.checked;
+        if (!requested) {
+            const accepted = await window.merlinRestartPrompt.ask({
+                title: 'Desativar inicialização automática?',
+                message: 'Sem a inicialização automática, será necessário abrir manualmente o Merlin antes de usar o plugin nas páginas da Steam.',
+                cancelLabel: 'Cancelar',
+                actionLabel: 'Desativar'
+            });
+            if (!accepted) { toggle.checked = true; return; }
+        }
+        toggle.disabled = true;
+        try {
+            const result = await window.electronAPI.steamPlugin.setStartAtLogin(requested);
+            if (!result.success) throw new Error(result.code || 'plugin_disabled');
+            config.steamPlugin = { ...(config.steamPlugin || {}), startAtLogin: result.enabled };
+            showNotification(result.enabled ? 'O Merlin iniciará com o Windows para manter o plugin disponível.' : 'Abra o Merlin manualmente antes de usar o plugin na Steam.', 'success');
+        } catch (_) {
+            toggle.checked = !requested;
+            showNotification('Não foi possível alterar a inicialização automática.', 'error');
+        } finally {
+            await updateSteamPluginCard();
+        }
+    });
+    window.electronAPI.steamPlugin.onOpen(({ view }) => {
+        const targetView = view === 'launcher' ? 'add-games' : view;
+        if (['add-games', 'library', 'premium', 'corrections', 'settings'].includes(targetView)) {
+            window.merlinView.set(targetView);
+        }
+    });
+    void updateSteamPluginCard();
+    window.setInterval(() => { if (window.merlinView?.get() === 'settings') void updateSteamPluginCard(); }, 4000);
+
     const logoutBtn = document.getElementById('logoutBtn');
     logoutBtn?.addEventListener('click', async () => {
         if (!await askToLogout()) return;

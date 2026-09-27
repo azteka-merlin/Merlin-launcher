@@ -2,7 +2,6 @@
 #include "HookMacros.h"
 #include "dllmain.h"
 #include "Utils/SteamMetadata/ManifestCache.h"
-#include <chrono>
 #include <format>
 
 // ═══════════════════════════════════════════════════════════════════
@@ -12,41 +11,15 @@
 // ═══════════════════════════════════════════════════════════════════
 namespace {
 
-    // Keep Steam's dependency-building path responsive. The first few archive
-    // requests are allowed a short wait; remaining depots continue in workers.
+    // The per-manifest acquire hook below calls this immediately before Steam's
+    // own depotcache lookup. A short timeout lets an archive hit start on the
+    // first attempt without turning a slow origin into a long UI stall.
     constexpr uint32_t kPreseedFetchTimeoutMs = 2000;
-    constexpr int64_t  kPreseedBudgetMs = 5000;
 
     std::string DepotEntryDebug(const DepotEntry& e) {
         return std::format("DepotId={} AppId={} Gid={} Size={} Dlc={} Lcs={} Carry={} Shared={}",
             e.DepotId, e.AppId, e.ManifestGid, e.ManifestSize, e.DlcAppId,
             (int)e.LcsRequired, (int)e.bNotNewTarget, (int)e.SharedInstall);
-    }
-
-    void PreseedDepots(
-        AppId_t appId,
-        const CUtlVector<DepotEntry>* depots,
-        const std::unordered_map<uint64_t, LuaConfig::ManifestOverride>& overrides,
-        std::chrono::steady_clock::time_point deadline)
-    {
-        if (!depots) return;
-
-        for (uint32 i = 0; i < depots->m_Size; ++i) {
-            const DepotEntry& depotEntry = depots->m_Memory.m_pMemory[i];
-            if (!depotEntry.DepotId || !depotEntry.ManifestGid) continue;
-
-            const bool pinned = overrides.count(depotEntry.DepotId) != 0;
-            const bool unlocked = LuaConfig::HasDepot(depotEntry.DepotId, false) &&
-                                  !LuaConfig::IsOwned(depotEntry.AppId);
-            if (!pinned && !unlocked) continue;
-
-            const AppId_t app = appId;
-            const uint32 depot = depotEntry.DepotId;
-            const uint64 gid = depotEntry.ManifestGid;
-
-            if (std::chrono::steady_clock::now() >= deadline) break;
-            ManifestCache::EnsureCached(app, depot, gid, kPreseedFetchTimeoutMs);
-        }
     }
 
     HOOK_FUNC(BuildDepotDependency, bool, void* pUserAppMgr, AppId_t AppId,
@@ -105,11 +78,24 @@ namespace {
             }
         }
 
-        const auto deadline = std::chrono::steady_clock::now() +
-                              std::chrono::milliseconds(kPreseedBudgetMs);
-        PreseedDepots(AppId, pDepotInfo, overrides, deadline);
-        PreseedDepots(AppId, pSharedDepotInfo, overrides, deadline);
         return result;
+    }
+
+    // This is Steam's per-manifest acquisition path. It runs immediately before
+    // the original checks depotcache, so a cached or freshly fetched manifest is
+    // available on the first download attempt. The call remains silent on a
+    // cache miss or network problem; Steam follows its existing fallback path.
+    HOOK_FUNC(YldLoadDepotManifest, __int64,
+              void* a1, void* a2, int appId, uint32_t depotId,
+              uint64_t manifestGid, const char* branch)
+    {
+        if (depotId && manifestGid && LuaConfig::HasDepot(depotId)) {
+            LOG_MANIFEST_DEBUG("YldLoadDepotManifest: checking cache app={} depot={} gid={} branch={}",
+                               appId, depotId, manifestGid, branch ? branch : "");
+            ManifestCache::EnsureCached(static_cast<AppId_t>(appId), depotId, manifestGid,
+                                        kPreseedFetchTimeoutMs);
+        }
+        return oYldLoadDepotManifest(a1, a2, appId, depotId, manifestGid, branch);
     }
 
 } // anonymous namespace
@@ -119,12 +105,14 @@ namespace Hooks_Manifest {
     void Install() {
         HOOK_BEGIN();
         INSTALL_HOOK_C(BuildDepotDependency);
+        INSTALL_HOOK_C(YldLoadDepotManifest);
         HOOK_END();
     }
 
     void Uninstall() {
         UNHOOK_BEGIN();
         UNINSTALL_HOOK(BuildDepotDependency);
+        UNINSTALL_HOOK(YldLoadDepotManifest);
         UNHOOK_END();
     }
 }

@@ -96,7 +96,9 @@ namespace {
 
 } // namespace
 
-bool EnsureCached(AppId_t app, uint32_t depot, uint64_t gid, uint32_t recvTimeoutMs) {
+bool EnsureCached(AppId_t app, uint32_t depot, uint64_t gid, uint32_t recvTimeoutMs,
+                  bool* outNotArchived, bool bypassNegativeCache) {
+    if (outNotArchived) *outNotArchived = false;
     if (!depot || !gid) return false;
 
     const fs::path directory = DepotCacheDir();
@@ -107,7 +109,7 @@ bool EnsureCached(AppId_t app, uint32_t depot, uint64_t gid, uint32_t recvTimeou
     if (fs::exists(destination, error)) return true;
 
     const std::string key = std::format("{}_{}", depot, gid);
-    {
+    if (!bypassNegativeCache) {
         std::lock_guard<std::mutex> lock(g_negativeCacheMutex);
         const auto it = g_negativeCache.find(key);
         if (it != g_negativeCache.end()) {
@@ -128,7 +130,9 @@ bool EnsureCached(AppId_t app, uint32_t depot, uint64_t gid, uint32_t recvTimeou
         recvTimeoutMs ? recvTimeoutMs : kDefaultRecvTimeoutMs, kMaxBodyBytes);
 
     if (!response.ok || response.status != 200) {
-        if (response.ok && response.status == 404) {
+        const bool notArchived = response.ok && response.status == 404;
+        if (outNotArchived) *outNotArchived = notArchived;
+        if (notArchived) {
             std::lock_guard<std::mutex> lock(g_negativeCacheMutex);
             g_negativeCache[key] = std::chrono::steady_clock::now();
         }

@@ -10,6 +10,10 @@ function normalizeItem(value) {
         ? value.manualAddedAt
         : null;
     const hasDrm = value.hasDrm === true;
+    const activationType = typeof value.activationType === 'string' ? value.activationType.trim() : '';
+    const minimumLauncherVersion = typeof value.minimumLauncherVersion === 'string'
+        ? value.minimumLauncherVersion.trim()
+        : '';
     const correction = value.correction && typeof value.correction === 'object'
         ? {
             href: typeof value.correction.href === 'string' ? value.correction.href.trim() : '',
@@ -36,6 +40,8 @@ function normalizeItem(value) {
         releaseDate,
         manualAddedAt,
         hasDrm,
+        activationType: activationType || null,
+        minimumLauncherVersion: minimumLauncherVersion || null,
         correction: {
             href: correction.href,
             filename: correction.filename,

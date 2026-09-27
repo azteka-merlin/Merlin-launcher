@@ -1,5 +1,7 @@
 # Jogos e Steam
 
+> A integracao opcional que coloca controles na loja Steam esta documentada separadamente em [steam-plugin.md](steam-plugin.md). Este documento continua sendo a fonte do fluxo nativo de jogos/manifests.
+
 ## Readiness e DLLs
 
 - Steam valido: diretorio existente com `steam.exe` na raiz.

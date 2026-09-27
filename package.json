@@ -1,12 +1,12 @@
 {
   "name": "merlin",
-  "version": "1.6.7",
+  "version": "1.7.1",
   "description": "Steam game injector with manifest and lua support",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "start:stage": "set MERLIN_API_BASE_URL=https://staging.api-merlin.com/api&& electron .",
-    "start:prod": "set MERLIN_API_BASE_URL=https://api-merlin.com/api&& electron .",
+    "start": "node scripts/start-dev.js",
+    "start:stage": "set MERLIN_API_BASE_URL=https://staging.api-merlin.com/api&& node scripts/start-dev.js",
+    "start:prod": "set MERLIN_API_BASE_URL=https://api-merlin.com/api&& node scripts/start-dev.js",
     "doctor": "node scripts/doctor.js",
     "build:opensteamtool": "node build.js --opensteamtool-only",
     "build": "node build.js",
@@ -35,7 +35,8 @@
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "lucide-static": "^1.45.0",
-    "node-unrar-js": "^2.0.2"
+    "node-unrar-js": "^2.0.2",
+    "ws": "^8.21.3"
   },
   "build": {
     "appId": "com.merlin.app",
@@ -50,9 +51,14 @@
       "!build.js",
       "!scripts{,/**/*}",
       "!OpenSteamTool{,/**/*}",
+      "!.deps{,/**/*}",
       "!dist{,/**/*}",
+      "!release-*{,/**/*}",
+      "!tmp{,/**/*}",
       "!.git{,/**/*}",
       "!.vscode{,/**/*}",
+      "!test{,/**/*}",
+      "!docs{,/**/*}",
       "!assets/dlls{,/**/*}"
     ],
     "extraResources": [

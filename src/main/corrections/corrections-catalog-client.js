@@ -44,13 +44,19 @@ function normalizeRemoteGame(entry) {
     const manualAddedAt = typeof entry.manualAddedAt === 'string' && !Number.isNaN(Date.parse(entry.manualAddedAt))
         ? entry.manualAddedAt
         : null;
+    const imageUrl = typeof entry.imageUrl === 'string' ? entry.imageUrl.trim() : '';
 
     return {
         appId,
         gameName,
+        imageUrl: imageUrl || null,
         releaseDate,
         manualAddedAt,
         hasDrm: entry.hasDrm === true,
+        activationType: typeof entry.activationType === 'string' ? entry.activationType.trim() || null : null,
+        minimumLauncherVersion: typeof entry.minimumLauncherVersion === 'string'
+            ? entry.minimumLauncherVersion.trim() || null
+            : null,
         correction
     };
 }

@@ -87,6 +87,27 @@ test('auth session allows retry after transient server validation failure', asyn
     assert.equal(attempts, 2);
 });
 
+test('auth status validates once per Merlin process and reuses a valid session afterwards', async () => {
+    let loginAttempts = 0;
+    const fs = createMemoryFs();
+    const options = {
+        app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
+        safeStorage: createSafeStorage(), fs, path,
+        axios: { post: async () => {
+            loginAttempts += 1;
+            return { data: { accessToken: `token-${loginAttempts}`, expiresIn: 3600, license: { name: 'Azteka', expiresAt: '2026-12-31', status: 'active' } } };
+        } },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'merlin-hwid-123' }, baseUrl: 'https://api-merlin.com/api'
+    };
+    const firstProcess = createAuthSession(options);
+    await firstProcess.login('MERLIN-ABCD-EFGH-JKLM');
+
+    const secondProcess = createAuthSession(options);
+    await secondProcess.status();
+    await secondProcess.status();
+    assert.equal(loginAttempts, 2);
+});
+
 test('auth session returns rate_limited when the API throttles license attempts', async () => {
     const session = createAuthSession({
         app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },

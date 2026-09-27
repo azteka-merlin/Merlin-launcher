@@ -58,6 +58,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     validateActivation: () => ipcRenderer.invoke('validate-activation'),
     checkFilesStatus: () => ipcRenderer.invoke('check-files-status'),
     verifyFiles: () => ipcRenderer.invoke('verify-files'),
+    steamPlugin: {
+        status: () => ipcRenderer.invoke('steam-plugin:status'),
+        install: () => ipcRenderer.invoke('steam-plugin:install'),
+        uninstall: () => ipcRenderer.invoke('steam-plugin:uninstall'),
+        setStartAtLogin: enabled => ipcRenderer.invoke('steam-plugin:set-start-at-login', enabled),
+        onOpen: callback => ipcRenderer.on('steam-plugin:open', (_event, payload) => callback(payload))
+    },
 
     // Events
     onDownloadProgress: (callback) => {

@@ -91,6 +91,7 @@ Endpoints que devem seguir a base:
 - `/manifests/status`
 - `/fixes/catalog`
 - `/fixes/vote`
+- `/fixes/license-token` (somente para a correcao especial compativel)
 - `/premium/catalog`
 - `/premium/activate`
 - `/premium/activate-third-party`

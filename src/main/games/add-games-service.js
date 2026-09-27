@@ -166,7 +166,26 @@ function createAddGamesService({
     async function resolveInput(input) {
         const payload = normalizeInputPayload(input);
         if (payload.selected) {
-            const selected = await applyManifestPolicy(payload.selected);
+            let selected = payload.selected;
+            // The Steam integration only knows the app id and the page title.  Hydrate
+            // that lightweight selection before persisting it so the Library receives
+            // the same cover metadata as the native search flow.
+            if (!selected.coverUrl && catalogService?.resolveByAppId) {
+                try {
+                    const catalogMatch = await catalogService.resolveByAppId(selected.appId, { allowRefresh: true });
+                    if (catalogMatch) {
+                        selected = {
+                            ...selected,
+                            name: catalogMatch.name || selected.name,
+                            coverUrl: catalogMatch.coverUrl || null,
+                            coverSource: catalogMatch.coverSource || null
+                        };
+                    }
+                } catch (error) {
+                    // A catalog outage must not stop an otherwise valid installation.
+                }
+            }
+            selected = await applyManifestPolicy(selected);
             return {
                 success: true,
                 item: {

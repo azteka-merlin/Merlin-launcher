@@ -2,7 +2,6 @@ const { execSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const JavaScriptObfuscator = require('javascript-obfuscator');
 
 const rootDir = __dirname;
 const nativeProjectDir = path.join(rootDir, 'OpenSteamTool');
@@ -14,65 +13,6 @@ const distDir = path.join(rootDir, 'dist');
 const requiredDlls = ['OpenSteamTool.dll', 'dwmapi.dll', 'xinput1_4.dll'];
 const helperDll = 'merlin-helper.dll';
 const requestedGenerator = process.env.MERLIN_CMAKE_GENERATOR?.trim();
-
-const obfuscationOptions = {
-    compact: true,
-    controlFlowFlattening: true,
-    controlFlowFlatteningThreshold: 0.35,
-    deadCodeInjection: true,
-    deadCodeInjectionThreshold: 0.12,
-    identifierNamesGenerator: 'hexadecimal',
-    renameGlobals: false,
-    rotateStringArray: true,
-    selfDefending: true,
-    splitStrings: true,
-    splitStringsChunkLength: 8,
-    stringArray: true,
-    stringArrayEncoding: ['base64'],
-    stringArrayThreshold: 0.8,
-    transformObjectKeys: true
-};
-
-function obfuscateMainForPackaging() {
-    const mainFiles = [path.join(rootDir, 'main.js')];
-    const srcMainDir = path.join(rootDir, 'src', 'main');
-
-    function collectJavaScriptFiles(directory) {
-        for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-            const entryPath = path.join(directory, entry.name);
-            if (entry.isDirectory()) {
-                collectJavaScriptFiles(entryPath);
-            } else if (entry.isFile() && entry.name.endsWith('.js')) {
-                mainFiles.push(entryPath);
-            }
-        }
-    }
-
-    collectJavaScriptFiles(srcMainDir);
-    const originals = new Map();
-
-    function restore() {
-        for (const [filePath, source] of originals) {
-            fs.writeFileSync(filePath, source);
-        }
-    }
-
-    try {
-        for (const filePath of mainFiles) {
-            const source = fs.readFileSync(filePath, 'utf8');
-            originals.set(filePath, source);
-            const obfuscated = JavaScriptObfuscator
-                .obfuscate(source, obfuscationOptions)
-                .getObfuscatedCode();
-            fs.writeFileSync(filePath, obfuscated);
-        }
-    } catch (error) {
-        restore();
-        throw error;
-    }
-
-    return restore;
-}
 
 function sha256(filePath) {
     return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
@@ -211,13 +151,8 @@ if (dllsOnly) {
 } else {
     console.log('Cleaning previous Electron build artifacts...');
     cleanBuildDirectory(distDir);
-    const restoreMain = obfuscateMainForPackaging();
-    console.log('Building obfuscated Electron package...');
-    try {
-        execSync('electron-builder --publish never', { cwd: rootDir, stdio: 'inherit' });
-    } finally {
-        restoreMain();
-    }
+    console.log('Building transparent Electron package...');
+    execSync('electron-builder --publish never', { cwd: rootDir, stdio: 'inherit' });
     writeIntegrityManifest();
     console.log('Obfuscated package and integrity manifest generated.');
 }

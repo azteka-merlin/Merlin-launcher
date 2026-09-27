@@ -43,9 +43,12 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
     assert.deepEqual(result.items[0], {
         appId: '10',
         gameName: 'Example Game',
+        imageUrl: null,
         releaseDate: '2026-09-18',
         manualAddedAt: '2026-09-17',
         hasDrm: true,
+        activationType: null,
+        minimumLauncherVersion: null,
         correction: {
             href: 'https://example.com/fix.zip',
             filename: 'fix.zip',
@@ -57,6 +60,28 @@ test('keeps only the first eligible correction and blocks Hypervisor entries', a
             viewerVote: null
         }
     });
+});
+
+test('preserves special correction metadata from the API', async () => {
+    const client = createCorrectionsCatalogClient({
+        axios: {
+            get: async () => ({
+                data: [{
+                    appid: 4407750,
+                    name: 'Special game',
+                    imageUrl: 'https://generator.ryuu.lol/files/images/4080220.jpg',
+                    activationType: 'license_token',
+                    minimumLauncherVersion: '1.6.8',
+                    fixes: [{ href: 'https://example.com/fix.zip', filename: 'fix.zip' }]
+                }]
+            })
+        }
+    });
+
+    const result = await client.download();
+    assert.equal(result.items[0].activationType, 'license_token');
+    assert.equal(result.items[0].minimumLauncherVersion, '1.6.8');
+    assert.equal(result.items[0].imageUrl, 'https://generator.ryuu.lol/files/images/4080220.jpg');
 });
 
 test('keeps corrections without catalog metadata sortable after a cache refresh', async () => {

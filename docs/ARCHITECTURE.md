@@ -62,6 +62,7 @@ Responsabilidades:
 - `games`: busca, fila, instalacao de manifestos/Lua e policy de manifest override.
 - `library`: leitura/remocao da biblioteca local do Merlin.
 - `steam`: deteccao, readiness, restart e leitura de bibliotecas Steam.
+- `steam-plugin`: integracao opcional da loja Steam via CDP local; veja `features/steam-plugin.md`.
 - `lumacore`: instalacao de DLLs no Steam.
 - `corrections`: catalogo, votos, download e instalacao de fixes.
 - `premium`: catalogo, ativacao, download, aplicacao e validacao.

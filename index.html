@@ -115,6 +115,22 @@
                             </button>
                         </div>
                         </section>
+                        <section class="settings-section merlin-plugin-settings" aria-labelledby="settingsPluginTitle">
+                        <p id="settingsPluginTitle" class="config-kicker">INTEGRAÇÃO STEAM</p>
+                        <div class="merlin-plugin-card">
+                            <div class="merlin-plugin-card__title"><img src="node_modules/lucide-static/icons/sparkles.svg" alt=""><strong>Plugin Merlin</strong></div>
+                            <p id="steamPluginDescription">Adiciona um atalho do Merlin às páginas da loja Steam. É opcional e não altera o funcionamento normal do launcher.</p>
+                            <div class="merlin-plugin-card__status"><span>Estado</span><strong id="steamPluginStatus">Verificando…</strong></div>
+                            <label class="auto-update-option merlin-plugin-card__startup" for="steamPluginStartAtLogin">
+                                <span class="auto-update-switch"><input id="steamPluginStartAtLogin" type="checkbox"><span class="auto-update-slider" aria-hidden="true"></span></span>
+                                <span class="auto-update-copy"><span class="auto-update-title">Inicializar automaticamente</span><span class="auto-update-description">Mantém o Merlin na bandeja ao iniciar o Windows para deixar o plugin da Steam disponível.</span></span>
+                            </label>
+                            <div class="button-group merlin-plugin-card__actions">
+                                <button id="installSteamPluginBtn" class="btn btn-primary" type="button">Instalar e reiniciar Steam</button>
+                                <button id="uninstallSteamPluginBtn" class="btn btn-secondary" type="button" hidden>Desinstalar e reiniciar Steam</button>
+                            </div>
+                        </div>
+                        </section>
                         <section class="settings-section settings-maintenance" aria-labelledby="settingsMaintenanceTitle">
                         <p id="settingsMaintenanceTitle" class="config-kicker" data-i18n="settings_maintenance">MANUTENÇÃO</p>
                         <div class="button-group maintenance-actions">
@@ -124,8 +140,8 @@
                                 <img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="verify_files">Repair</span>
                             </button>
                             <button id="restartSteamSettingsBtn"
-                                    class="btn btn-secondary">
-                                <img src="node_modules/lucide-static/icons/rotate-cw.svg" alt=""><span data-i18n="restart_steam">Restart Steam</span>
+                                    class="btn btn-secondary steam-restart-btn">
+                                <img src="assets/icons/steam-mark.svg" alt=""><span data-i18n="restart_steam">Restart Steam</span>
                             </button>
                         </div>
                         </section>
