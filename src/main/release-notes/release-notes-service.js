@@ -3,6 +3,24 @@ function normalizeLocale(value) {
     return ['ptbr', 'en', 'es', 'fr', 'de'].includes(locale) ? locale : 'ptbr';
 }
 
+function compareVersions(left, right) {
+    const parse = (value) => {
+        const match = String(value || '').trim().replace(/^v/i, '').match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/);
+        if (!match) return null;
+        return { numbers: match.slice(1, 4).map(Number), prerelease: match[4] || null };
+    };
+    const a = parse(left);
+    const b = parse(right);
+    if (!a || !b) return null;
+    for (let index = 0; index < a.numbers.length; index += 1) {
+        if (a.numbers[index] !== b.numbers[index]) return a.numbers[index] - b.numbers[index];
+    }
+    if (a.prerelease === b.prerelease) return 0;
+    if (!a.prerelease) return 1;
+    if (!b.prerelease) return -1;
+    return a.prerelease.localeCompare(b.prerelease, undefined, { numeric: true });
+}
+
 function createReleaseNotesService({ authSession, client, store, configStore, baseUrl, launcherVersion }) {
     const memory = new Map();
 
@@ -18,8 +36,14 @@ function createReleaseNotesService({ authSession, client, store, configStore, ba
     function response(locale, releases, stale) {
         const currentVersion = String(launcherVersion || '').replace(/^v/i, '');
         const lastSeenVersion = String(configStore.get().lastSeenChangelogVersion || '').trim() || null;
-        const current = releases.find((release) => release.version === currentVersion) || null;
-        const latest = releases[0] || null;
+        // A patch launcher (for example 2.0.2) must still show the newest
+        // published notes it supports (2.0.0). Future notes stay visible in
+        // the manual history but never auto-open on an older launcher.
+        const compatible = releases
+            .filter((release) => (compareVersions(release.version, currentVersion) ?? 1) <= 0)
+            .sort((left, right) => (compareVersions(right.version, left.version) ?? 0));
+        const current = compatible[0] || null;
+        const latest = current;
         return {
             success: true,
             locale,
@@ -77,4 +101,4 @@ function createReleaseNotesService({ authSession, client, store, configStore, ba
     return { get, refresh, markSeen };
 }
 
-module.exports = { createReleaseNotesService, normalizeLocale };
+module.exports = { compareVersions, createReleaseNotesService, normalizeLocale };

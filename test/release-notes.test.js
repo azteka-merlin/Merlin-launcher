@@ -23,7 +23,7 @@ test('normalizes release notes and resolves API asset paths', () => {
     assert.equal(releases[0].type, 'major');
 });
 
-test('release notes state opens only the matching unseen launcher version', async () => {
+test('release notes state opens the newest compatible unseen launcher version', async () => {
     let state = { lastSeenChangelogVersion: '' };
     const service = createReleaseNotesService({
         authSession: { getAccessToken: async () => 'token' },
@@ -31,7 +31,7 @@ test('release notes state opens only the matching unseen launcher version', asyn
         store: { save: (_locale, value) => value, load: () => null },
         configStore: { get: () => state, update: (patch) => { state = { ...state, ...patch }; } },
         baseUrl: 'https://api-merlin.com/api/release-notes',
-        launcherVersion: '2.0.0'
+        launcherVersion: '2.0.2'
     });
     const first = await service.get({ locale: 'ptbr' });
     assert.equal(first.shouldAutoOpen, true);
@@ -40,6 +40,20 @@ test('release notes state opens only the matching unseen launcher version', asyn
     const second = await service.get({ locale: 'ptbr' });
     assert.equal(second.shouldAutoOpen, false);
     assert.equal(second.hasUnread, false);
+});
+
+test('release notes do not auto-open a version newer than the launcher', async () => {
+    const service = createReleaseNotesService({
+        authSession: { getAccessToken: async () => 'token' },
+        client: { request: async () => normalizeReleaseList([releaseFixture]) },
+        store: { save: (_locale, value) => value, load: () => null },
+        configStore: { get: () => ({ lastSeenChangelogVersion: '' }), update: () => {} },
+        baseUrl: 'https://api-merlin.com/api/release-notes',
+        launcherVersion: '1.9.9'
+    });
+    const result = await service.get({ locale: 'ptbr' });
+    assert.equal(result.current, null);
+    assert.equal(result.shouldAutoOpen, false);
 });
 
 test('release notes stay non-critical and use cache when the request fails', async () => {
