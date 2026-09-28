@@ -14,7 +14,7 @@ yarn-error.log*
 dist/
 
 # Pacotes e diretórios locais gerados por builds de release
-release-*/
+/release-*/
 tmp/
 
 # Cache e saídas geradas pelo OpenSteamTool internalizado
