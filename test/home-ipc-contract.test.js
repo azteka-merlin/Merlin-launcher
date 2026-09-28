@@ -10,10 +10,12 @@ test('registers isolated Home IPC handlers', async () => {
         ipcMain,
         homeContentService: {
             get(options) { calls.push(['get', options]); return { success: true }; },
-            refresh() { calls.push(['refresh']); return { success: true }; }
+            refresh() { calls.push(['refresh']); return { success: true }; },
+            checkForUpdate() { calls.push(['checkForUpdate']); return { success: true, changed: false }; }
         }
     });
     assert.deepEqual(await handlers.get('home:get')({}, { force: true }), { success: true });
     assert.deepEqual(await handlers.get('home:refresh')(), { success: true });
-    assert.deepEqual(calls, [['get', { force: true }], ['refresh']]);
+    assert.deepEqual(await handlers.get('home:check-for-update')(), { success: true, changed: false });
+    assert.deepEqual(calls, [['get', { force: true }], ['refresh'], ['checkForUpdate']]);
 });

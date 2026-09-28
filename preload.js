@@ -167,7 +167,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     home: {
         get: (payload) => ipcRenderer.invoke('home:get', payload),
-        refresh: () => ipcRenderer.invoke('home:refresh')
+        refresh: () => ipcRenderer.invoke('home:refresh'),
+        checkForUpdate: () => ipcRenderer.invoke('home:check-for-update')
     },
 
     releaseNotes: {

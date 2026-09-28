@@ -5,6 +5,12 @@ function normalizePercent(value) {
     return Number.isFinite(numberValue) ? Math.min(100, Math.max(0, numberValue)) : 50;
 }
 
+function normalizeZoom(value) {
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue)) return 1;
+    return Math.min(4, Math.max(1, numberValue));
+}
+
 function normalizeItem(value, slotType, baseUrl) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
     const id = Number(value.id);
@@ -25,6 +31,7 @@ function normalizeItem(value, slotType, baseUrl) {
         imageUrl,
         imagePositionX: normalizePercent(value.imagePositionX),
         imagePositionY: normalizePercent(value.imagePositionY),
+        imageZoom: normalizeZoom(value.imageZoom),
         primaryAction: ['premium', 'add_game'].includes(value.primaryAction) ? value.primaryAction : 'none',
         secondaryAction: ['premium', 'add_game'].includes(value.secondaryAction) ? value.secondaryAction : 'none'
     };
@@ -42,6 +49,10 @@ function normalizeHomeContent(value, baseUrl = DEFAULT_HOME_URL) {
         updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null
     };
     if (!home.hero.length) return null;
+    const fallbackRevision = `${home.hero.length + home.side.length + home.showcase.length}:${home.updatedAt || ''}`;
+    home.revision = typeof value.revision === 'string' && value.revision.trim()
+        ? value.revision.trim()
+        : fallbackRevision;
     return home;
 }
 
@@ -55,7 +66,18 @@ function createHomeContentClient({ axios, url = DEFAULT_HOME_URL, timeout = 1200
         if (!home) throw new Error('Invalid Home content payload');
         return home;
     }
-    return { request };
+
+    async function requestRevision(accessToken) {
+        const response = await axios.get(`${url.replace(/\/+$/, '')}/revision`, {
+            timeout,
+            headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
+        });
+        const revision = typeof response.data?.revision === 'string' ? response.data.revision.trim() : '';
+        if (!revision) throw new Error('Invalid Home revision payload');
+        return revision;
+    }
+
+    return { request, requestRevision };
 }
 
 module.exports = { DEFAULT_HOME_URL, createHomeContentClient, normalizeHomeContent };

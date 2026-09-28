@@ -37,12 +37,33 @@ function createHomeContentService({ authSession, client, store, baseUrl }) {
         }
     }
 
+    async function checkForUpdate() {
+        const current = memory || store.load();
+        if (!current) return { success: true, changed: true };
+
+        try {
+            let accessToken = await getAccessToken();
+            let revision;
+            try {
+                revision = await client.requestRevision(accessToken);
+            } catch (error) {
+                if (error?.response?.status !== 401) throw error;
+                await authSession.handleUnauthorized();
+                accessToken = await getAccessToken();
+                revision = await client.requestRevision(accessToken);
+            }
+            return { success: true, changed: revision !== current.revision };
+        } catch (error) {
+            return { success: false, changed: false, code: error?.code || 'refresh_failed' };
+        }
+    }
+
     async function get({ force = false } = {}) {
         if (!force && memory) return { success: true, home: memory, stale: false };
         return refresh();
     }
 
-    return { get, refresh };
+    return { get, refresh, checkForUpdate };
 }
 
 module.exports = { createHomeContentService };

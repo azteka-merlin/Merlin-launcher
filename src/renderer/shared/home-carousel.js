@@ -66,6 +66,16 @@
         }
 
         const positionStyle = item => `${item.imagePositionX}% ${item.imagePositionY}%`;
+        const zoomStyle = item => {
+            const zoom = Number(item.imageZoom);
+            return Number.isFinite(zoom) ? Math.min(4, Math.max(1, zoom)) : 1;
+        };
+
+        function applyImageFrame(element, item) {
+            const position = positionStyle(item);
+            element.style.setProperty('--home-image-zoom', String(zoomStyle(item)));
+            element.style.setProperty('--home-image-origin', position);
+        }
 
         function createCard(item, type) {
             const article = document.createElement('article');
@@ -75,6 +85,7 @@
             image.src = item.imageUrl;
             image.alt = '';
             image.style.objectPosition = positionStyle(item);
+            applyImageFrame(image, item);
             const meta = document.createElement('div');
             if (type === 'showcase') meta.className = 'home-game-meta';
             const name = document.createElement('strong');
@@ -115,6 +126,7 @@
             const nextLayer = immediate ? activeLayer : 1 - activeLayer;
             layers[nextLayer].style.backgroundImage = `url("${game.imageUrl}")`;
             layers[nextLayer].style.backgroundPosition = positionStyle(game);
+            applyImageFrame(layers[nextLayer], game);
             if (!immediate) {
                 layers[nextLayer].classList.add('is-active');
                 layers[activeLayer].classList.remove('is-active');
@@ -174,11 +186,12 @@
             startRotation();
         }
 
-        async function load({ force = false } = {}) {
+        async function load({ force = false, showSkeleton = false } = {}) {
             if (loading) return;
             loading = true;
             retryButton.disabled = true;
-            if (!loaded) {
+            const hadContent = loaded;
+            if (!hadContent || showSkeleton) {
                 view.classList.add('is-loading');
                 view.setAttribute('aria-busy', 'true');
             }
@@ -195,9 +208,25 @@
                 setLoadState(result.stale ? 'stale' : null);
             } catch (_) {
                 setLoadState('error');
+                if (hadContent) {
+                    view.classList.remove('is-loading');
+                    view.setAttribute('aria-busy', 'false');
+                }
             } finally {
                 loading = false;
                 retryButton.disabled = false;
+            }
+        }
+
+        async function refreshWhenHomeReopens() {
+            if (!loaded || loading) return;
+            try {
+                const update = await window.electronAPI.home.checkForUpdate();
+                if (update?.success && update.changed) {
+                    await load({ force: true, showSkeleton: true });
+                }
+            } catch (_) {
+                // Keep the already-rendered Home when the lightweight revision check fails.
             }
         }
 
@@ -214,6 +243,9 @@
         });
         document.addEventListener('visibilitychange', () => { if (document.hidden) stopRotation(); else startRotation(); });
         window.addEventListener('merlin-authenticated', () => { if (!loaded) void load({ force: true }); });
+        window.addEventListener('merlin-view-changed', event => {
+            if (event.detail?.view === 'home') void refreshWhenHomeReopens();
+        });
         window.addEventListener('merlin-language-changed', () => {
             if (loaded && games[activeIndex]) renderCopy(games[activeIndex]);
             dotButtons.forEach((button, index) => button.setAttribute('aria-label', tr('home_show_slide', { title: games[index].title })));
