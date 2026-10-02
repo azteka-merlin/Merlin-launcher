@@ -17,6 +17,18 @@ const licenseGateTranslations = {
         invalid_key: 'A chave informada não é válida.',
         expired: 'Seu acesso expirou. Acesse Minha conta para regularizar seu plano e continuar usando o Merlin.',
         expiredAction: 'Regularizar acesso',
+        expiringEarlyTitle: 'Seu acesso vence em {days} dias, no dia {date}.',
+        expiringEarlyBody: 'Renove para continuar usando o Merlin normalmente.',
+        expiringEarlyAction: 'Renovar acesso',
+        expiringSoonTitle: 'Faltam só {days} dias para seu acesso vencer.',
+        expiringSoonBody: 'Seu plano termina em {date}.',
+        expiringTomorrowTitle: 'Seu acesso vence amanhã, {date}.',
+        expiringTomorrowBody: 'Renove para continuar usando o Merlin sem interrupções.',
+        expiringTodayTitle: 'Seu acesso vence hoje, às {time}.',
+        expiringTodayBody: 'Renove para continuar usando o Merlin.',
+        expiringUrgentAction: 'Renovar agora',
+        autoRenewing: 'Sua assinatura está prevista para renovar automaticamente em {date}. Confira os detalhes em Minha conta.',
+        autoRenewingAction: 'Ver assinatura',
         revoked: 'Esta licença foi revogada.',
         hwid_mismatch: 'Esta chave já está vinculada a outro computador.',
         unavailable: 'Não foi possível conectar à Merlin API. Tente novamente.',
@@ -46,6 +58,18 @@ const licenseGateTranslations = {
         invalid_key: 'The key you entered is invalid.',
         expired: 'Your access has expired. Open My Account to regularize your plan and keep using Merlin.',
         expiredAction: 'Regularize access',
+        expiringEarlyTitle: 'Your access expires in {days} days, on {date}.',
+        expiringEarlyBody: 'Renew to keep using Merlin as usual.',
+        expiringEarlyAction: 'Renew access',
+        expiringSoonTitle: 'Only {days} days left before your access expires.',
+        expiringSoonBody: 'Your plan ends on {date}.',
+        expiringTomorrowTitle: 'Your access expires tomorrow, {date}.',
+        expiringTomorrowBody: 'Renew to keep using Merlin without interruption.',
+        expiringTodayTitle: 'Your access expires today at {time}.',
+        expiringTodayBody: 'Renew to keep using Merlin.',
+        expiringUrgentAction: 'Renew now',
+        autoRenewing: 'Your subscription is scheduled to renew automatically on {date}. Check the details in My Account.',
+        autoRenewingAction: 'View subscription',
         revoked: 'This license has been revoked.',
         hwid_mismatch: 'This key is already linked to another computer.',
         unavailable: 'Could not connect to the Merlin API. Try again.',
@@ -75,6 +99,18 @@ const licenseGateTranslations = {
         invalid_key: 'La clave introducida no es válida.',
         expired: 'Tu acceso ha caducado. Accede a Mi cuenta para regularizar tu plan y seguir usando Merlin.',
         expiredAction: 'Regularizar acceso',
+        expiringEarlyTitle: 'Tu acceso vence en {days} días, el {date}.',
+        expiringEarlyBody: 'Renueva para seguir usando Merlin normalmente.',
+        expiringEarlyAction: 'Renovar acceso',
+        expiringSoonTitle: 'Faltan solo {days} días para que venza tu acceso.',
+        expiringSoonBody: 'Tu plan termina el {date}.',
+        expiringTomorrowTitle: 'Tu acceso vence mañana, {date}.',
+        expiringTomorrowBody: 'Renueva para seguir usando Merlin sin interrupciones.',
+        expiringTodayTitle: 'Tu acceso vence hoy a las {time}.',
+        expiringTodayBody: 'Renueva para seguir usando Merlin.',
+        expiringUrgentAction: 'Renovar ahora',
+        autoRenewing: 'La renovación automática de tu suscripción está prevista para el {date}. Consulta los detalles en Mi cuenta.',
+        autoRenewingAction: 'Ver suscripción',
         revoked: 'Esta licencia ha sido revocada.',
         hwid_mismatch: 'Esta clave ya está vinculada a otro equipo.',
         unavailable: 'No se pudo conectar con Merlin API. Inténtalo de nuevo.',
@@ -104,6 +140,18 @@ const licenseGateTranslations = {
         invalid_key: 'La clé saisie est invalide.',
         expired: 'Votre accès a expiré. Ouvrez Mon compte pour régulariser votre forfait et continuer à utiliser Merlin.',
         expiredAction: 'Régulariser l’accès',
+        expiringEarlyTitle: 'Votre accès expire dans {days} jours, le {date}.',
+        expiringEarlyBody: 'Renouvelez pour continuer à utiliser Merlin normalement.',
+        expiringEarlyAction: 'Renouveler l’accès',
+        expiringSoonTitle: 'Il ne reste que {days} jours avant l’expiration de votre accès.',
+        expiringSoonBody: 'Votre forfait se termine le {date}.',
+        expiringTomorrowTitle: 'Votre accès expire demain, le {date}.',
+        expiringTomorrowBody: 'Renouvelez pour continuer à utiliser Merlin sans interruption.',
+        expiringTodayTitle: 'Votre accès expire aujourd’hui à {time}.',
+        expiringTodayBody: 'Renouvelez pour continuer à utiliser Merlin.',
+        expiringUrgentAction: 'Renouveler maintenant',
+        autoRenewing: 'Le renouvellement automatique de votre abonnement est prévu le {date}. Consultez les détails dans Mon compte.',
+        autoRenewingAction: 'Voir l’abonnement',
         revoked: 'Cette licence a été révoquée.',
         hwid_mismatch: 'Cette clé est déjà liée à un autre ordinateur.',
         unavailable: 'Connexion à Merlin API impossible. Réessayez.',
@@ -133,6 +181,18 @@ const licenseGateTranslations = {
         invalid_key: 'Der eingegebene Schlüssel ist ungültig.',
         expired: 'Ihr Zugang ist abgelaufen. Öffnen Sie Mein Konto, um Ihren Plan zu regulieren und Merlin weiter zu nutzen.',
         expiredAction: 'Zugang regulieren',
+        expiringEarlyTitle: 'Ihr Zugang läuft in {days} Tagen am {date} ab.',
+        expiringEarlyBody: 'Verlängern Sie, um Merlin weiterhin wie gewohnt zu nutzen.',
+        expiringEarlyAction: 'Zugang verlängern',
+        expiringSoonTitle: 'Ihr Zugang läuft in nur {days} Tagen ab.',
+        expiringSoonBody: 'Ihr Tarif endet am {date}.',
+        expiringTomorrowTitle: 'Ihr Zugang läuft morgen, am {date}, ab.',
+        expiringTomorrowBody: 'Verlängern Sie, um Merlin ohne Unterbrechung weiter zu nutzen.',
+        expiringTodayTitle: 'Ihr Zugang läuft heute um {time} ab.',
+        expiringTodayBody: 'Verlängern Sie, um Merlin weiter zu nutzen.',
+        expiringUrgentAction: 'Jetzt verlängern',
+        autoRenewing: 'Die automatische Verlängerung Ihres Abonnements ist für den {date} vorgesehen. Prüfen Sie die Details in Mein Konto.',
+        autoRenewingAction: 'Abonnement ansehen',
         revoked: 'Diese Lizenz wurde widerrufen.',
         hwid_mismatch: 'Dieser Schlüssel ist bereits mit einem anderen Computer verknüpft.',
         unavailable: 'Verbindung zur Merlin API fehlgeschlagen. Versuchen Sie es erneut.',
@@ -172,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let mode = 'checking';
     let rateLimitUntil = 0;
     let rateLimitTimer = null;
+    let currentSessionData = null;
 
     function setApplicationLocked(locked) {
         for (const element of document.body.children) {
@@ -193,8 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('licenseGatePrivacy').textContent = text.privacy;
         signupText.textContent = text.signupText;
         signupLink.textContent = text.signupLink;
-        expiredAccessNoticeText.textContent = text.expired;
-        expiredAccessPlansBtn.textContent = text.expiredAction;
+        renderAccessNotice();
         if (isRateLimited()) renderRateLimitCountdown();
     }
 
@@ -301,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showError(code) {
         entitlementMonitor.stop();
         setApplicationLocked(true);
+        currentSessionData = null;
         expiredAccessNotice.hidden = true;
         gate.hidden = false;
         gate.classList.remove('is-authenticated');
@@ -333,8 +394,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyEntitlementStatus(sessionData = null) {
-        const expired = isExpiredSession(sessionData);
-        expiredAccessNotice.hidden = !expired;
+        currentSessionData = sessionData;
+        renderAccessNotice();
+    }
+
+    function noticeLocale() {
+        return { ptbr: 'pt-BR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE' }[language] || 'pt-BR';
+    }
+
+    function noticeText(template, values) {
+        return template.replace(/\{(days|date|time)\}/g, (_, key) => String(values[key] ?? ''));
+    }
+
+    function renderAccessNotice() {
+        const notice = window.MerlinEntitlementMonitor.getAccessNotice(currentSessionData);
+        const text = messages();
+        expiredAccessNotice.hidden = !notice;
+        if (!notice) {
+            expiredAccessNotice.removeAttribute('data-urgency');
+            return;
+        }
+        expiredAccessNotice.dataset.urgency = notice.urgency;
+        if (notice.type === 'expired') {
+            expiredAccessNoticeText.textContent = text.expired;
+            expiredAccessPlansBtn.textContent = text.expiredAction;
+            return;
+        }
+
+        const expiry = new Date(notice.expiresAt);
+        const locale = noticeLocale();
+        const values = {
+            days: notice.days,
+            date: new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(expiry),
+            time: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(expiry)
+        };
+        if (notice.type === 'auto_renewing') {
+            expiredAccessNoticeText.textContent = noticeText(text.autoRenewing, values);
+            expiredAccessPlansBtn.textContent = text.autoRenewingAction;
+            return;
+        }
+
+        const stage = notice.stage[0].toUpperCase() + notice.stage.slice(1);
+        const title = document.createElement('strong');
+        title.textContent = noticeText(text[`expiring${stage}Title`], values);
+        expiredAccessNoticeText.replaceChildren(title, document.createTextNode(` ${noticeText(text[`expiring${stage}Body`], values)}`));
+        expiredAccessPlansBtn.textContent = notice.stage === 'early' ? text.expiringEarlyAction : text.expiringUrgentAction;
     }
 
     input.addEventListener('input', () => {
@@ -453,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') entitlementMonitor.check();
     });
+    window.addEventListener('focus', () => entitlementMonitor.check());
 
     setApplicationLocked(true);
     (async () => {

@@ -25,6 +25,7 @@ Auditoria da API completa: `src/index.ts`, rotas OpenAPI, endpoints e biblioteca
 | `GET /api/announcements/:id/image` | imagem de comunicado | imagem vinculada ao comunicado elegivel, nao URL arbitraria |
 | `GET /api/updates/latest`, `GET /api/updates/download` | Update | metadata de release e instalador; o launcher mantem allowlist HTTPS/arquivo `.exe` |
 | `POST /api/launcher/billing-portal` | assinatura | portal para a licenca autenticada; 409 significa indisponivel, nao logout |
+| `GET /api/launcher/access-notice` | aviso de vencimento | atualiza vencimento e renovacao Pix confirmada para ocultar o aviso sem esperar o proximo login |
 
 Todos os recursos autenticados usam bearer JWT do login. Uma resposta 401 pode renovar uma vez; erro definitivo volta ao portao de licenca.
 

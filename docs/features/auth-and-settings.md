@@ -26,6 +26,7 @@
 Recursos autenticados podem renovar token uma vez em 401. Se a renovacao falhar, recebem `auth:required` e o front deve voltar ao portao, sem expor resposta HTTP.
 
 Enquanto a sessao estiver aberta, o launcher revalida a situacao da licenca a cada cinco minutos e ao retornar ao foco. Uma expiracao confirmada revela o aviso de regularizacao sem exigir novo login; indisponibilidade temporaria da API preserva a interface e a sessao local.
+Planos recorrentes mostram o aviso nos ultimos sete dias do periodo: CTA amarelo de sete a quatro dias e laranja de tres dias ate o vencimento. O texto informa os dias e a data local, muda para "amanha" no dia anterior e mostra o horario no proprio dia. Para cartao com renovacao automatica ativa, o aviso informa a cobranca prevista; para Pix ou renovacao desativada, abre Meu acesso para renovar. O launcher consulta o estado de pagamento ao iniciar, ao voltar ao foco e a cada cinco minutos; uma renovacao Pix antecipada confirmada remove o aviso mesmo antes de mudar a data da licenca. A API permite renovar Pix antecipadamente nesse mesmo intervalo de sete dias.
 
 ## Assinatura e links de conta
 

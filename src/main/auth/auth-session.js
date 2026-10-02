@@ -135,10 +135,46 @@ function createAuthSession({
         return {
             accessType: rawBilling?.accessType || 'free',
             billingStatus: rawBilling?.billingStatus || 'none',
+            entitlementExpiresAt: rawBilling?.entitlementExpiresAt || null,
             currentPeriodEnd: rawBilling?.currentPeriodEnd || null,
             cancelAtPeriodEnd: Boolean(rawBilling?.cancelAtPeriodEnd),
-            canManageSubscription: Boolean(rawBilling?.canManageSubscription)
+            canManageSubscription: Boolean(rawBilling?.canManageSubscription),
+            renewalScheduled: Boolean(rawBilling?.renewalScheduled)
         };
+    }
+
+    async function refreshAccessNotice() {
+        const stored = loadStoredSession();
+        const billing = stored?.license?.billing;
+        const rawExpiry = billing?.entitlementExpiresAt || billing?.currentPeriodEnd || stored?.license?.expiresAt;
+        const expiry = new Date(rawExpiry || '').getTime();
+        if (!stored?.accessToken || !Number.isFinite(expiry) || expiry - Date.now() > 7 * 24 * 60 * 60 * 1000) {
+            return publicSession();
+        }
+        try {
+            const response = await axios.get(`${baseUrl}/launcher/access-notice`, {
+                timeout: 5_000,
+                httpsAgent,
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${stored.accessToken}`,
+                    'User-Agent': 'Merlin/2.0'
+                }
+            });
+            if (response.data?.license?.billing) {
+                session.license = {
+                    ...session.license,
+                    expiresAt: response.data.license.expiresAt,
+                    status: response.data.license.status,
+                    planTier: response.data.license.planTier || session.license.planTier,
+                    billing: normalizeBilling(response.data.license.billing)
+                };
+                persistSession();
+            }
+        } catch (_) {
+            // Keep the last confirmed entitlement when the notice check fails.
+        }
+        return publicSession();
     }
 
     async function performLogin(licenseKey) {
@@ -220,13 +256,13 @@ function createAuthSession({
         // the token actually needs renewal. This avoids recording a new
         // /auth/login activity every five minutes while the launcher is open.
         if (statusValidatedThisProcess && stored.accessTokenExpiresAt > Date.now() + TOKEN_REFRESH_MARGIN_MS) {
-            return publicSession();
+            return refreshAccessNotice();
         }
 
         try {
             const result = await refresh();
             statusValidatedThisProcess = result?.authenticated === true;
-            return result;
+            return refreshAccessNotice();
         } catch (error) {
             if (error.code === 'expired') {
                 return preserveExpiredSession() || { authenticated: false, code: 'expired' };
@@ -243,7 +279,7 @@ function createAuthSession({
         try {
             const result = await performLogin(licenseKey);
             statusValidatedThisProcess = result?.authenticated === true;
-            return result;
+            return refreshAccessNotice();
         } catch (error) {
             return { authenticated: false, code: error.code || 'server_error' };
         }

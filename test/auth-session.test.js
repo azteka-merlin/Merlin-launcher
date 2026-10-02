@@ -108,6 +108,39 @@ test('auth status validates once per Merlin process and reuses a valid session a
     assert.equal(loginAttempts, 2);
 });
 
+test('confirmed Pix renewal removes the notice when the launcher checks billing', async () => {
+    const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    let renewalScheduled = false;
+    let checks = 0;
+    const session = createAuthSession({
+        app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
+        safeStorage: createSafeStorage(), fs: createMemoryFs(), path,
+        axios: {
+            post: async () => ({ data: {
+                accessToken: 'token-pix', expiresIn: 3600,
+                license: { name: 'Azteka', expiresAt: expiresAt.slice(0, 10), status: 'active',
+                    billing: { accessType: 'monthly_subscription', billingStatus: 'active', entitlementExpiresAt: expiresAt } }
+            } }),
+            get: async (url, options) => {
+                checks += 1;
+                assert.equal(url, 'https://api-merlin.com/api/launcher/access-notice');
+                assert.equal(options.headers.Authorization, 'Bearer token-pix');
+                return { data: { license: {
+                    expiresAt: expiresAt.slice(0, 10), status: 'active',
+                    billing: { accessType: 'monthly_subscription', billingStatus: 'active', entitlementExpiresAt: expiresAt, renewalScheduled }
+                } } };
+            }
+        },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    });
+
+    assert.equal((await session.login('MERLIN-ABCD-EFGH-JKLM')).license.billing.renewalScheduled, false);
+    renewalScheduled = true;
+    assert.equal((await session.status()).license.billing.renewalScheduled, true);
+    assert.equal(checks, 2);
+});
+
 test('auth session returns rate_limited when the API throttles license attempts', async () => {
     const session = createAuthSession({
         app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
@@ -158,6 +191,7 @@ test('auth session opens billing portal for manageable monthly subscriptions', a
                                 billing: {
                                     accessType: 'monthly_subscription',
                                     billingStatus: 'active',
+                                    entitlementExpiresAt: '2026-09-01T00:00:00.000Z',
                                     currentPeriodEnd: '2026-09-01T00:00:00.000Z',
                                     cancelAtPeriodEnd: false,
                                     canManageSubscription: true
@@ -182,6 +216,7 @@ test('auth session opens billing portal for manageable monthly subscriptions', a
     const login = await session.login('MERLIN-ABCD-EFGH-JKLM');
     assert.equal(login.authenticated, true);
     assert.equal(login.license.billing.canManageSubscription, true);
+    assert.equal(login.license.billing.entitlementExpiresAt, '2026-09-01T00:00:00.000Z');
 
     const portal = await session.createBillingPortalSession();
     assert.deepEqual(portal, { ok: true, portalUrl: 'https://billing.stripe.com/session/test' });
