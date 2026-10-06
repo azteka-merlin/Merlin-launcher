@@ -14,6 +14,7 @@ namespace RemoteToml {
         bool        fromCache = false;
         std::string body;
         std::string sha256;
+        std::string cachePath; // exact TOML path for this DLL hash, if known
     };
 
     // Fetch remote TOML first, then fall back to the exact local cache entry.

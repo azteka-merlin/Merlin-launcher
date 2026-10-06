@@ -93,6 +93,7 @@ Result Fetch(const Request& request)
     fs::path cacheDir  = steamRoot / "opensteamtool" / request.channel / request.component;
     fs::path cachePath = cacheDir / (out.sha256 + ".toml");
     const std::string cachePathText = cachePath.string();
+    out.cachePath = cachePathText;
 
     std::error_code mkdirEc;
     fs::create_directories(cacheDir, mkdirEc);
@@ -170,7 +171,7 @@ Result Fetch(const Request& request)
         }
     }
 
-    // 6. Total failure — caller handles popup / degraded mode.
+    // 6. Total failure — caller records diagnostics and enters degraded mode.
     if (MerlinLocalFallback::TryGenerate(request) && fs::exists(cachePath)) {
         LOG_INFO("RemoteToml({}/{}): Merlin local fallback generated {}",
                  request.channel, request.component, cachePathText);

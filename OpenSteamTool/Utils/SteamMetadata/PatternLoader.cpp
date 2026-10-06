@@ -7,6 +7,7 @@
 #include "Utils/Support/FnvHash.h"
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -36,14 +37,35 @@ using PatternMap = std::unordered_map<uint32_t, PatternEntry>;
 // module → its pattern map
 static std::unordered_map<OSTPlatform::DynamicLibrary::ModuleHandle, PatternMap> g_moduleMaps;
 
-// Modules whose Load() call failed (popup already shown). FindPattern
-// silently returns nullptr for these — without re-logging or adding the
-// function to g_missingFunctions — so we don't follow one "TOML missing"
-// popup with a second popup listing every dependent hook.
+// Modules whose Load() call failed (diagnostic already recorded). FindPattern
+// returns nullptr for these without recording each dependent hook again.
 static std::unordered_set<OSTPlatform::DynamicLibrary::ModuleHandle> g_failedModules;
 
-// functions whose names were not found during FindPattern
-static std::vector<std::string> g_missingFunctions;
+// Keep the exact TOML path reported by RemoteToml for each loaded module.
+static std::unordered_map<OSTPlatform::DynamicLibrary::ModuleHandle, std::string> g_moduleTomlPaths;
+
+struct MissingFunction {
+    std::string name;
+    std::string tomlPath;
+};
+static std::vector<MissingFunction> g_missingFunctions;
+
+static std::string ExpectedToml(const std::string& path)
+{
+    return path.empty() ? "(unknown: Steam DLL SHA-256 could not be calculated)" : path;
+}
+
+static void RecordMissingFunction(OSTPlatform::DynamicLibrary::ModuleHandle module,
+                                  const char* funcName)
+{
+    const auto it = g_moduleTomlPaths.find(module);
+    g_missingFunctions.push_back({
+        funcName,
+        it == g_moduleTomlPaths.end()
+            ? "(unknown: pattern metadata was not loaded for this module)"
+            : ExpectedToml(it->second),
+    });
+}
 
 // ---- byte-pattern scanner ----
 
@@ -138,29 +160,22 @@ static PatternMap ParsePatternString(std::string_view body,
     }
 }
 
-// ---- popup helpers (detached threads so we never block Steam) ----
-
-// Surface a missing pattern file to the user, with enough detail to either
-// (a) drop a file in manually, (b) check the upstream repo, or (c) file
-// an actionable bug report.  We deliberately only disable hooks for the
-// failing module — the rest of OpenSteamTool keeps working.
-static void ShowDownloadFailedPopup(const std::string& dllName,
-                                    const std::string& sha256,
-                                    const std::string& component)
+// Record failures without interrupting Steam startup. Hooks for the failing
+// module are disabled; other modules keep working.
+static void RecordPatternFailure(const std::string& dllName,
+                                 const std::string& sha256,
+                                 const std::string& component,
+                                 const std::string& tomlPath,
+                                 const std::string& reason)
 {
-    SteamDiagnostics::ShowWarning(
-        "OpenSteamTool - Unsupported Steam Version",
-        "OpenSteamTool: signature file not found for " + dllName + ".\n\n"
-        "Hooks that depend on " + dllName + " are disabled for this session; "
-        "other modules are unaffected.\n\n"
-        "You can:\n"
-        "  1. Wait for the next signature update, then restart Steam.\n"
-        "  2. Drop a matching TOML at:\n"
-        "       <Steam>\\opensteamtool\\pattern\\" + component + "\\" + sha256 + ".toml\n"
-        "  3. Check upstream:\n"
-        "       https://github.com/OpenSteam001/steam-monitor/tree/pattern/" + component + "\n"
-        "  4. Report the diagnostics below:\n"
-        "       https://github.com/OpenSteam001/OpenSteamTool/issues");
+    SteamDiagnostics::RecordWarning(
+        "Steam pattern metadata unavailable",
+        "Component: " + component + "\n"
+        "Steam module: " + dllName + "\n"
+        "SHA-256: " + sha256 + "\n"
+        "Expected TOML: " + ExpectedToml(tomlPath) + "\n"
+        "Reason: " + reason + "\n"
+        "Hooks depending on this module are disabled for this session.");
 }
 
 } // namespace
@@ -181,9 +196,10 @@ bool Load(OSTPlatform::DynamicLibrary::ModuleHandle module, const std::string& d
         component,
         dllPath,
     });
+    g_moduleTomlPaths[module] = r.cachePath;
 
+    std::string parseErr;
     if (r.ok) {
-        std::string parseErr;
         PatternMap map = ParsePatternString(r.body, &parseErr);
         if (!map.empty()) {
             LOG_INFO("PatternLoader: loaded {} patterns for {} ({})",
@@ -195,20 +211,24 @@ bool Load(OSTPlatform::DynamicLibrary::ModuleHandle module, const std::string& d
                  component, parseErr.empty() ? "no entries" : parseErr);
     }
 
-    // Total failure — popup + disable module's hooks.
+    // Total failure — record diagnostics and disable this module's hooks.
     std::string dllName = fs::path(dllPath).filename().string();
     std::string sha     = r.sha256.empty() ? "(hash failed)" : r.sha256;
-    ShowDownloadFailedPopup(dllName, sha, component);
+    const std::string reason = r.ok
+        ? (parseErr.empty() ? "TOML contained no usable pattern entries"
+                            : "TOML parse error: " + parseErr)
+        : (r.sha256.empty()
+            ? "Steam DLL SHA-256 could not be calculated; TOML filename is unknown"
+            : "No matching metadata was available remotely or in the local cache");
+    RecordPatternFailure(dllName, sha, component, r.cachePath, reason);
     g_failedModules.insert(module);
     return false;
 }
 
 void* FindPattern(OSTPlatform::DynamicLibrary::ModuleHandle module, const char* funcName)
 {
-    // If the whole module's pattern file failed to load, stay quiet — the
-    // user already saw one popup and the main.log already has the warning.
-    // No point amplifying that into one log line per hook plus a second
-    // "missing functions" popup later.
+    // If the whole module's pattern file failed to load, avoid one log entry
+    // per hook: the failure has already been recorded.
     if (g_failedModules.count(module)) {
         return nullptr;
     }
@@ -220,7 +240,7 @@ void* FindPattern(OSTPlatform::DynamicLibrary::ModuleHandle module, const char* 
         // Load() was never called for this module.
         LOG_WARN("PatternLoader: FindPattern called for module that was never loaded "
                  "('{}')", funcName);
-        g_missingFunctions.emplace_back(funcName);
+        RecordMissingFunction(module, funcName);
         return nullptr;
     }
 
@@ -228,7 +248,7 @@ void* FindPattern(OSTPlatform::DynamicLibrary::ModuleHandle module, const char* 
     auto entryIt = map.find(key);
     if (entryIt == map.end()) {
         LOG_WARN("PatternLoader: no entry for '{}' (key=0x{:08X})", funcName, key);
-        g_missingFunctions.emplace_back(funcName);
+        RecordMissingFunction(module, funcName);
         return nullptr;
     }
 
@@ -264,7 +284,7 @@ void* FindPattern(OSTPlatform::DynamicLibrary::ModuleHandle module, const char* 
         LOG_WARN("PatternLoader: entry for '{}' has neither rva nor sig", funcName);
     }
 
-    g_missingFunctions.emplace_back(funcName);
+    RecordMissingFunction(module, funcName);
     return nullptr;
 }
 
@@ -272,20 +292,25 @@ void ReportMissingFunctions()
 {
     if (g_missingFunctions.empty()) return;
 
-    // Build the list
-    std::string list;
-    for (const auto& name : g_missingFunctions)
-        list += "  - " + name + "\n";
+    std::map<std::string, std::vector<std::string>> byToml;
+    for (const auto& missing : g_missingFunctions)
+        byToml[missing.tomlPath].push_back(missing.name);
     g_missingFunctions.clear();
 
-    SteamDiagnostics::ShowWarning(
-        "OpenSteamTool - Missing Signatures",
-        "OpenSteamTool: some functions could not be located.\n\n"
-        "The following functions were not found in the signature file:\n" +
-        list +
-        "\nHooks for these functions are disabled for this session.\n\n"
-        "Please report this at:\n"
-        "https://github.com/OpenSteam001/OpenSteamTool/issues");
+    // Put every TOML path first, even if the function list is later truncated.
+    std::string list = "Expected TOMLs:\n";
+    for (const auto& entry : byToml)
+        list += "  - " + entry.first + "\n";
+    for (const auto& [tomlPath, names] : byToml) {
+        list += "\nFunctions for " + tomlPath + ":\n";
+        for (const auto& name : names)
+            list += "  - " + name + "\n";
+    }
+
+    SteamDiagnostics::RecordWarning(
+        "Steam functions not found",
+        "The following functions were not found in the pattern metadata.\n" +
+        list + "\nHooks for these functions are disabled for this session.");
 }
 
 } // namespace PatternLoader

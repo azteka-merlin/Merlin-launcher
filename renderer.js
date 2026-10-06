@@ -22,6 +22,12 @@ const translations = {
         detect_steam: 'Detecção automática',
         select_steam: 'Procurar',
         verify_files: 'Reparar',
+        export_steam_log: 'Copiar e salvar log de erros',
+        export_steam_log_saved: 'Log copiado e TXT salvo.',
+        export_steam_log_copied: 'Log copiado. O salvamento do TXT foi cancelado.',
+        export_steam_log_empty: 'Não há erros da integração Steam nas últimas 24 horas.',
+        export_steam_log_save_failed: 'Log copiado, mas não foi possível salvar o TXT.',
+        export_steam_log_failed: 'Não foi possível copiar o log de erros.',
         status: 'Status',
         steam_offline: 'Não detectada',
         steam_online: 'Detectada',
@@ -105,6 +111,12 @@ const translations = {
         detect_steam: 'Auto Detect',
         select_steam: 'Browse',
         verify_files: 'Repair',
+        export_steam_log: 'Copy and save error log',
+        export_steam_log_saved: 'Log copied and TXT saved.',
+        export_steam_log_copied: 'Log copied. Saving the TXT was canceled.',
+        export_steam_log_empty: 'No Steam integration errors in the last 24 hours.',
+        export_steam_log_save_failed: 'Log copied, but the TXT could not be saved.',
+        export_steam_log_failed: 'Could not copy the error log.',
         status: 'Status',
         steam_offline: 'Not detected',
         steam_online: 'Detected',
@@ -188,6 +200,12 @@ const translations = {
         detect_steam: 'Auto-detectar',
         select_steam: 'Explorar',
         verify_files: 'Reparar',
+        export_steam_log: 'Copiar y guardar registro de errores',
+        export_steam_log_saved: 'Registro copiado y TXT guardado.',
+        export_steam_log_copied: 'Registro copiado. Se canceló el guardado del TXT.',
+        export_steam_log_empty: 'No hay errores de la integración Steam en las últimas 24 horas.',
+        export_steam_log_save_failed: 'Registro copiado, pero no se pudo guardar el TXT.',
+        export_steam_log_failed: 'No se pudo copiar el registro de errores.',
         status: 'Estado',
         steam_offline: 'No detectado',
         steam_online: 'Detectado',
@@ -271,6 +289,12 @@ const translations = {
         detect_steam: 'Auto-détection',
         select_steam: 'Parcourir',
         verify_files: 'Réparer',
+        export_steam_log: 'Copier et enregistrer le journal des erreurs',
+        export_steam_log_saved: 'Journal copié et TXT enregistré.',
+        export_steam_log_copied: 'Journal copié. L’enregistrement du TXT a été annulé.',
+        export_steam_log_empty: 'Aucune erreur de l’intégration Steam au cours des dernières 24 heures.',
+        export_steam_log_save_failed: 'Journal copié, mais le TXT n’a pas pu être enregistré.',
+        export_steam_log_failed: 'Impossible de copier le journal des erreurs.',
         status: 'Statut',
         steam_offline: 'Non détecté',
         steam_online: 'Détecté',
@@ -354,6 +378,12 @@ const translations = {
         detect_steam: 'Auto-Erkennung',
         select_steam: 'Durchsuchen',
         verify_files: 'Reparieren',
+        export_steam_log: 'Fehlerprotokoll kopieren und speichern',
+        export_steam_log_saved: 'Protokoll kopiert und TXT gespeichert.',
+        export_steam_log_copied: 'Protokoll kopiert. Das Speichern der TXT-Datei wurde abgebrochen.',
+        export_steam_log_empty: 'Keine Fehler der Steam-Integration in den letzten 24 Stunden.',
+        export_steam_log_save_failed: 'Protokoll kopiert, aber die TXT-Datei konnte nicht gespeichert werden.',
+        export_steam_log_failed: 'Das Fehlerprotokoll konnte nicht kopiert werden.',
         status: 'Status',
         steam_offline: 'Nicht erkannt',
         steam_online: 'Erkannt',
@@ -1377,6 +1407,29 @@ function setupEventListeners() {
                 isSteamFileLocked ? t('repair_steam_files_locked') : `${t('download_error')}: ${error.message}`,
                 'error'
             );
+        }
+    });
+
+    const exportSteamLogBtn = document.getElementById('exportSteamLogBtn');
+    exportSteamLogBtn.addEventListener('click', async () => {
+        exportSteamLogBtn.disabled = true;
+        try {
+            const result = await window.electronAPI.exportSteamIntegrationLog();
+            if (result?.status === 'saved') {
+                showNotification(t('export_steam_log_saved'), 'success');
+            } else if (result?.status === 'copied') {
+                showNotification(t('export_steam_log_copied'), 'success');
+            } else if (result?.status === 'empty') {
+                showNotification(t('export_steam_log_empty'));
+            } else if (result?.status === 'save_failed') {
+                showNotification(t('export_steam_log_save_failed'), 'error');
+            } else {
+                showNotification(t('export_steam_log_failed'), 'error');
+            }
+        } catch {
+            showNotification(t('export_steam_log_failed'), 'error');
+        } finally {
+            exportSteamLogBtn.disabled = false;
         }
     });
 

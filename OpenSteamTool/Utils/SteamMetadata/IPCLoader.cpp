@@ -136,19 +136,19 @@ namespace {
         return true;
     }
 
-    static void ShowMissingPopup(const std::string& sha256)
+    static void RecordMetadataFailure(const std::string& sha256,
+                                      const std::string& tomlPath,
+                                      const std::string& reason)
     {
-        SteamDiagnostics::ShowWarning(
-            "OpenSteamTool - IPC spec missing",
-            "OpenSteamTool: IPC spec file not found.\n\n"
+        SteamDiagnostics::RecordWarning(
+            "Steam IPC metadata unavailable",
+            "Component: steamclient\n"
+            "SHA-256: " + sha256 + "\n"
+            "Expected TOML: " + (tomlPath.empty()
+                ? "(unknown: Steam DLL SHA-256 could not be calculated)" : tomlPath) + "\n"
+            "Reason: " + reason + "\n"
             "IPC interception is disabled for this session; pattern-based "
-            "hooks are unaffected.\n\n"
-            "You can:\n"
-            "  1. Wait for the next upstream publish and restart Steam.\n"
-            "  2. Drop a matching TOML at:\n"
-            "       <Steam>\\opensteamtool\\ipc\\steamclient\\" + sha256 + ".toml\n"
-            "  3. Check upstream:\n"
-            "       https://github.com/OpenSteam001/steam-monitor/tree/ipc/steamclient");
+            "hooks are unaffected.");
     }
 
 } // namespace
@@ -166,7 +166,12 @@ bool Load(const std::string& steamclientPath)
     });
 
     if (!r.ok) {
-        ShowMissingPopup(r.sha256.empty() ? "(hash failed)" : r.sha256);
+        RecordMetadataFailure(
+            r.sha256.empty() ? "(hash failed)" : r.sha256,
+            r.cachePath,
+            r.sha256.empty()
+                ? "Steam DLL SHA-256 could not be calculated; TOML filename is unknown"
+                : "No matching metadata was available remotely or in the local cache");
         return false;
     }
 
@@ -175,7 +180,8 @@ bool Load(const std::string& steamclientPath)
         root = toml::parse(r.body);
     } catch (const toml::parse_error& e) {
         LOG_WARN("IPCLoader: TOML parse error: {}", e.description());
-        ShowMissingPopup(r.sha256);
+        RecordMetadataFailure(r.sha256, r.cachePath,
+                              "TOML parse error: " + std::string(e.description()));
         return false;
     }
 

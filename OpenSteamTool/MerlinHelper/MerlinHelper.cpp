@@ -97,6 +97,34 @@ constexpr PatternSeed kSteamuiPatternSeeds[] = {
     {"0xD055D6C0","ShouldShowAppInLibrary","40 53 48 83 EC 20 48 8B 01 48 8B D9 FF 10 3D D6 0C 09 00"},
 };
 
+// A few Steam functions share the same short prologue. Disambiguate them only
+// for an exact, validated DLL hash; never reuse an RVA from a different build.
+struct KnownPatternOverride {
+    std::string_view dllSha256;
+    std::string_view name;
+    uint32_t rva;
+    const char* seedSig;
+};
+
+constexpr KnownPatternOverride kKnownPatternOverrides[] = {
+    {"caba4826aa3501039d095aee1843a6bfb270fb43a3ab4455b2d6733223579fee",
+     "CUtlMemoryGrow", 0xE8400, nullptr},
+    {"cb387adefbbac64a3c1490d4275d00daf3a1e0219b4580726ef7681db7429278",
+     "GetTopManager", 0x611D80, "48 8B 05 C9 2C B1 00 C3"},
+    {"cb387adefbbac64a3c1490d4275d00daf3a1e0219b4580726ef7681db7429278",
+     "RepeatedFieldUint32_Add", 0x6D8340, nullptr},
+};
+
+const KnownPatternOverride* KnownPatternFor(std::string_view dllSha256,
+                                           std::string_view name)
+{
+    for (const auto& entry : kKnownPatternOverrides) {
+        if (entry.dllSha256 == dllSha256 && entry.name == name)
+            return &entry;
+    }
+    return nullptr;
+}
+
 constexpr IpcMethodSeed kIClientUserMethods[] = {
     {"GetSteamID",10,0xD6FC3200u,0xD7058CA5u,0},
     {"GetAppOwnershipTicketExtendedData",105,0xC7E71245u,0xC8449840u,2},
@@ -422,7 +450,8 @@ std::optional<PatternEntry> BuildAutoPatternEntry(const PortableExecutable& pe,
 }
 
 std::optional<std::vector<PatternEntry>> GeneratePatterns(const std::filesystem::path& dllPath,
-                                                          std::span<const PatternSeed> seeds)
+                                                          std::span<const PatternSeed> seeds,
+                                                          std::string_view dllSha256)
 {
     const auto bytesOpt = ReadFileBytes(dllPath);
     if (!bytesOpt) return std::nullopt;
@@ -435,7 +464,9 @@ std::optional<std::vector<PatternEntry>> GeneratePatterns(const std::filesystem:
     entries.reserve(seeds.size());
 
     for (const auto& seed : seeds) {
-        const char* matchedSignature = seed.seedSig;
+        const auto* knownPattern = KnownPatternFor(dllSha256, seed.name);
+        const char* matchedSignature = knownPattern && knownPattern->seedSig
+            ? knownPattern->seedSig : seed.seedSig;
         auto matches = FindAllMatches(bytes, ParseSignatureTokens(matchedSignature));
         if (matches.size() != 1 && seed.alternateSeedSig) {
             const auto alternateMatches = FindAllMatches(bytes, ParseSignatureTokens(seed.alternateSeedSig));
@@ -444,11 +475,12 @@ std::optional<std::vector<PatternEntry>> GeneratePatterns(const std::filesystem:
                 matchedSignature = seed.alternateSeedSig;
             }
         }
-        if (matches.size() != 1 && seed.preferredRva != 0) {
+        const uint32_t preferredRva = knownPattern ? knownPattern->rva : seed.preferredRva;
+        if (matches.size() != 1 && preferredRva != 0) {
             std::vector<uint32_t> filtered;
             for (auto offset : matches) {
                 const auto rva = FileOffsetToRva(pe, offset);
-                if (rva && *rva == seed.preferredRva) filtered.push_back(offset);
+                if (rva && *rva == preferredRva) filtered.push_back(offset);
             }
             matches = std::move(filtered);
         }
@@ -638,10 +670,10 @@ uint32_t GeneratePatternFile(const std::filesystem::path& steamRoot,
                              std::span<const PatternSeed> seeds,
                              const char* component)
 {
-    const auto entries = GeneratePatterns(dllPath, seeds);
-    if (!entries) return 0;
     const auto sha = OSTPlatform::Hash::Sha256OfFile(dllPath);
     if (sha.empty()) return 0;
+    const auto entries = GeneratePatterns(dllPath, seeds, sha);
+    if (!entries) return 0;
     const auto outPath = steamRoot / "opensteamtool" / "pattern" / component / (sha + ".toml");
     return WriteTextFile(outPath, RenderPatternToml(*entries)) ? 1u : 0u;
 }

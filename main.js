@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, safeStorage, session, shell, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, clipboard, Menu, safeStorage, session, shell, Tray } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -56,6 +56,7 @@ const { registerLibraryIpc } = require('./src/main/ipc/register-library-ipc');
 const { registerPremiumIpc } = require('./src/main/ipc/register-premium-ipc');
 const { registerPollsIpc } = require('./src/main/ipc/register-polls-ipc');
 const { registerSteamPluginIpc } = require('./src/main/ipc/register-steam-plugin-ipc');
+const { registerSupportLogIpc } = require('./src/main/ipc/register-support-log-ipc');
 const { createLibraryCacheStore } = require('./src/main/library/library-cache-store');
 const { createLibraryCatalogClient } = require('./src/main/library/library-catalog-client');
 const { createLibraryCatalogService } = require('./src/main/library/library-catalog-service');
@@ -672,6 +673,15 @@ registerExistingIpc({
     gameInstaller,
     libraryService,
     getMainWindow: () => mainWindow
+});
+
+registerSupportLogIpc({
+    ipcMain,
+    clipboard,
+    dialog,
+    getMainWindow: () => mainWindow,
+    getDownloadsPath: () => app.getPath('downloads'),
+    localAppData: process.env.LOCALAPPDATA
 });
 
 registerGamesIpc({ ipcMain, addGamesService });

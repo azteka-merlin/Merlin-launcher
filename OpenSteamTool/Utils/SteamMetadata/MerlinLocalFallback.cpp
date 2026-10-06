@@ -53,12 +53,13 @@ bool TryGenerate(const RemoteToml::Request& request)
     }
 
     const auto generate = reinterpret_cast<MerlinHelperApi::GenerateMetadataFn>(rawSymbol);
+    const auto steamRootPath = steamRoot.string();
     const auto steamclientPath = (steamRoot / "steamclient64.dll").string();
     const auto steamuiPath = (steamRoot / "steamui.dll").string();
 
     MerlinHelperApi::GenerateRequest generateRequest{};
     generateRequest.flags = RequestToFlags(request);
-    generateRequest.steamRoot = steamRoot.string().c_str();
+    generateRequest.steamRoot = steamRootPath.c_str();
     generateRequest.steamclientPath = steamclientPath.c_str();
     generateRequest.steamuiPath = steamuiPath.c_str();
 

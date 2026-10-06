@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     validateActivation: () => ipcRenderer.invoke('validate-activation'),
     checkFilesStatus: () => ipcRenderer.invoke('check-files-status'),
     verifyFiles: () => ipcRenderer.invoke('verify-files'),
+    exportSteamIntegrationLog: () => ipcRenderer.invoke('support:export-steam-log'),
     steamPlugin: {
         status: () => ipcRenderer.invoke('steam-plugin:status'),
         install: () => ipcRenderer.invoke('steam-plugin:install'),

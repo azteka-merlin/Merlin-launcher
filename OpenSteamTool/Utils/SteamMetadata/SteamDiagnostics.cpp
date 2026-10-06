@@ -1,12 +1,20 @@
 #include "SteamDiagnostics.h"
 #include "OpenSteamToolBuildInfo.h"
-#include "OSTPlatform/include/Dialog.h"
 #include "OSTPlatform/include/DynamicLibrary.h"
 #include "OSTPlatform/include/Hash.h"
 #include "Utils/Logging/Log.h"
 
+#include <windows.h>
+
+#include <chrono>
 #include <cstdint>
-#include <thread>
+#include <ctime>
+#include <exception>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <mutex>
+#include <string>
 #include <utility>
 
 namespace SteamDiagnostics {
@@ -23,6 +31,67 @@ namespace {
     };
 
     Snapshot g_snapshot;
+    std::mutex g_warningLogMutex;
+    constexpr std::uintmax_t kMaxWarningLogBytes = 1024 * 1024;
+    constexpr std::size_t kMaxWarningMessageBytes = 16 * 1024;
+
+    static std::filesystem::path WarningLogPath()
+    {
+        const DWORD required = GetEnvironmentVariableW(L"LOCALAPPDATA", nullptr, 0);
+        if (required < 2) return {};
+
+        std::wstring localAppData(required, L'\0');
+        const DWORD copied = GetEnvironmentVariableW(
+            L"LOCALAPPDATA", localAppData.data(), required);
+        if (copied == 0 || copied >= required) return {};
+        localAppData.resize(copied);
+
+        return std::filesystem::path(localAppData) / L"Merlin" / L"logs" /
+            L"merlin_steam_integration.log";
+    }
+
+    static void WriteWarning(const std::string& title, const std::string& message)
+    {
+        try {
+            std::lock_guard lock(g_warningLogMutex);
+            const auto path = WarningLogPath();
+            if (path.empty()) return;
+
+            std::error_code ec;
+            std::filesystem::create_directories(path.parent_path(), ec);
+            if (ec) return;
+
+            const auto size = std::filesystem::file_size(path, ec);
+            if (!ec && size >= kMaxWarningLogBytes) {
+                const auto previous = std::filesystem::path(path.wstring() + L".1");
+                std::filesystem::remove(previous, ec);
+                ec.clear();
+                std::filesystem::rename(path, previous, ec);
+                if (ec) {
+                    // Keep the primary file bounded even when rotation fails.
+                    std::ofstream truncated(path, std::ios::binary | std::ios::trunc);
+                    if (!truncated) return;
+                }
+            }
+
+            std::ofstream out(path, std::ios::binary | std::ios::app);
+            if (!out) return;
+
+            const auto now = std::chrono::system_clock::to_time_t(
+                std::chrono::system_clock::now());
+            std::tm utc{};
+            gmtime_s(&utc, &now);
+            out << '[' << std::put_time(&utc, "%Y-%m-%d %H:%M:%S UTC")
+                << "] [WARN] " << title << '\n';
+            const auto messageBytes = message.size() < kMaxWarningMessageBytes
+                ? message.size() : kMaxWarningMessageBytes;
+            out.write(message.data(), static_cast<std::streamsize>(messageBytes));
+            if (messageBytes < message.size()) out << "\n[diagnostic truncated]";
+            out << "\n\n";
+        } catch (const std::exception&) {
+            // Diagnostics must never interrupt Steam startup.
+        }
+    }
 
     static std::string DetectSteamBuildID()
     {
@@ -55,7 +124,7 @@ namespace {
     {
         message +=
             "\n\nSteam diagnostics:\n"
-            "  OpenSteamTool version: " + g_snapshot.openSteamToolVersion + "\n"
+            "  Native component version: " + g_snapshot.openSteamToolVersion + "\n"
             "  Build ID:              " + g_snapshot.buildID + "\n"
             "  steamclient64.dll SHA: " + g_snapshot.steamclientSha256 + "\n"
             "  steamui.dll SHA:       " + g_snapshot.steamUISha256;
@@ -95,12 +164,9 @@ std::string Sha256Of(const std::string& path)
     return OSTPlatform::Hash::Sha256OfFile(path);
 }
 
-void ShowWarning(std::string title, std::string message)
+void RecordWarning(std::string title, std::string message)
 {
-    std::thread([title = std::move(title),
-                 message = AppendSnapshot(std::move(message))]() {
-        OSTPlatform::Dialog::ShowWarning(title, message);
-    }).detach();
+    WriteWarning(title, AppendSnapshot(std::move(message)));
 }
 
 } // namespace SteamDiagnostics

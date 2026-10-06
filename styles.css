@@ -4752,6 +4752,13 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
 .settings-main-view .config-section .maintenance-actions .steam-restart-btn > img { filter: none; opacity: .92; }
 .settings-main-view .config-section .maintenance-actions .btn { color: #c6d0e1; background: rgba(18, 27, 45, .56); }
 .settings-main-view .config-section .maintenance-actions .btn:hover:not(:disabled) { background: rgba(34, 45, 68, .82); }
+.settings-main-view .config-section .maintenance-actions { grid-template-columns: 1fr 1fr 1.35fr; max-width: 760px; }
+.settings-main-view .config-section .maintenance-actions #exportSteamLogBtn { grid-column: auto; }
+
+@media (max-width: 800px) {
+    .settings-main-view .config-section .maintenance-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .settings-main-view .config-section .maintenance-actions #exportSteamLogBtn { grid-column: 1 / -1 !important; }
+}
 
 @media (max-width: 680px) {
     .welcome-modal-header {
