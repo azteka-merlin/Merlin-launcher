@@ -15,6 +15,8 @@ test('registers auth IPC channels', () => {
 
     assert.deepEqual(channels, [
         'auth:has-session',
+        'auth:remembered-key',
+        'auth:forget-remembered-key',
         'auth:status',
         'auth:login',
         'auth:reset-hwid',
@@ -24,6 +26,29 @@ test('registers auth IPC channels', () => {
         'auth:open-plans',
         'auth:open-access'
     ]);
+});
+
+test('passes the remember-key choice to authentication and exposes only the saved key', async () => {
+    const handlers = new Map();
+    const calls = [];
+    registerAuthIpc({
+        ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+        authSession: {
+            getRememberedKey: () => 'MERLIN-ABCD-EFGH-JKLM',
+            forgetRememberedKey: () => { calls.push('forgot'); return true; },
+            login: (key, remember) => {
+                calls.push({ key, remember });
+                return { authenticated: true };
+            }
+        },
+        shell: {},
+        apiBaseUrl: 'https://api-merlin.com/api'
+    });
+
+    assert.equal(await handlers.get('auth:remembered-key')(), 'MERLIN-ABCD-EFGH-JKLM');
+    assert.equal(handlers.get('auth:forget-remembered-key')(), true);
+    assert.deepEqual(await handlers.get('auth:login')(null, 'MERLIN-ABCD-EFGH-JKLM', true), { authenticated: true });
+    assert.deepEqual(calls, ['forgot', { key: 'MERLIN-ABCD-EFGH-JKLM', remember: true }]);
 });
 
 test('opens the public access page', () => {

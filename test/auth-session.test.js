@@ -34,6 +34,14 @@ function createSafeStorage() {
     };
 }
 
+function createEncryptedStorage() {
+    return {
+        isEncryptionAvailable: () => true,
+        encryptString: value => Buffer.from(value, 'utf8').reverse(),
+        decryptString: buffer => Buffer.from(buffer).reverse().toString('utf8')
+    };
+}
+
 test('auth session allows retry after transient server validation failure', async () => {
     let attempts = 0;
     const fs = createMemoryFs();
@@ -262,6 +270,107 @@ test('auth session logout clears persisted access', async () => {
     assert.equal(authRequiredCode, 'missing');
     assert.equal(session.hasStoredSession(), false);
     await assert.rejects(() => session.getAccessToken(), { code: 'missing' });
+});
+
+test('opted-in logout retains only an encrypted key for manual login', async () => {
+    const fs = createMemoryFs();
+    const userData = 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin';
+    const options = {
+        app: { getPath: () => userData },
+        safeStorage: createEncryptedStorage(), fs, path,
+        axios: { post: async () => ({ data: {
+            accessToken: 'private-token', expiresIn: 3600,
+            license: { name: 'Azteka', expiresAt: '2026-12-31', status: 'active' }
+        } }) },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    };
+    const key = 'MERLIN-ABCD-EFGH-JKLM';
+    const firstProcess = createAuthSession(options);
+    assert.equal((await firstProcess.login(key, true)).authenticated, true);
+    assert.equal(firstProcess.getRememberedKey(), null);
+
+    assert.deepEqual(firstProcess.logout(), { ok: true });
+    assert.equal(firstProcess.hasStoredSession(), false);
+    const saved = fs.readFileSync(path.join(userData, 'remembered-license-key.json'));
+    assert.doesNotMatch(saved, /MERLIN-|private-token/);
+    const secondProcess = createAuthSession(options);
+    assert.equal(secondProcess.getRememberedKey(), key);
+    await assert.rejects(() => secondProcess.getAccessToken(), { code: 'missing' });
+
+    assert.equal((await secondProcess.login(key, false)).authenticated, true);
+    assert.equal(fs.existsSync(path.join(userData, 'remembered-license-key.json')), false);
+    secondProcess.logout();
+    assert.equal(secondProcess.getRememberedKey(), null);
+});
+
+test('automatic session refresh keeps the remember-key choice', async () => {
+    const fs = createMemoryFs();
+    const options = {
+        app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
+        safeStorage: createEncryptedStorage(), fs, path,
+        axios: { post: async () => ({ data: {
+            accessToken: 'private-token', expiresIn: 3600,
+            license: { name: 'Azteka', expiresAt: '2026-12-31', status: 'active' }
+        } }) },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    };
+    const key = 'MERLIN-ABCD-EFGH-JKLM';
+    await createAuthSession(options).login(key, true);
+    const nextProcess = createAuthSession(options);
+    assert.equal((await nextProcess.status()).authenticated, true);
+    nextProcess.logout();
+    assert.equal(createAuthSession(options).getRememberedKey(), key);
+});
+
+test('logout cannot be undone by an authentication response already in flight', async () => {
+    const fs = createMemoryFs();
+    let completeLogin;
+    let notifyRequestStarted;
+    const requestStarted = new Promise(resolve => { notifyRequestStarted = resolve; });
+    const session = createAuthSession({
+        app: { getPath: () => 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin' },
+        safeStorage: createEncryptedStorage(), fs, path,
+        axios: { post: () => {
+            notifyRequestStarted();
+            return new Promise(resolve => { completeLogin = resolve; });
+        } },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    });
+
+    const pending = session.login('MERLIN-ABCD-EFGH-JKLM', true);
+    await requestStarted;
+    session.logout();
+    completeLogin({ data: {
+        accessToken: 'late-token', expiresIn: 3600,
+        license: { name: 'Azteka', expiresAt: '2026-12-31', status: 'active' }
+    } });
+
+    assert.deepEqual(await pending, { authenticated: false, code: 'missing' });
+    assert.equal(session.hasStoredSession(), false);
+    assert.equal(session.getRememberedKey(), null);
+});
+
+test('remembered key is not written when encryption is unavailable', async () => {
+    const fs = createMemoryFs();
+    const userData = 'C:\\Users\\AZTEKA\\AppData\\Roaming\\Merlin';
+    const session = createAuthSession({
+        app: { getPath: () => userData },
+        safeStorage: { isEncryptionAvailable: () => false }, fs, path,
+        axios: { post: async () => ({ data: {
+            accessToken: 'private-token', expiresIn: 3600,
+            license: { name: 'Azteka', expiresAt: '2026-12-31', status: 'active' }
+        } }) },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'merlin-hwid-123' },
+        baseUrl: 'https://api-merlin.com/api'
+    });
+
+    await session.login('MERLIN-ABCD-EFGH-JKLM', true);
+    session.logout();
+    assert.equal(fs.existsSync(path.join(userData, 'remembered-license-key.json')), false);
+    assert.equal(session.getRememberedKey(), null);
 });
 
 test('expired license keeps the local launcher session but blocks token refresh', async () => {

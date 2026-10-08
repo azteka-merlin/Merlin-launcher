@@ -41,6 +41,7 @@
         let dotButtons = [];
         let loading = false;
         let loaded = false;
+        let retryAfterAuthentication = false;
 
         function setLoadState(kind) {
             if (!kind) {
@@ -215,6 +216,10 @@
             } finally {
                 loading = false;
                 retryButton.disabled = false;
+                if (retryAfterAuthentication) {
+                    retryAfterAuthentication = false;
+                    if (!loaded || !loadState.hidden) void load({ force: true });
+                }
             }
         }
 
@@ -242,7 +247,13 @@
             if (event.key === 'ArrowRight') next.click();
         });
         document.addEventListener('visibilitychange', () => { if (document.hidden) stopRotation(); else startRotation(); });
-        window.addEventListener('merlin-authenticated', () => { if (!loaded) void load({ force: true }); });
+        window.addEventListener('merlin-authenticated', () => {
+            if (loading) {
+                retryAfterAuthentication = true;
+                return;
+            }
+            if (!loaded || !loadState.hidden) void load({ force: true });
+        });
         window.addEventListener('merlin-view-changed', event => {
             if (event.detail?.view === 'home') void refreshWhenHomeReopens();
         });

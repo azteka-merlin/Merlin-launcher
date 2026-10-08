@@ -658,7 +658,15 @@
                         spellcheck="false"
                         required
                     >
+                    <button id="licenseKeyVisibility" class="license-key-visibility" type="button" aria-label="Ocultar chave" aria-pressed="true" data-visible="true">
+                        <img class="license-key-eye-open" src="node_modules/lucide-static/icons/eye.svg" alt="">
+                        <img class="license-key-eye-closed" src="node_modules/lucide-static/icons/eye-off.svg" alt="">
+                    </button>
                 </div>
+                <label class="license-gate-remember" for="licenseGateRememberKey">
+                    <input id="licenseGateRememberKey" type="checkbox">
+                    <span id="licenseGateRememberKeyText">Lembrar chave neste computador</span>
+                </label>
                 <p id="licenseGateFeedback" class="license-gate-feedback" role="status" aria-live="polite">
                     Validando acesso salvo...
                 </p>

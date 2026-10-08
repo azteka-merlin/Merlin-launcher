@@ -33,8 +33,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Authentication
     auth: {
         hasSession: () => ipcRenderer.invoke('auth:has-session'),
+        rememberedKey: () => ipcRenderer.invoke('auth:remembered-key'),
+        forgetRememberedKey: () => ipcRenderer.invoke('auth:forget-remembered-key'),
         status: () => ipcRenderer.invoke('auth:status'),
-        login: (licenseKey) => ipcRenderer.invoke('auth:login', licenseKey),
+        login: (licenseKey, rememberKey) => ipcRenderer.invoke('auth:login', licenseKey, rememberKey),
         resetHwid: (licenseKey) => ipcRenderer.invoke('auth:reset-hwid', licenseKey),
         logout: () => ipcRenderer.invoke('auth:logout'),
         manageSubscription: () => ipcRenderer.invoke('auth:manage-subscription'),

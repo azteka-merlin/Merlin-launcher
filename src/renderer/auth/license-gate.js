@@ -6,6 +6,10 @@ const licenseGateTranslations = {
         checkingTitle: 'Validando licença...',
         checkingDescription: 'Aguarde enquanto validamos o acesso salvo neste computador.',
         label: 'Chave de acesso',
+        rememberKey: 'Lembrar chave neste computador',
+        showKey: 'Mostrar chave',
+        hideKey: 'Ocultar chave',
+        forgetKeyFailed: 'Não foi possível apagar a chave lembrada. Tente novamente.',
         checking: 'Validando acesso salvo...',
         submit: 'Validar chave',
         validating: 'Validando licença...',
@@ -47,6 +51,10 @@ const licenseGateTranslations = {
         checkingTitle: 'Validating license...',
         checkingDescription: 'Please wait while we validate the saved access on this computer.',
         label: 'Access key',
+        rememberKey: 'Remember key on this computer',
+        showKey: 'Show key',
+        hideKey: 'Hide key',
+        forgetKeyFailed: 'Could not remove the remembered key. Try again.',
         checking: 'Validating saved access...',
         submit: 'Validate key',
         validating: 'Validating license...',
@@ -88,6 +96,10 @@ const licenseGateTranslations = {
         checkingTitle: 'Validando licencia...',
         checkingDescription: 'Espera mientras validamos el acceso guardado en este equipo.',
         label: 'Clave de acceso',
+        rememberKey: 'Recordar clave en este equipo',
+        showKey: 'Mostrar clave',
+        hideKey: 'Ocultar clave',
+        forgetKeyFailed: 'No se pudo borrar la clave recordada. Inténtalo de nuevo.',
         checking: 'Validando el acceso guardado...',
         submit: 'Validar clave',
         validating: 'Validando licencia...',
@@ -129,6 +141,10 @@ const licenseGateTranslations = {
         checkingTitle: 'Validation de la licence...',
         checkingDescription: 'Veuillez patienter pendant la validation de l’accès enregistré sur cet ordinateur.',
         label: 'Clé d’accès',
+        rememberKey: 'Mémoriser la clé sur cet ordinateur',
+        showKey: 'Afficher la clé',
+        hideKey: 'Masquer la clé',
+        forgetKeyFailed: 'Impossible de supprimer la clé mémorisée. Réessayez.',
         checking: 'Validation de l’accès enregistré...',
         submit: 'Valider la clé',
         validating: 'Validation de la licence...',
@@ -170,6 +186,10 @@ const licenseGateTranslations = {
         checkingTitle: 'Lizenz wird validiert...',
         checkingDescription: 'Bitte warten Sie, während der gespeicherte Zugriff auf diesem Computer validiert wird.',
         label: 'Zugangsschlüssel',
+        rememberKey: 'Schlüssel auf diesem Computer merken',
+        showKey: 'Schlüssel anzeigen',
+        hideKey: 'Schlüssel verbergen',
+        forgetKeyFailed: 'Der gemerkte Schlüssel konnte nicht gelöscht werden. Versuchen Sie es erneut.',
         checking: 'Gespeicherten Zugang validieren...',
         submit: 'Schlüssel validieren',
         validating: 'Lizenz wird validiert...',
@@ -210,6 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const gate = document.getElementById('licenseGate');
     const form = document.getElementById('licenseGateForm');
     const input = document.getElementById('licenseKeyInput');
+    const visibilityButton = document.getElementById('licenseKeyVisibility');
+    const rememberKey = document.getElementById('licenseGateRememberKey');
     const submit = document.getElementById('licenseGateSubmit');
     const feedback = document.getElementById('licenseGateFeedback');
     const title = document.getElementById('licenseGateTitle');
@@ -244,12 +266,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return licenseGateTranslations[language] || licenseGateTranslations.ptbr;
     }
 
+    function setKeyVisible(visible) {
+        input.type = visible ? 'text' : 'password';
+        const label = visible ? messages().hideKey : messages().showKey;
+        visibilityButton.setAttribute('aria-label', label);
+        visibilityButton.setAttribute('aria-pressed', String(visible));
+        visibilityButton.title = label;
+        visibilityButton.dataset.visible = String(visible);
+    }
+
     function renderLanguage() {
         const text = messages();
+        setKeyVisible(input.type === 'text');
         document.getElementById('licenseGateEyebrow').textContent = text.eyebrow;
         title.textContent = mode === 'checking' ? text.checkingTitle : text.title;
         description.textContent = mode === 'checking' ? text.checkingDescription : text.description;
         document.getElementById('licenseGateLabel').textContent = text.label;
+        document.getElementById('licenseGateRememberKeyText').textContent = text.rememberKey;
         document.getElementById('licenseGateSubmitText').textContent = text.submit;
         document.getElementById('licenseGatePrivacy').textContent = text.privacy;
         signupText.textContent = text.signupText;
@@ -353,6 +386,8 @@ document.addEventListener('DOMContentLoaded', () => {
         busy = value;
         gate.classList.toggle('is-busy', value);
         input.disabled = value;
+        visibilityButton.disabled = value;
+        rememberKey.disabled = value;
         updateSubmitState();
         feedback.dataset.type = value ? 'info' : feedback.dataset.type;
         if (message) feedback.textContent = message;
@@ -445,6 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursorAtEnd = input.selectionStart === input.value.length;
         input.value = formatLicenseKey(input.value);
         if (cursorAtEnd) input.setSelectionRange(input.value.length, input.value.length);
+        if (!input.value) setKeyVisible(true);
         updateSubmitState();
         if (isRateLimited()) {
             renderRateLimitCountdown();
@@ -454,6 +490,38 @@ document.addEventListener('DOMContentLoaded', () => {
         feedback.dataset.type = 'info';
         feedback.dataset.code = '';
     });
+
+    visibilityButton.addEventListener('click', () => {
+        setKeyVisible(input.type === 'password');
+        input.focus();
+    });
+
+    rememberKey.addEventListener('change', async () => {
+        if (rememberKey.checked) return;
+        try {
+            if (await window.electronAPI.auth.forgetRememberedKey()) return;
+        } catch (_) {
+            // Surface the same failure as a filesystem error.
+        }
+        rememberKey.checked = true;
+        feedback.textContent = messages().forgetKeyFailed;
+        feedback.dataset.type = 'error';
+        feedback.dataset.code = '';
+    });
+
+    async function restoreRememberedKey() {
+        try {
+            const saved = await window.electronAPI.auth.rememberedKey();
+            if (saved && !input.value && mode === 'prompt') {
+                input.value = formatLicenseKey(saved);
+                setKeyVisible(false);
+                rememberKey.checked = true;
+                updateSubmitState();
+            }
+        } catch (_) {
+            // A missing or unreadable saved key must not block manual login.
+        }
+    }
 
     signupLink.addEventListener('click', async () => {
         if (signupLink.disabled) return;
@@ -534,9 +602,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setMode('prompt');
         setBusy(true, messages().validating);
         try {
-            const result = await window.electronAPI.auth.login(normalizeLicenseKey(input.value));
+            const result = await window.electronAPI.auth.login(normalizeLicenseKey(input.value), rememberKey.checked);
             if (result.authenticated) {
                 input.value = '';
+                setKeyVisible(true);
                 unlock(result);
                 return;
             }
@@ -551,8 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('merlin-logout', () => {
         entitlementMonitor.stop();
         input.value = '';
+        setKeyVisible(true);
+        rememberKey.checked = false;
         expiredAccessNotice.hidden = true;
         showError('missing');
+        void restoreRememberedKey();
     });
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') entitlementMonitor.check();
@@ -569,6 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
             feedback.textContent = messages().missing;
             feedback.dataset.type = 'info';
             setBusy(false);
+            await restoreRememberedKey();
             input.focus();
             return;
         }
@@ -584,8 +657,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             showError(result.code);
+            await restoreRememberedKey();
         } catch (_) {
             showError('unavailable');
+            await restoreRememberedKey();
         }
     })();
 });

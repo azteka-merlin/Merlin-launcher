@@ -48,6 +48,7 @@ test('plugin version changes when the page-state recovery contract changes', () 
     const script = buildMerlinStoreScript();
     assert.match(script, new RegExp(`version="${PLUGIN_VERSION}"`));
     assert.match(script, /__merlinSteamPluginLanguage/);
+    assert.match(script, /__merlinSteamPluginReady=true/);
     assert.match(script, /data:image\/png;base64,/);
     assert.match(script, /merlin-denuvo-wrap/);
     assert.match(script, /document\.body\?\.innerText/);
@@ -61,6 +62,31 @@ test('plugin version changes when the page-state recovery contract changes', () 
     const serviceSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'steam-plugin', 'steam-plugin-service.js'), 'utf8');
     assert.match(serviceSource, /getSteamPluginTranslations/);
     assert.match(serviceSource, /buildMerlinStoreScript\(\{ language \}\)/);
+    assert.match(serviceSource, /window\.__merlinSteamPluginReady === true/);
+});
+
+test('Store script retries when its previous initialization stopped early', () => {
+    const script = buildMerlinStoreScript();
+    const storage = new Map();
+    let observerAttempts = 0;
+    const browser = {
+        window: { sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) } },
+        document: {
+            documentElement: {}, head: { appendChild: () => {} },
+            getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
+            createElement: () => ({})
+        },
+        location: { pathname: '/', reload: () => assert.fail('same-version recovery must not reload the page') },
+        MutationObserver: class { constructor() { if (++observerAttempts === 1) throw new Error('page not ready'); } observe() {} disconnect() {} },
+        setInterval: () => 1, clearInterval: () => {}
+    };
+    const context = vm.createContext(browser);
+    assert.throws(() => vm.runInContext(script, context), /page not ready/);
+    assert.equal(browser.window.__merlinSteamPluginVersion, PLUGIN_VERSION);
+    assert.equal(browser.window.__merlinSteamPluginReady, false);
+    vm.runInContext(script, context);
+    assert.equal(browser.window.__merlinSteamPluginReady, true);
+    assert.equal(observerAttempts, 2);
 });
 
 test('bridge removes handled requests in place so the injected script keeps its queue reference', () => {
@@ -119,6 +145,47 @@ test('bridge accepts two open commands from the same injected page queue', async
         assert.deepEqual(removed, ['10']);
         assert.equal(browser.window.__merlinSteamPluginReplies['remove-game'].success, true);
         assert.equal(queueReference.length, 0);
+    } finally {
+        service.stop();
+        for (const client of socketServer.clients) client.terminate();
+        await new Promise(resolve => server.close(resolve));
+    }
+});
+
+test('a broken Steam Store tab does not block injection into another tab', async () => {
+    const server = http.createServer((request, response) => {
+        if (request.url !== '/json') return response.writeHead(404).end();
+        response.setHeader('content-type', 'application/json');
+        response.end(JSON.stringify([
+            { id: 'stale-store-page', url: 'https://store.steampowered.com/app/10/', webSocketDebuggerUrl: `ws://127.0.0.1:${server.address().port}/stale` },
+            { id: 'healthy-store-page', url: 'https://store.steampowered.com/', webSocketDebuggerUrl: `ws://127.0.0.1:${server.address().port}/healthy` }
+        ]));
+    });
+    const socketServer = new WebSocket.Server({ noServer: true });
+    let healthyEvaluations = 0;
+    server.on('upgrade', (request, socket, head) => {
+        if (request.url === '/stale') return socket.destroy();
+        socketServer.handleUpgrade(request, socket, head, client => socketServer.emit('connection', client));
+    });
+    socketServer.on('connection', client => client.on('message', raw => {
+        const message = JSON.parse(String(raw));
+        healthyEvaluations++;
+        const value = message.params.expression.includes('__merlinSteamPluginVersion') ? 'true' : '[]';
+        client.send(JSON.stringify({ id: message.id, result: { result: { value } } }));
+    }));
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+
+    const service = createSteamPluginService({
+        fs: { lstatSync: () => ({}) }, path, execFile: () => {},
+        addGamesService: {}, logger: { debug: () => {} }, openView: () => {},
+        configStore: { get: () => ({ steamPath: 'C:\\Steam', steamPlugin: { enabled: true, markerOwned: false } }) },
+        cdpUrl: `http://127.0.0.1:${server.address().port}/json`
+    });
+    try {
+        await service.tick();
+        assert.equal(service.status().targetCount, 2);
+        assert.equal(healthyEvaluations, 2);
+        assert.ok(service.status().lastError);
     } finally {
         service.stop();
         for (const client of socketServer.clients) client.terminate();

@@ -67,9 +67,9 @@ function createSteamPluginService({ fs, path, execFile, configStore, addGamesSer
             const client = { ws, sequence: 0, pending: new Map() };
             sockets.set(tab.id, client);
             ws.once('open', () => resolve(client));
-            ws.once('error', error => { sockets.delete(tab.id); reject(error); });
-            ws.on('close', () => { sockets.delete(tab.id); for (const item of client.pending.values()) item.reject(new Error('A conexão com a Steam foi encerrada.')); client.pending.clear(); });
-            ws.on('message', message => { try { const response = JSON.parse(String(message)); const pending = client.pending.get(response.id); if (!pending) return; client.pending.delete(response.id); clearTimeout(pending.timeout); pending.resolve(response.result?.result?.value); } catch (_) {} });
+            ws.once('error', error => { if (sockets.get(tab.id) === client) sockets.delete(tab.id); reject(error); });
+            ws.on('close', () => { if (sockets.get(tab.id) === client) sockets.delete(tab.id); for (const item of client.pending.values()) { clearTimeout(item.timeout); item.reject(new Error('A conexão com a Steam foi encerrada.')); } client.pending.clear(); });
+            ws.on('message', message => { try { const response = JSON.parse(String(message)); const pending = client.pending.get(response.id); if (!pending) return; client.pending.delete(response.id); clearTimeout(pending.timeout); if (response.error || response.result?.exceptionDetails) pending.reject(new Error(response.error?.message || response.result?.exceptionDetails?.text || 'A Steam não conseguiu executar o plugin.')); else pending.resolve(response.result?.result?.value); } catch (_) {} });
         });
     }
 
@@ -174,33 +174,43 @@ function createSteamPluginService({ fs, path, execFile, configStore, addGamesSer
     async function tick() {
         if (!enabled() || ticking) return;
         ticking = true;
+        const recordError = error => {
+            const message = error?.message || String(error);
+            const waitingForSteam = error?.code === 'ECONNREFUSED' || error?.code === 'ECONNRESET'
+                || /ECONNREFUSED|ECONNRESET|CDP da Steam não respondeu/i.test(message);
+            if (!waitingForSteam && lastError !== message) logger.debug?.('Merlin Steam plugin:', message);
+            lastError = message;
+        };
         try {
             if (!markerExists(markerPath()) && config().markerOwned) await createMarker();
             const tabs = await readCdpTabs(); const active = new Set(); targetCount = 0;
+            let tabError = null;
             for (const tab of tabs) {
                 if (!/store\.steampowered\.com/i.test(tab.url || '') || !tab.webSocketDebuggerUrl) continue;
                 active.add(tab.id); targetCount++;
-                const language = configStore.get().language || 'ptbr';
-                const alive = await evaluate(tab, `String(window.__merlinSteamPluginVersion === ${JSON.stringify(PLUGIN_VERSION)} && window.__merlinSteamPluginLanguage === ${JSON.stringify(language)})`);
-                if (alive !== 'true') await evaluate(tab, buildMerlinStoreScript({ language }));
-                await synchronizePageState(tab);
-                const queued = await evaluate(tab, 'JSON.stringify(window.__merlinSteamPluginRequests || [])');
-                for (const command of JSON.parse(queued || '[]')) {
-                    const result = await dispatch(command);
-                    await evaluate(tab, `(()=>{window.__merlinSteamPluginReplies[${JSON.stringify(command.id)}]=${JSON.stringify(result)};const queue=window.__merlinSteamPluginRequests||[];for(let index=queue.length-1;index>=0;index--){if(queue[index]&&queue[index].id===${JSON.stringify(command.id)})queue.splice(index,1);}})()`);
-                    logger.debug?.(`Merlin Steam plugin: processed ${command.kind} request ${command.id}.`);
+                try {
+                    const language = configStore.get().language || 'ptbr';
+                    const alive = await evaluate(tab, `String(window.__merlinSteamPluginVersion === ${JSON.stringify(PLUGIN_VERSION)} && window.__merlinSteamPluginLanguage === ${JSON.stringify(language)} && window.__merlinSteamPluginReady === true)`);
+                    if (alive !== 'true') await evaluate(tab, buildMerlinStoreScript({ language }));
+                    await synchronizePageState(tab);
+                    const queued = await evaluate(tab, 'JSON.stringify(window.__merlinSteamPluginRequests || [])');
+                    for (const command of JSON.parse(queued || '[]')) {
+                        const result = await dispatch(command);
+                        await evaluate(tab, `(()=>{window.__merlinSteamPluginReplies[${JSON.stringify(command.id)}]=${JSON.stringify(result)};const queue=window.__merlinSteamPluginRequests||[];for(let index=queue.length-1;index>=0;index--){if(queue[index]&&queue[index].id===${JSON.stringify(command.id)})queue.splice(index,1);}})()`);
+                        logger.debug?.(`Merlin Steam plugin: processed ${command.kind} request ${command.id}.`);
+                    }
+                } catch (error) {
+                    sockets.get(tab.id)?.ws.terminate();
+                    sockets.delete(tab.id);
+                    tabError ||= error;
                 }
             }
             for (const [id, client] of sockets) if (!active.has(id)) client.ws.terminate();
-            lastError = null;
+            if (tabError) recordError(tabError);
+            else lastError = null;
         } catch (error) {
             closeSockets();
-            const waitingForSteam = error?.code === 'ECONNREFUSED' || error?.code === 'ECONNRESET'
-                || /ECONNREFUSED|ECONNRESET|CDP da Steam não respondeu/i.test(error?.message || '');
-            if (!waitingForSteam && lastError !== error.message) {
-                logger.debug?.('Merlin Steam plugin:', error.message);
-            }
-            lastError = error.message;
+            recordError(error);
         } finally { ticking = false; }
     }
 

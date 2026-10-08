@@ -830,6 +830,97 @@ webview {
     color: #475569;
 }
 
+.license-key-visibility {
+    display: grid;
+    position: relative;
+    flex: 0 0 3.2rem;
+    align-self: stretch;
+    place-items: center;
+    border: 0;
+    border-radius: 0 10px 10px 0;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.license-key-visibility:hover:not(:disabled) {
+    background: rgba(168, 85, 247, 0.12);
+}
+
+.license-key-visibility:active:not(:disabled) {
+    transform: scale(0.94);
+}
+
+.license-key-visibility:focus-visible {
+    outline: 2px solid #c084fc;
+    outline-offset: -4px;
+}
+
+.license-key-visibility:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.license-key-visibility img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.2rem;
+    height: 1.2rem;
+    filter: invert(84%) sepia(10%) saturate(534%) hue-rotate(178deg);
+    pointer-events: none;
+    transition: opacity 180ms ease, transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.license-key-visibility[data-visible='true'] .license-key-eye-open,
+.license-key-visibility[data-visible='false'] .license-key-eye-closed {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0);
+}
+
+.license-key-visibility[data-visible='true'] .license-key-eye-closed {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.78) rotate(-8deg);
+}
+
+.license-key-visibility[data-visible='false'] .license-key-eye-open {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.78) rotate(8deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .license-key-visibility,
+    .license-key-visibility img {
+        transition: none;
+    }
+}
+
+.license-gate-form .license-gate-remember {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0.85rem 0 0;
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    cursor: pointer;
+}
+
+.license-gate-remember input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: #a855f7;
+    cursor: pointer;
+}
+
+.license-gate-remember input:focus-visible {
+    outline: 2px solid #c084fc;
+    outline-offset: 3px;
+}
+
 .license-gate-feedback {
     min-height: 1.35rem;
     margin-top: 0.7rem;

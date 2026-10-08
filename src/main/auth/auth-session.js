@@ -23,12 +23,57 @@ function createAuthSession({
     let session = null;
     let refreshPromise = null;
     let statusValidatedThisProcess = false;
+    let sessionGeneration = 0;
 
     function sessionFilePath() {
         return path.join(app.getPath('userData'), 'auth-session.json');
     }
 
+    function rememberedKeyFilePath() {
+        return path.join(app.getPath('userData'), 'remembered-license-key.json');
+    }
+
+    function forgetRememberedKey() {
+        try {
+            fs.rmSync(rememberedKeyFilePath(), { force: true });
+            return true;
+        } catch (error) {
+            console.warn('Unable to clear the remembered license key:', error.message);
+            return false;
+        }
+    }
+
+    function rememberLicenseKey(licenseKey) {
+        if (!LICENSE_KEY_PATTERN.test(licenseKey) || !safeStorage.isEncryptionAvailable()) return;
+        try {
+            const filePath = rememberedKeyFilePath();
+            fs.mkdirSync(path.dirname(filePath), { recursive: true });
+            const encrypted = safeStorage.encryptString(licenseKey);
+            fs.writeFileSync(filePath, JSON.stringify({
+                version: 1,
+                payload: encrypted.toString('base64')
+            }), { encoding: 'utf8', mode: 0o600 });
+        } catch (error) {
+            console.warn('Unable to remember the license key:', error.message);
+        }
+    }
+
+    function getRememberedKey() {
+        if (loadStoredSession() || !safeStorage.isEncryptionAvailable()) return null;
+        try {
+            const filePath = rememberedKeyFilePath();
+            if (!fs.existsSync(filePath)) return null;
+            const envelope = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            if (envelope.version !== 1 || typeof envelope.payload !== 'string') return null;
+            const licenseKey = safeStorage.decryptString(Buffer.from(envelope.payload, 'base64'));
+            return LICENSE_KEY_PATTERN.test(licenseKey) ? licenseKey : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
     function clearStoredSession() {
+        sessionGeneration += 1;
         session = null;
         try {
             fs.rmSync(sessionFilePath(), { force: true });
@@ -177,11 +222,12 @@ function createAuthSession({
         return publicSession();
     }
 
-    async function performLogin(licenseKey) {
+    async function performLogin(licenseKey, rememberKey = false) {
         if (!LICENSE_KEY_PATTERN.test(licenseKey)) {
             throw new AuthError('invalid_key', 'Invalid license key format.');
         }
 
+        const loginGeneration = sessionGeneration;
         try {
             let hwid;
             try {
@@ -205,12 +251,17 @@ function createAuthSession({
             );
             const data = response.data;
 
+            if (loginGeneration !== sessionGeneration) {
+                throw new AuthError('missing', 'Authentication was canceled.');
+            }
+
             if (!data?.accessToken || !Number.isFinite(data.expiresIn) || !data.license) {
                 throw new AuthError('invalid_response', 'The Merlin API returned an invalid session.');
             }
 
             session = {
                 licenseKey,
+                rememberKey,
                 accessToken: data.accessToken,
                 accessTokenExpiresAt: Date.now() + data.expiresIn * 1000,
                 license: {
@@ -222,6 +273,7 @@ function createAuthSession({
                 }
             };
             persistSession();
+            forgetRememberedKey();
             return publicSession();
         } catch (error) {
             if (error instanceof AuthError) throw error;
@@ -236,7 +288,7 @@ function createAuthSession({
         }
 
         if (!refreshPromise) {
-            refreshPromise = performLogin(stored.licenseKey).finally(() => {
+            refreshPromise = performLogin(stored.licenseKey, stored.rememberKey === true).finally(() => {
                 refreshPromise = null;
             });
         }
@@ -274,10 +326,10 @@ function createAuthSession({
         }
     }
 
-    async function login(rawLicenseKey) {
+    async function login(rawLicenseKey, rememberKey = false) {
         const licenseKey = String(rawLicenseKey || '').trim().toUpperCase();
         try {
-            const result = await performLogin(licenseKey);
+            const result = await performLogin(licenseKey, rememberKey === true);
             statusValidatedThisProcess = result?.authenticated === true;
             return refreshAccessNotice();
         } catch (error) {
@@ -306,6 +358,9 @@ function createAuthSession({
     function logout() {
         refreshPromise = null;
         statusValidatedThisProcess = false;
+        const stored = loadStoredSession();
+        forgetRememberedKey();
+        if (stored?.rememberKey === true) rememberLicenseKey(stored.licenseKey);
         clearStoredSession();
         onAuthRequired('missing');
         return { ok: true };
@@ -425,7 +480,7 @@ function createAuthSession({
         }
     }
 
-    return { createAccessHandoff, createBillingPortalSession, getAccessToken, handleUnauthorized, hasStoredSession, login, logout, resetHwid, status };
+    return { createAccessHandoff, createBillingPortalSession, forgetRememberedKey, getAccessToken, getRememberedKey, handleUnauthorized, hasStoredSession, login, logout, resetHwid, status };
 }
 
 module.exports = { AuthError, createAuthSession };

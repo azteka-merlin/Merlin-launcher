@@ -2,6 +2,11 @@
 
 Home e changelog sao conteudo autenticado servido pela API. O launcher usa apenas IPCs `home:*` e `release-notes:*`; o renderer nao chama a rede diretamente.
 
+## Home
+
+- Quando a atualizacao falha, a Home pode exibir o ultimo conteudo salvo com um aviso e opcao de tentar novamente.
+- Depois que o login termina, a Home tenta atualizar novamente se estava exibindo cache/erro. Se o login termina durante a primeira carga, a tentativa ocorre logo apos ela; uma carga saudavel nao e repetida.
+
 ## Novidades
 
 - A primeira busca espera o idioma persistido carregar.

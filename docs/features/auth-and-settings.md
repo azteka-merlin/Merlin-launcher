@@ -11,6 +11,8 @@
 - Token e renovado quando faltam menos de 60 segundos. Uma sessao corrompida/indescriptografavel e removida.
 - `invalid_key`, `expired`, `revoked` e `hwid_mismatch` apagam a sessao; falha temporaria a preserva para nova tentativa.
 - Logout apaga sessao e cache Premium, mas preserva configuracao Steam e biblioteca local.
+- A opcao **Lembrar chave neste computador** e desmarcada por padrao. Quando marcada, somente o logout voluntario grava a chave em `userData/remembered-license-key.json` usando `safeStorage`; o token continua sendo apagado e nunca ha login automatico apos o logout. A chave e preenchida no proximo portao de acesso, e desmarcar a opcao remove imediatamente essa copia. Sem criptografia disponivel, nada e salvo em texto puro.
+- Chaves preenchidas automaticamente aparecem mascaradas, com um botao de olho para revelar ou ocultar. No primeiro login e na digitacao manual, o campo comeca visivel.
 
 ## Codigos de erro
 
