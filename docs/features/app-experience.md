@@ -21,6 +21,7 @@
 ## Updates
 
 - Compara versoes numericas, ignorando prefixo `v` e sufixo pre-release. So oferece update quando a versao remota e maior.
+- Consulta no inicio, ao autenticar, navegar ou trazer a janela da bandeja e a cada cinco minutos. Navegacao/foco respeitam intervalo minimo de 15 segundos e nao criam consultas paralelas; falhas preservam o aviso existente. Na mesma sessao, a versao dispensada nao reabre a modal, mas continua acessivel pela badge.
 - Dev pode simular update com `MERLIN_SIMULATE_UPDATE=1`, mas apenas em URL permitida.
 - Download so aceita HTTPS no endpoint `/updates/download` configurado ou release GitHub autorizado. Arquivo aberto deve terminar em `.exe`.
 - Usa `operationId`, progresso, cancelamento e salva em Downloads.

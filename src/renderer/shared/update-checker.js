@@ -133,6 +133,11 @@
     let activeOperationId = null;
     let downloadedFilePath = '';
     let downloadedFolderPath = '';
+    let checking = false;
+    let lastCheckAt = 0;
+    let lastPromptedVersion = '';
+    const MIN_CHECK_INTERVAL_MS = 15 * 1000;
+    const PERIODIC_CHECK_INTERVAL_MS = 5 * 60 * 1000;
     let lastProgress = {
         transferredBytes: 0,
         totalBytes: 0,
@@ -313,18 +318,52 @@
 
     window.addEventListener('merlin-language-changed', render);
 
+    async function checkForUpdates(force = false) {
+        if (checking || (!force && Date.now() - lastCheckAt < MIN_CHECK_INTERVAL_MS)) return;
+        checking = true;
+        lastCheckAt = Date.now();
+        try {
+            const result = await window.electronAPI.checkForUpdates();
+            if (!result?.success) return;
+            if (!result.updateAvailable) {
+                if (state !== 'downloading' && state !== 'completed') {
+                    update = null;
+                    updateNoticeBadge.hidden = true;
+                    modal.hidden = true;
+                }
+                return;
+            }
+            if (state === 'downloading' || state === 'completed') return;
+
+            const changedVersion = update?.latestVersion !== result.latestVersion;
+            update = result;
+            if (changedVersion) state = 'available';
+            render();
+            updateNoticeBadge.hidden = false;
+            if (changedVersion && lastPromptedVersion !== result.latestVersion) {
+                lastPromptedVersion = result.latestVersion;
+                modal.hidden = false;
+            }
+        } catch (_) {
+            // A failed check must not interrupt the launcher or hide a known update.
+        } finally {
+            checking = false;
+        }
+    }
+
+    const checkSoon = () => { void checkForUpdates(); };
+    window.addEventListener('merlin-authenticated', checkSoon);
+    window.addEventListener('merlin-view-changed', checkSoon);
+    window.addEventListener('focus', checkSoon);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkSoon();
+    });
+
     document.addEventListener('DOMContentLoaded', async () => {
         const version = await window.electronAPI.getVersion();
         versionBadge.textContent = `v${version}`;
         render();
-
-        const result = await window.electronAPI.checkForUpdates();
-        if (!result?.success || !result.updateAvailable) return;
-
-        update = result;
-        state = 'available';
-        render();
-        updateNoticeBadge.hidden = false;
-        modal.hidden = false;
+        await checkForUpdates(true);
+        window.setInterval(checkSoon, PERIODIC_CHECK_INTERVAL_MS);
     });
 })();
