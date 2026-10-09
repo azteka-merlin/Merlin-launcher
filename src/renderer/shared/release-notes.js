@@ -55,7 +55,12 @@
         sparkles: 'node_modules/lucide-static/icons/sparkles.svg',
         wrench: 'node_modules/lucide-static/icons/wrench.svg',
         gift: 'node_modules/lucide-static/icons/gift.svg',
-        megaphone: 'node_modules/lucide-static/icons/megaphone.svg'
+        megaphone: 'node_modules/lucide-static/icons/megaphone.svg',
+        cloud: 'node_modules/lucide-static/icons/cloud.svg',
+        'database-backup': 'node_modules/lucide-static/icons/database-backup.svg',
+        'refresh-cw': 'node_modules/lucide-static/icons/refresh-cw.svg',
+        'credit-card': 'node_modules/lucide-static/icons/credit-card.svg',
+        'shield-check': 'node_modules/lucide-static/icons/shield-check.svg'
     };
 
     function displayVersion(version) {

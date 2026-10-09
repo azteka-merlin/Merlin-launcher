@@ -23,6 +23,30 @@ test('normalizes release notes and resolves API asset paths', () => {
     assert.equal(releases[0].type, 'major');
 });
 
+test('preserves the approved Merlin 2.1 highlight icons', () => {
+    const icons = ['cloud', 'database-backup', 'refresh-cw', 'credit-card', 'shield-check'];
+    const releases = normalizeReleaseList([{
+        ...releaseFixture,
+        version: '2.1.0',
+        highlights: icons.map((icon) => ({ icon, title: icon, description: 'Descrição' }))
+    }]);
+    assert.deepEqual(releases[0].highlights.map((item) => item.icon), icons);
+});
+
+test('Merlin 2.1 notes open on launcher 2.1.0 but not 2.0.10', async () => {
+    const release = { ...releaseFixture, version: '2.1.0' };
+    const createService = (launcherVersion) => createReleaseNotesService({
+        authSession: { getAccessToken: async () => 'token' },
+        client: { request: async () => normalizeReleaseList([release]) },
+        store: { save: (_locale, value) => value, load: () => null },
+        configStore: { get: () => ({ lastSeenChangelogVersion: '2.0.0' }), update: () => {} },
+        baseUrl: 'https://api-merlin.com/api/release-notes',
+        launcherVersion
+    });
+    assert.equal((await createService('2.0.10').get()).shouldAutoOpen, false);
+    assert.equal((await createService('2.1.0').get()).shouldAutoOpen, true);
+});
+
 test('release notes state opens the newest compatible unseen launcher version', async () => {
     let state = { lastSeenChangelogVersion: '' };
     const service = createReleaseNotesService({

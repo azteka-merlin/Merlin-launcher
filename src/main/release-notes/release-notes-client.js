@@ -1,6 +1,6 @@
 const DEFAULT_RELEASE_NOTES_URL = 'https://api-merlin.com/api/release-notes';
 const SUPPORTED_TYPES = new Set(['major', 'standard']);
-const SUPPORTED_ICONS = new Set(['home', 'steam', 'library', 'settings', 'sparkles', 'wrench', 'gift', 'megaphone']);
+const SUPPORTED_ICONS = new Set(['home', 'steam', 'library', 'settings', 'sparkles', 'wrench', 'gift', 'megaphone', 'cloud', 'database-backup', 'refresh-cw', 'credit-card', 'shield-check']);
 
 function normalizeRelease(value, baseUrl = DEFAULT_RELEASE_NOTES_URL) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
