@@ -1,4 +1,4 @@
-const REQUIRED_DLLS = ['OpenSteamTool.dll', 'dwmapi.dll', 'xinput1_4.dll'];
+const REQUIRED_DLLS = ['OpenSteamTool.dll', 'dwmapi.dll', 'xinput1_4.dll', 'merlin_cloud_redirect.dll'];
 const REQUIRED_STEAM_FILES = [
     ...REQUIRED_DLLS.map(name => ({ name, sourceName: name, relativeDestination: name })),
     {
@@ -163,6 +163,20 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
         });
     }
 
+    function getActiveAccountId() {
+        if (platform !== 'win32') return Promise.resolve(null);
+        return new Promise(resolve => {
+            exec('reg query "HKCU\\Software\\Valve\\Steam\\ActiveProcess" /v ActiveUser', (error, stdout) => {
+                if (error) return resolve(null);
+                const match = String(stdout || '').match(/ActiveUser\s+REG_(?:DWORD|QWORD)\s+([^\s]+)/i);
+                if (!match) return resolve(null);
+                const raw = match[1].replace(/^0x/i, '');
+                const value = /^0x/i.test(match[1]) ? Number.parseInt(raw, 16) : Number.parseInt(raw, 10);
+                resolve(Number.isSafeInteger(value) && value > 0 ? String(value) : null);
+            });
+        });
+    }
+
     function getFilesStatus(steamPath) {
         if (!steamPath || !fs.existsSync(steamPath)) {
             return { ok: false, reason: 'steam_path_missing', missing: [] };
@@ -248,6 +262,7 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
         findDefaultPath,
         getLibraryFolders,
         getActivationReadiness,
+        getActiveAccountId,
         getFilesStatus,
         isRunning,
         start

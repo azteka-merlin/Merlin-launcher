@@ -20,6 +20,7 @@ tmp/
 # Cache e saídas geradas pelo OpenSteamTool internalizado
 .deps/
 OpenSteamTool/build/
+vendor/CloudRedirect/build/
 
 # Manifesto de integridade gerado durante o build
 dist/integrity.json

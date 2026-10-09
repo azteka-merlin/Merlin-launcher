@@ -146,6 +146,18 @@ Var pid
     ${EndIf}
 
     ${If} $1 == "0"
+      ${If} ${FileExists} "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll"
+        ClearErrors
+        CopyFiles /SILENT "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll" "$0\merlin_cloud_redirect.dll"
+        ${If} ${Errors}
+          StrCpy $1 "1"
+        ${EndIf}
+      ${Else}
+        StrCpy $1 "1"
+      ${EndIf}
+    ${EndIf}
+
+    ${If} $1 == "0"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\merlin-helper.dll"
         ClearErrors
         CopyFiles /SILENT "$INSTDIR\resources\dlls\merlin-helper.dll" "$0\merlin-helper.dll"

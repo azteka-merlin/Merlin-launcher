@@ -63,6 +63,8 @@ const { createLibraryCatalogService } = require('./src/main/library/library-cata
 const { createLibraryCatalogStore } = require('./src/main/library/library-catalog-store');
 const { createLibraryService } = require('./src/main/library/library-service');
 const { createDllInstaller } = require('./src/main/lumacore/dll-installer');
+const { createCloudSyncService } = require('./src/main/cloud-sync/cloud-sync-service');
+const { registerCloudSyncIpc } = require('./src/main/ipc/register-cloud-sync-ipc');
 const { createArchiveClient } = require('./src/main/network/archive-client');
 const { createApiAgent } = require('./src/main/network/api-agent');
 const { createDownloadManager } = require('./src/main/network/download-manager');
@@ -266,7 +268,8 @@ const configStore = createConfigStore({
         correctionsDisclaimerSeen: false,
         discordAnnouncementSeen: false,
         lastSeenChangelogVersion: '',
-        steamPlugin: { enabled: false, markerOwned: false, startAtLogin: false }
+        steamPlugin: { enabled: false, markerOwned: false, startAtLogin: false },
+        cloudSync: { enabled: false, startAtLogin: false }
     }
 });
 
@@ -310,6 +313,14 @@ const authSession = createAuthSession({
     machineIdentity,
     baseUrl: apiBaseUrl,
     onAuthRequired: code => mainWindow?.webContents.send('auth:required', { code })
+});
+const cloudSyncService = createCloudSyncService({
+    axios,
+    authSession,
+    configStore,
+    apiBaseUrl,
+    localAppData: process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
+    httpsAgent: apiAgent
 });
 const archiveClient = createArchiveClient({ axios, httpsAgent: apiAgent });
 const manifestOverrideService = createManifestOverrideService({
@@ -559,7 +570,7 @@ function createWindow() {
     mainWindow.loadFile('index.html');
     mainWindow.on('closed', () => { mainWindow = null; });
     mainWindow.on('close', event => {
-        if (configStore.get().steamPlugin?.enabled && !isQuitting) {
+        if ((configStore.get().steamPlugin?.enabled || configStore.get().cloudSync?.enabled) && !isQuitting) {
             event.preventDefault();
             mainWindow.hide();
             updateTray();
@@ -575,7 +586,7 @@ function createWindow() {
     });
     mainWindow.webContents.once('did-finish-load', updateTray);
     mainWindow.webContents.on('render-process-gone', () => {
-        if (!isQuitting && configStore.get().steamPlugin?.enabled) {
+        if (!isQuitting && (configStore.get().steamPlugin?.enabled || configStore.get().cloudSync?.enabled)) {
             mainWindow?.destroy();
             mainWindow = null;
             setTimeout(() => { if (!mainWindow) createWindow(); }, 500);
@@ -616,6 +627,7 @@ function shutdownRuntime(source) {
     if (devShutdownWatcher) clearInterval(devShutdownWatcher);
     devShutdownWatcher = null;
     steamPluginService.stop();
+    cloudSyncService.stop();
     disposeTray();
     instanceGuard.release();
 }
@@ -633,7 +645,7 @@ function startDevShutdownWatcher() {
 
 function updateTray() {
     if (!app.isReady()) return;
-    if (!configStore.get().steamPlugin?.enabled) {
+    if (!configStore.get().steamPlugin?.enabled && !configStore.get().cloudSync?.enabled) {
         disposeTray();
         return;
     }
@@ -644,7 +656,9 @@ function updateTray() {
     }
     tray.setContextMenu(Menu.buildFromTemplate([
         { label: 'Abrir Merlin', click: () => openMerlinView('launcher') },
-        { label: 'Plugin da Steam ativo', enabled: false },
+        { label: configStore.get().cloudSync?.enabled
+            ? (cloudSyncService.status().connected ? 'Nuvem de saves ativa' : 'Nuvem de saves sem conexão')
+            : 'Plugin da Steam ativo', enabled: false },
         { type: 'separator' },
         { label: 'Sair', click: () => { shutdownRuntime('tray-menu'); app.quit(); } }
     ]));
@@ -658,7 +672,9 @@ function applyLoginItemSettings() {
         return;
     }
     const plugin = configStore.get().steamPlugin || {};
-    const openAtLogin = plugin.enabled === true && plugin.startAtLogin !== false;
+    const cloud = configStore.get().cloudSync || {};
+    const openAtLogin = (plugin.enabled === true && plugin.startAtLogin !== false)
+        || (cloud.enabled === true && cloud.startAtLogin !== false);
     app.setLoginItemSettings(openAtLogin
         ? { openAtLogin: true, args: ['--background'] }
         : { openAtLogin: false });
@@ -704,6 +720,17 @@ registerSteamPluginIpc({
     },
     onStartAtLoginChanged: applyLoginItemSettings
 });
+registerCloudSyncIpc({
+    ipcMain,
+    cloudSyncService,
+    dllInstaller,
+    getSteamPath: () => configStore.get().steamPath,
+    getSteamReadiness: () => steamService.getActivationReadiness(configStore.get().steamPath),
+    getSteamAccountId: () => steamService.getActiveAccountId(),
+    isSteamRunning: () => steamService.isRunning(),
+    stopSteam: () => steamService.close(configStore.get().steamPath),
+    onStateChanged: () => { applyLoginItemSettings(); updateTray(); }
+});
 registerAnnouncementsIpc({ ipcMain, announcementsService });
 registerHomeIpc({ ipcMain, homeContentService });
 registerReleaseNotesIpc({ ipcMain, releaseNotesService });
@@ -712,6 +739,17 @@ registerAuthIpc({
     authSession,
     shell,
     apiBaseUrl,
+    onBeforeLogout: async () => {
+        if (configStore.get().cloudSync?.enabled) await cloudSyncService.suspendForLogout();
+        applyLoginItemSettings();
+        updateTray();
+    },
+    onAuthenticated: async () => {
+        const cloudState = await cloudSyncService.resumeAfterLogin();
+        applyLoginItemSettings();
+        updateTray();
+        if (cloudState.enabled) mainWindow?.webContents.send('cloud-sync:resumed', cloudState);
+    },
     onLogout: () => premiumService.clearCache()
 });
 ipcMain.handle('app:set-menu-language', (_event, language) => {
@@ -772,11 +810,17 @@ app.whenReady().then(() => {
     if (process.defaultApp) app.removeAsDefaultProtocolClient('merlin', process.execPath, [path.resolve(process.argv[1])]);
     else app.removeAsDefaultProtocolClient('merlin');
     configStore.load();
+    cloudSyncService.start();
     const plugin = configStore.get().steamPlugin || {};
     startInBackground = !process.defaultApp
         && process.argv.includes('--background')
         && plugin.enabled === true
         && plugin.startAtLogin !== false;
+    if (!startInBackground) {
+        const cloud = configStore.get().cloudSync || {};
+        startInBackground = !process.defaultApp && process.argv.includes('--background')
+            && cloud.enabled === true && cloud.startAtLogin !== false;
+    }
     applyLoginItemSettings();
     console.info(`Merlin startup: development=${Boolean(process.defaultApp)}, background=${startInBackground}`);
     configureYouTubePlayerRequests();
@@ -793,7 +837,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-    if (!configStore.get().steamPlugin?.enabled && process.platform !== 'darwin') app.quit();
+    if (!configStore.get().steamPlugin?.enabled && !configStore.get().cloudSync?.enabled && process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {

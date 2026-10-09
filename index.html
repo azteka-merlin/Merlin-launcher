@@ -140,6 +140,27 @@
                             </div>
                         </div>
                         </section>
+                        <section id="cloudSyncSection" class="settings-section merlin-plugin-settings" aria-labelledby="settingsCloudTitle" hidden>
+                        <p id="settingsCloudTitle" class="config-kicker" data-i18n="cloud_kicker">SAVES NA NUVEM</p>
+                        <div class="merlin-plugin-card">
+                            <div class="merlin-plugin-card__title"><img src="node_modules/lucide-static/icons/cloud.svg" alt=""><strong data-i18n="cloud_title">Sincronização de saves</strong></div>
+                            <p data-i18n="cloud_description">Mantenha seu progresso sincronizado entre computadores nos jogos adicionados pelo Merlin. Seus jogos comprados continuam usando o Steam Cloud normalmente.</p>
+                            <div class="merlin-plugin-card__cloud-row">
+                                <button id="openCloudSavesBtn" class="btn btn-secondary" type="button" data-i18n="cloud_open_games" hidden>Ver jogos sincronizados</button>
+                                <div class="merlin-plugin-card__cloud-control">
+                                    <strong id="cloudSyncStatus">Verificando…</strong>
+                                    <label class="merlin-plugin-card__cloud-toggle" for="cloudSyncToggle" data-i18n-aria-label="cloud_toggle_aria">
+                                        <span class="auto-update-switch"><input id="cloudSyncToggle" type="checkbox"><span class="auto-update-slider" aria-hidden="true"></span></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="button-group merlin-plugin-card__actions">
+                                <button id="enableCloudSyncBtn" class="btn btn-primary" type="button" data-i18n="cloud_enable" hidden>Ativar sincronização</button>
+                                <button id="disableCloudSyncBtn" class="btn btn-secondary" type="button" data-i18n="cloud_disable" hidden>Desativar</button>
+                                <button id="retryCloudSyncBtn" class="btn btn-secondary" type="button" data-i18n="cloud_retry">Tentar novamente</button>
+                            </div>
+                        </div>
+                        </section>
                         <section class="settings-section settings-maintenance" aria-labelledby="settingsMaintenanceTitle">
                         <p id="settingsMaintenanceTitle" class="config-kicker" data-i18n="settings_maintenance">MANUTENÇÃO</p>
                         <div class="button-group maintenance-actions">
@@ -541,6 +562,68 @@
                                 <p id="premiumResultCount"></p>
                                 <nav id="premiumPagination" class="library-pagination" aria-label=""></nav>
                             </footer>
+                        </div>
+                    </section>
+                    <section id="cloudSavesView" class="library-view cloud-saves-view" aria-labelledby="cloudSavesTitle" hidden>
+                        <div class="library-card cloud-saves-card">
+                            <header class="library-header cloud-saves-header">
+                                <button id="cloudSavesConfigBackBtn" class="cloud-saves-back-btn" type="button"><span aria-hidden="true">←</span><span data-i18n="cloud_saves_back_settings">Configuração</span></button>
+                                <div class="library-title-row">
+                                    <h2 id="cloudSavesTitle" data-i18n="cloud_saves_title">Saves sincronizados</h2>
+                                </div>
+                                <p data-i18n="cloud_saves_subtitle">Veja os jogos que utilizam a nuvem do Merlin.</p>
+                            </header>
+
+                            <div id="cloudSavesListState">
+                                <div class="library-controls cloud-saves-controls">
+                                    <div class="library-search-wrap cloud-saves-search-wrap">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle cx="11" cy="11" r="7"></circle>
+                                            <path d="m20 20-4-4"></path>
+                                        </svg>
+                                        <label class="sr-only" for="cloudSavesSearchInput" data-i18n="cloud_saves_search_label">Buscar jogos sincronizados</label>
+                                        <input id="cloudSavesSearchInput" type="search" data-i18n="cloud_saves_search_placeholder" placeholder="Buscar jogo..." autocomplete="off">
+                                    </div>
+                                </div>
+                                <div id="cloudSavesLoadingState" class="library-state">
+                                    <span class="library-spinner" aria-hidden="true"></span>
+                                    <p data-i18n="cloud_saves_loading">Carregando jogos sincronizados…</p>
+                                </div>
+                                <div id="cloudSavesErrorState" class="library-state" hidden>
+                                    <p data-i18n="cloud_saves_error">Não foi possível carregar seus jogos sincronizados.</p>
+                                    <button id="cloudSavesRetryBtn" class="library-retry-btn" type="button" data-i18n="cloud_saves_retry">Tentar novamente</button>
+                                </div>
+                                <div id="cloudSavesEmptyState" class="library-state" hidden>
+                                    <strong data-i18n="cloud_saves_empty_title">Nenhum jogo sincronizado ainda</strong>
+                                    <p data-i18n="cloud_saves_empty_description">Quando um jogo compatível salvar na nuvem, ele aparecerá aqui.</p>
+                                </div>
+                                <div id="cloudSavesNoResultsState" class="library-state" hidden>
+                                    <strong data-i18n="cloud_saves_no_results_title">Nenhum jogo encontrado</strong>
+                                    <p data-i18n="cloud_saves_no_results_description">Tente buscar por outro nome.</p>
+                                </div>
+                                <div id="cloudSavesGameList" class="cloud-saves-game-list" hidden></div>
+                            </div>
+
+                            <div id="cloudSavesDetailsState" class="cloud-saves-details" hidden>
+                                <button id="cloudSavesBackBtn" class="cloud-saves-back-btn" type="button">
+                                    <span aria-hidden="true">←</span><span data-i18n="cloud_saves_back">Voltar para jogos</span>
+                                </button>
+                                <div class="cloud-saves-game-heading">
+                                    <div class="cloud-saves-game-cover-wrap"><img id="cloudSavesGameCover" class="cloud-saves-game-cover" alt="" hidden><span class="cloud-saves-game-cover-fallback" aria-hidden="true">✦</span></div>
+                                    <div><h3 id="cloudSavesGameName">—</h3><p id="cloudSavesGameMeta"></p></div>
+                                </div>
+                                <section class="cloud-saves-version-card" aria-labelledby="cloudSavesCurrentTitle">
+                                    <div class="cloud-saves-section-heading"><h4 id="cloudSavesCurrentTitle" data-i18n="cloud_saves_current_title">Versão atual</h4><span id="cloudSavesCurrentStatus" data-i18n="cloud_saves_synced">Sincronizada</span></div>
+                                    <p id="cloudSavesCurrentDate"></p>
+                                    <p id="cloudSavesCurrentSummary"></p>
+                                </section>
+                                <section class="cloud-saves-backups-section" aria-labelledby="cloudSavesBackupsTitle">
+                                    <div class="cloud-saves-section-heading"><h4 id="cloudSavesBackupsTitle" data-i18n="cloud_saves_backups_title">Versões anteriores</h4><span data-i18n="cloud_saves_backups_hint">Até 2 backups por jogo</span></div>
+                                    <div id="cloudSavesBackups" class="cloud-saves-backups-list"></div>
+                                    <p id="cloudSavesNoBackups" class="cloud-saves-no-backups" data-i18n="cloud_saves_no_backups" hidden>Nenhuma versão anterior disponível.</p>
+                                </section>
+                                <p id="cloudSavesDetailsNotice" class="cloud-saves-details-notice" data-i18n="cloud_saves_restore_notice">A Steam precisa estar fechada para restaurar uma versão anterior.</p>
+                            </div>
                         </div>
                     </section>
                     <section id="accessView" class="access-view" aria-labelledby="accessTitle" hidden>
@@ -1219,6 +1302,7 @@
     <script src="src/renderer/library/library.js"></script>
     <script src="src/renderer/corrections/corrections.js"></script>
     <script src="src/renderer/premium/premium.js"></script>
+    <script src="src/renderer/cloud-saves/cloud-saves.js"></script>
     <script src="src/renderer/access/access.js"></script>
     <script src="gamepad.js"></script>
     <script src="src/renderer/shared/home-carousel.js?v=4"></script>

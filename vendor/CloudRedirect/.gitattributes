@@ -1,0 +1,7 @@
+# Shell scripts must use LF endings or they break when run on Linux (bash\r).
+*.sh text eol=lf
+
+*.desktop text eol=lf
+*.metainfo.xml text eol=lf
+*.flatpakrepo text eol=lf
+*.yml text eol=lf

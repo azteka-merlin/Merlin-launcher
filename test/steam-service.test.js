@@ -27,6 +27,7 @@ test('reports a valid Steam installation only when exe and DLLs exist', () => {
         path.join(root, 'OpenSteamTool.dll'),
         path.join(root, 'dwmapi.dll'),
         path.join(root, 'xinput1_4.dll'),
+        path.join(root, 'merlin_cloud_redirect.dll'),
         path.join(root, 'merlin-helper.dll')
     ]));
 
@@ -48,6 +49,7 @@ test('reports missing OpenSteamTool files without changing the path', () => {
         'OpenSteamTool.dll',
         'dwmapi.dll',
         'xinput1_4.dll',
+        'merlin_cloud_redirect.dll',
         'merlin-helper.dll'
     ]);
 });
@@ -59,7 +61,8 @@ test('reports merlin-helper.dll as missing in file status checks', () => {
         path.join(root, 'steam.exe'),
         path.join(root, 'OpenSteamTool.dll'),
         path.join(root, 'dwmapi.dll'),
-        path.join(root, 'xinput1_4.dll')
+        path.join(root, 'xinput1_4.dll'),
+        path.join(root, 'merlin_cloud_redirect.dll')
     ]));
 
     assert.deepEqual(service.getFilesStatus(root), {

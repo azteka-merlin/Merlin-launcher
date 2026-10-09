@@ -2,6 +2,7 @@
 #include "Utils/Config/Config.h"
 #include "Utils/Config/LuaConfig.h"
 #include "Utils/Config/LuaFileWatcher.h"
+#include "Utils/CloudSync/CloudSyncHost.h"
 #include "Utils/Config/ConfigFileWatcher.h"
 #include "Utils/Logging/Log.h"
 #include "OSTPlatform/include/DirectoryWatch.h"
@@ -59,6 +60,7 @@ void RestartLuaWatcher() {
     LuaFileWatcher::Start(watchDirs);
 
     Hooks_Package::NotifyLicenseChanged();
+    CloudSyncHost::RefreshApps();
     LOG_INFO("Lua directories refreshed after config reload: {}", static_cast<uint32_t>(watchDirs.size()));
 }
 

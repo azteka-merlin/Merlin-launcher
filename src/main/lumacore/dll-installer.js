@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 const MESSAGES = {
     ptbr: {
         msg: 'Arquivos necessários não encontrados. Deseja instalá-los agora?',
@@ -34,6 +36,56 @@ const MESSAGES = {
 const LEGACY_DLLS = ['LumaCore.dll'];
 
 function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, getMainWindow }) {
+    const cloudRuntimeNames = new Set(['OpenSteamTool.dll', 'merlin_cloud_redirect.dll']);
+
+    function sameContents(source, destination) {
+        if (!fs.existsSync(source) || !fs.existsSync(destination)) return false;
+        const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+        try { return digest(source) === digest(destination); }
+        catch (_) { return false; }
+    }
+
+    function cloudSupportReady(steamPath) {
+        if (!steamPath || !fs.existsSync(path.join(steamPath, 'steam.exe'))) return false;
+        return requiredFiles.every(file => {
+            const destination = path.join(steamPath, file.relativeDestination);
+            if (!fs.existsSync(destination)) return false;
+            return !cloudRuntimeNames.has(file.name) || sameContents(getSourcePath(file), destination);
+        });
+    }
+
+    function installCloudSupport(steamPath) {
+        if (!steamPath || !fs.existsSync(path.join(steamPath, 'steam.exe'))) {
+            const error = new Error('Steam installation not configured');
+            error.code = 'steam_path_invalid';
+            throw error;
+        }
+        // Validate every bundled file before changing the Steam directory.
+        for (const file of requiredFiles) {
+            if (!fs.existsSync(getSourcePath(file))) {
+                const error = new Error(`Missing bundled Steam file: ${file.name}`);
+                error.code = 'cloud_files_missing';
+                throw error;
+            }
+        }
+        const updated = [];
+        for (const file of requiredFiles) {
+            const source = getSourcePath(file);
+            const destination = path.join(steamPath, file.relativeDestination);
+            if (cloudRuntimeNames.has(file.name) ? sameContents(source, destination) : fs.existsSync(destination)) continue;
+            fs.mkdirSync(path.dirname(destination), { recursive: true });
+            fs.copyFileSync(source, destination);
+            updated.push(file.name);
+        }
+        if (!cloudSupportReady(steamPath)) {
+            const error = new Error('Cloud runtime files could not be verified');
+            error.code = 'cloud_files_install_failed';
+            throw error;
+        }
+        notify(true);
+        return { updated };
+    }
+
     function notify(ok) {
         const mainWindow = getMainWindow();
         if (mainWindow?.webContents) {
@@ -109,7 +161,7 @@ function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, ge
         return { installed: false, alreadyInstalled: false, cancelled: true };
     }
 
-    return { checkAndInstall };
+    return { checkAndInstall, cloudSupportReady, installCloudSupport };
 }
 
 module.exports = { LEGACY_DLLS, createDllInstaller };

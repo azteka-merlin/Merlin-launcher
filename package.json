@@ -51,6 +51,7 @@
       "!build.js",
       "!scripts{,/**/*}",
       "!OpenSteamTool{,/**/*}",
+      "!vendor{,/**/*}",
       "!.deps{,/**/*}",
       "!dist{,/**/*}",
       "!release-[0-9]*{,/**/*}",
@@ -69,7 +70,8 @@
           "OpenSteamTool.dll",
           "dwmapi.dll",
           "xinput1_4.dll",
-          "merlin-helper.dll"
+          "merlin-helper.dll",
+          "merlin_cloud_redirect.dll"
         ]
       }
     ],

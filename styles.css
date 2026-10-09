@@ -1141,6 +1141,12 @@ webview {
 .merlin-plugin-card__status strong { color: var(--text-primary); text-align: right; }
 .merlin-plugin-card__actions { margin-top: 1rem; }
 .merlin-plugin-card__startup { margin-top: .9rem; }
+.merlin-plugin-card__cloud-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; }
+.merlin-plugin-card__cloud-row > .btn { min-height: 42px; }
+.merlin-plugin-card__cloud-control { display: inline-flex; align-items: center; gap: .65rem; }
+.merlin-plugin-card__cloud-control strong { color: var(--text-primary); font-size: .82rem; }
+.merlin-plugin-card__cloud-toggle { display: inline-flex; align-items: center; cursor: pointer; }
+.merlin-plugin-card__cloud-toggle:has(input:disabled) { cursor: not-allowed; opacity: .58; }
 .merlin-plugin-card__startup:has(input:disabled) { cursor: not-allowed; opacity: .58; }
 .merlin-plugin-card__actions .is-loading { cursor: wait; opacity: .75; }
 .merlin-plugin-card__actions .is-loading::before { content: ''; display: inline-block; width: .8rem; height: .8rem; margin-right: .42rem; border: 2px solid rgba(255,255,255,.35); border-top-color: currentColor; border-radius: 50%; vertical-align: -.1rem; animation: license-gate-spin .7s linear infinite; }
@@ -1651,6 +1657,49 @@ webview {
 .install-all-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* Cloud save history */
+.cloud-saves-card { width: min(100%, 980px); }
+.cloud-saves-controls { justify-content: flex-end; margin-bottom: .9rem; }
+.cloud-saves-search-wrap { min-width: min(100%, 330px); }
+.cloud-saves-game-list { display: grid; gap: .55rem; }
+.cloud-saves-game-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto 18px; align-items: center; gap: .85rem; width: 100%; padding: .6rem .7rem; border: 1px solid rgba(70, 88, 126, .62); border-radius: 10px; background: rgba(13, 20, 35, .72); color: var(--text-primary); text-align: left; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.cloud-saves-game-row:hover, .cloud-saves-game-row:focus-visible { border-color: rgba(167, 115, 255, .85); background: rgba(44, 34, 76, .38); transform: translateY(-1px); outline: none; }
+.cloud-saves-row-cover { display: grid; width: 54px; height: 32px; place-items: center; overflow: hidden; border-radius: 5px; background: linear-gradient(135deg, #2c1d53, #101827); color: #c8a2ff; }
+.cloud-saves-row-cover img { width: 100%; height: 100%; object-fit: cover; }
+.cloud-saves-row-cover.is-fallback::before { content: '✦'; font-size: 1rem; }
+.cloud-saves-row-info { display: grid; min-width: 0; gap: .22rem; }
+.cloud-saves-row-info strong { overflow: hidden; color: var(--text-primary); font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-saves-row-info span, .cloud-saves-row-stats { color: var(--text-secondary); font-size: .75rem; }
+.cloud-saves-row-stats { white-space: nowrap; }
+.cloud-saves-row-arrow { color: #b789ff; font-size: 1.45rem; line-height: 1; }
+.cloud-saves-details { display: grid; gap: 1rem; }
+.cloud-saves-back-btn { width: fit-content; padding: .35rem .55rem; border: 0; background: transparent; color: #caa8ff; font: inherit; font-size: .8rem; cursor: pointer; }
+.cloud-saves-back-btn:hover { color: #fff; }
+.cloud-saves-game-heading { display: flex; align-items: center; gap: .85rem; padding-bottom: .35rem; }
+.cloud-saves-game-cover-wrap { display: grid; width: 76px; height: 44px; flex: 0 0 auto; place-items: center; overflow: hidden; border-radius: 7px; background: linear-gradient(135deg, #2c1d53, #101827); color: #c8a2ff; }
+.cloud-saves-game-cover { width: 100%; height: 100%; object-fit: cover; }
+.cloud-saves-game-cover-fallback { font-size: 1.15rem; }
+.cloud-saves-game-heading h3 { color: var(--text-primary); font-size: 1.2rem; }
+.cloud-saves-game-heading p, .cloud-saves-section-heading span, .cloud-saves-version-card p, .cloud-saves-no-backups, .cloud-saves-details-notice { color: var(--text-secondary); font-size: .8rem; }
+.cloud-saves-version-card, .cloud-saves-backups-section { padding: 1rem; border: 1px solid rgba(70, 88, 126, .55); border-radius: 10px; background: rgba(12, 18, 31, .55); }
+.cloud-saves-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: .55rem; }
+.cloud-saves-section-heading h4 { color: var(--text-primary); font-size: .9rem; }
+.cloud-saves-section-heading #cloudSavesCurrentStatus { color: #9fdbba; }
+.cloud-saves-section-heading #cloudSavesCurrentStatus::before { content: '✓ '; }
+.cloud-saves-backups-list { display: grid; gap: .55rem; }
+.cloud-saves-backup-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem; border: 1px solid rgba(70, 88, 126, .45); border-radius: 8px; background: rgba(18, 27, 45, .55); }
+.cloud-saves-backup-card > div { display: grid; gap: .2rem; }
+.cloud-saves-backup-card strong { color: var(--text-primary); font-size: .82rem; }
+.cloud-saves-backup-card span { color: var(--text-secondary); font-size: .75rem; }
+.cloud-saves-restore-btn { min-height: 34px; padding: .42rem .7rem; white-space: nowrap; }
+.cloud-saves-details-notice { margin: 0; padding: .65rem .8rem; border-left: 2px solid rgba(167, 115, 255, .75); background: rgba(124, 58, 237, .08); }
+@media (max-width: 640px) {
+    .cloud-saves-game-row { grid-template-columns: 48px minmax(0, 1fr) 18px; gap: .6rem; }
+    .cloud-saves-row-cover { width: 48px; height: 29px; }
+    .cloud-saves-row-stats { display: none; }
+    .cloud-saves-backup-card { align-items: flex-start; flex-direction: column; }
 }
 
 /* Native Library view */

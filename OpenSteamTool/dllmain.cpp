@@ -2,6 +2,7 @@
 #include "Hook/HookManager.h"
 #include "Utils/Config/ConfigFileWatcher.h"
 #include "Utils/Config/LuaFileWatcher.h"
+#include "Utils/CloudSync/CloudSyncHost.h"
 #include "Utils/SteamMetadata/IPCLoader.h"
 #include "Utils/SteamMetadata/PatternLoader.h"
 #include "Utils/SteamMetadata/SteamDiagnostics.h"
@@ -78,6 +79,7 @@ static uint32_t InitThread(OSTPlatform::DynamicLibrary::ModuleHandle selfModule)
 
     SteamUI::CoreHook();
     SteamClient::CoreHook();
+    CloudSyncHost::Initialize(SteamInstallPath, LuaDir);
 
     // Surface any functions that FindPattern() could not locate.
     PatternLoader::ReportMissingFunctions();

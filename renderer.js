@@ -1066,6 +1066,135 @@ Object.assign(translations.de, {
     repair_steam_running_action: 'Steam schliessen und fortfahren'
 });
 
+const cloudTranslations = {
+    ptbr: {
+        cloud_kicker: 'SAVES NA NUVEM', cloud_title: 'Sincronização de saves',
+        cloud_description: 'Mantenha seu progresso sincronizado entre computadores nos jogos adicionados pelo Merlin. Seus jogos comprados continuam usando o Steam Cloud normalmente.',
+        cloud_state: 'Status', cloud_enable: 'Ativar sincronização', cloud_disable: 'Desativar', cloud_retry: 'Tentar novamente',
+        cloud_off: 'Desativada', cloud_on: 'Ativada', cloud_disconnected: 'Sem conexão', cloud_toggle_aria: 'Ativar ou desativar a sincronização de saves',
+        cloud_enable_title: 'Ativar saves na nuvem?',
+        cloud_enable_running: 'A Steam será fechada para atualizar os arquivos do Merlin. Depois, você poderá abri-la novamente. O Merlin também iniciará com o Windows para manter a sincronização disponível.',
+        cloud_enable_closed: 'O Merlin instalará os arquivos necessários. Abra a Steam depois da ativação. O Merlin também iniciará com o Windows para manter a sincronização disponível.',
+        cloud_disable_title: 'Desativar saves na nuvem?',
+        cloud_disable_running: 'A Steam será fechada para aplicar a mudança. Seus saves não serão apagados.',
+        cloud_disable_closed: 'A sincronização será desativada. Seus saves não serão apagados.',
+        cloud_busy_enable: 'Ativando…', cloud_busy_disable: 'Desativando…',
+        cloud_enabled_notice: 'Sincronização ativada.',
+        cloud_disabled_notice: 'Sincronização desativada.',
+        cloud_reopen_message: 'A Steam foi fechada para aplicar a mudança. Deseja abri-la agora?',
+        cloud_resume_restart_message: 'A sincronização foi reconectada. A Steam precisa reiniciar para voltar a usar os saves na nuvem. Reiniciar agora?',
+        cloud_error_generic: 'Não foi possível alterar a sincronização. Tente novamente.',
+        cloud_error_auth_required: 'Entre na sua conta Merlin e tente novamente.',
+        cloud_error_connection_failed: 'Sem conexão com a nuvem. Tente novamente.',
+        cloud_error_steam_path_invalid: 'Configure a pasta da Steam antes de ativar.',
+        cloud_error_steam_close_failed: 'Não foi possível fechar a Steam. Feche-a por completo e tente novamente.',
+        cloud_error_cloud_files_missing: 'Os arquivos de sincronização não estão neste pacote do Merlin.',
+        cloud_error_cloud_files_permission: 'Não foi possível atualizar os arquivos da Steam. Abra o Merlin como administrador e tente novamente.',
+        cloud_error_steam_start_failed: 'Não foi possível iniciar a Steam. Abra-a manualmente.'
+    },
+    en: {
+        cloud_kicker: 'CLOUD SAVES', cloud_title: 'Save synchronization',
+        cloud_description: 'Keep your progress synced across computers for Merlin-added games. Purchased games continue using Steam Cloud normally.',
+        cloud_state: 'Status', cloud_enable: 'Enable synchronization', cloud_disable: 'Disable', cloud_retry: 'Try again',
+        cloud_off: 'Disabled', cloud_on: 'Enabled', cloud_disconnected: 'Offline', cloud_toggle_aria: 'Enable or disable save synchronization',
+        cloud_enable_title: 'Enable cloud saves?',
+        cloud_enable_running: 'Steam will close while Merlin updates its files. You can reopen it afterward. Merlin will also start with Windows to keep synchronization available.',
+        cloud_enable_closed: 'Merlin will install the required files. Open Steam after activation. Merlin will also start with Windows to keep synchronization available.',
+        cloud_disable_title: 'Disable cloud saves?',
+        cloud_disable_running: 'Steam will close to apply the change. Your saves will not be deleted.',
+        cloud_disable_closed: 'Synchronization will be disabled. Your saves will not be deleted.',
+        cloud_busy_enable: 'Enabling…', cloud_busy_disable: 'Disabling…',
+        cloud_enabled_notice: 'Synchronization enabled.',
+        cloud_disabled_notice: 'Synchronization disabled.',
+        cloud_reopen_message: 'Steam was closed to apply the change. Open it now?',
+        cloud_resume_restart_message: 'Synchronization reconnected. Steam needs to restart to use cloud saves again. Restart now?',
+        cloud_error_generic: 'Could not change synchronization. Try again.',
+        cloud_error_auth_required: 'Sign in to Merlin and try again.',
+        cloud_error_connection_failed: 'Cloud connection unavailable. Try again.',
+        cloud_error_steam_path_invalid: 'Configure your Steam folder before enabling.',
+        cloud_error_steam_close_failed: 'Could not close Steam. Exit it fully and try again.',
+        cloud_error_cloud_files_missing: 'The synchronization files are missing from this Merlin package.',
+        cloud_error_cloud_files_permission: 'Could not update Steam files. Run Merlin as administrator and try again.',
+        cloud_error_steam_start_failed: 'Could not start Steam. Open it manually.'
+    },
+    es: {
+        cloud_kicker: 'PARTIDAS EN LA NUBE', cloud_title: 'Sincronización de partidas',
+        cloud_description: 'Mantén tu progreso sincronizado entre ordenadores en los juegos añadidos por Merlin. Los juegos comprados siguen usando Steam Cloud normalmente.',
+        cloud_state: 'Estado', cloud_enable: 'Activar sincronización', cloud_disable: 'Desactivar', cloud_retry: 'Reintentar',
+        cloud_off: 'Desactivada', cloud_on: 'Activada', cloud_disconnected: 'Sin conexión', cloud_toggle_aria: 'Activar o desactivar la sincronización de partidas',
+        cloud_enable_title: '¿Activar partidas en la nube?',
+        cloud_enable_running: 'Steam se cerrará mientras Merlin actualiza sus archivos. Podrás abrirlo después. Merlin también se iniciará con Windows para mantener la sincronización disponible.',
+        cloud_enable_closed: 'Merlin instalará los archivos necesarios. Abre Steam después de activar. Merlin también se iniciará con Windows.',
+        cloud_disable_title: '¿Desactivar partidas en la nube?',
+        cloud_disable_running: 'Steam se cerrará para aplicar el cambio. No se borrarán tus partidas.',
+        cloud_disable_closed: 'Se desactivará la sincronización. No se borrarán tus partidas.',
+        cloud_busy_enable: 'Activando…', cloud_busy_disable: 'Desactivando…',
+        cloud_enabled_notice: 'Sincronización activada.',
+        cloud_disabled_notice: 'Sincronización desactivada.',
+        cloud_reopen_message: 'Steam se cerró para aplicar el cambio. ¿Abrirlo ahora?',
+        cloud_resume_restart_message: 'La sincronización se reconectó. Steam debe reiniciarse para volver a usar las partidas en la nube. ¿Reiniciar ahora?',
+        cloud_error_generic: 'No se pudo cambiar la sincronización. Inténtalo de nuevo.',
+        cloud_error_auth_required: 'Inicia sesión en Merlin e inténtalo de nuevo.',
+        cloud_error_connection_failed: 'Sin conexión con la nube. Inténtalo de nuevo.',
+        cloud_error_steam_path_invalid: 'Configura la carpeta de Steam antes de activar.',
+        cloud_error_steam_close_failed: 'No se pudo cerrar Steam. Ciérralo por completo e inténtalo de nuevo.',
+        cloud_error_cloud_files_missing: 'Faltan los archivos de sincronización en este paquete de Merlin.',
+        cloud_error_cloud_files_permission: 'No se pudieron actualizar los archivos de Steam. Abre Merlin como administrador e inténtalo de nuevo.',
+        cloud_error_steam_start_failed: 'No se pudo iniciar Steam. Ábrelo manualmente.'
+    },
+    fr: {
+        cloud_kicker: 'SAUVEGARDES CLOUD', cloud_title: 'Synchronisation des sauvegardes',
+        cloud_description: 'Gardez votre progression synchronisée entre ordinateurs pour les jeux ajoutés par Merlin. Les jeux achetés continuent d’utiliser Steam Cloud normalement.',
+        cloud_state: 'État', cloud_enable: 'Activer la synchronisation', cloud_disable: 'Désactiver', cloud_retry: 'Réessayer',
+        cloud_off: 'Désactivée', cloud_on: 'Activée', cloud_disconnected: 'Hors ligne', cloud_toggle_aria: 'Activer ou désactiver la synchronisation des sauvegardes',
+        cloud_enable_title: 'Activer les sauvegardes cloud ?',
+        cloud_enable_running: 'Steam sera fermé pendant la mise à jour des fichiers Merlin. Vous pourrez le rouvrir ensuite. Merlin démarrera aussi avec Windows pour garder la synchronisation disponible.',
+        cloud_enable_closed: 'Merlin installera les fichiers nécessaires. Ouvrez Steam après activation. Merlin démarrera aussi avec Windows.',
+        cloud_disable_title: 'Désactiver les sauvegardes cloud ?',
+        cloud_disable_running: 'Steam sera fermé pour appliquer le changement. Vos sauvegardes ne seront pas supprimées.',
+        cloud_disable_closed: 'La synchronisation sera désactivée. Vos sauvegardes ne seront pas supprimées.',
+        cloud_busy_enable: 'Activation…', cloud_busy_disable: 'Désactivation…',
+        cloud_enabled_notice: 'Synchronisation activée.',
+        cloud_disabled_notice: 'Synchronisation désactivée.',
+        cloud_reopen_message: 'Steam a été fermé pour appliquer le changement. L’ouvrir maintenant ?',
+        cloud_resume_restart_message: 'La synchronisation est rétablie. Steam doit redémarrer pour utiliser à nouveau les sauvegardes cloud. Redémarrer maintenant ?',
+        cloud_error_generic: 'Impossible de modifier la synchronisation. Réessayez.',
+        cloud_error_auth_required: 'Connectez-vous à Merlin et réessayez.',
+        cloud_error_connection_failed: 'Connexion au cloud indisponible. Réessayez.',
+        cloud_error_steam_path_invalid: 'Configurez le dossier Steam avant activation.',
+        cloud_error_steam_close_failed: 'Impossible de fermer Steam. Quittez-le complètement et réessayez.',
+        cloud_error_cloud_files_missing: 'Les fichiers de synchronisation manquent dans ce paquet Merlin.',
+        cloud_error_cloud_files_permission: 'Impossible de mettre à jour les fichiers Steam. Lancez Merlin en administrateur et réessayez.',
+        cloud_error_steam_start_failed: 'Impossible de démarrer Steam. Ouvrez-le manuellement.'
+    },
+    de: {
+        cloud_kicker: 'CLOUD-SPIELSTÄNDE', cloud_title: 'Spielstände synchronisieren',
+        cloud_description: 'Halte deinen Fortschritt auf Merlin-Spielen zwischen Computern synchron. Gekaufte Spiele verwenden weiterhin Steam Cloud.',
+        cloud_state: 'Status', cloud_enable: 'Synchronisierung aktivieren', cloud_disable: 'Deaktivieren', cloud_retry: 'Erneut versuchen',
+        cloud_off: 'Deaktiviert', cloud_on: 'Aktiviert', cloud_disconnected: 'Keine Verbindung', cloud_toggle_aria: 'Synchronisierung der Spielstände aktivieren oder deaktivieren',
+        cloud_enable_title: 'Cloud-Spielstände aktivieren?',
+        cloud_enable_running: 'Steam wird geschlossen, während Merlin seine Dateien aktualisiert. Danach kannst du es erneut öffnen. Merlin startet auch mit Windows, damit die Synchronisierung verfügbar bleibt.',
+        cloud_enable_closed: 'Merlin installiert die benötigten Dateien. Öffne Steam nach der Aktivierung. Merlin startet auch mit Windows.',
+        cloud_disable_title: 'Cloud-Spielstände deaktivieren?',
+        cloud_disable_running: 'Steam wird geschlossen, um die Änderung anzuwenden. Deine Spielstände werden nicht gelöscht.',
+        cloud_disable_closed: 'Die Synchronisierung wird deaktiviert. Deine Spielstände werden nicht gelöscht.',
+        cloud_busy_enable: 'Aktivierung…', cloud_busy_disable: 'Deaktivierung…',
+        cloud_enabled_notice: 'Synchronisierung aktiviert.',
+        cloud_disabled_notice: 'Synchronisierung deaktiviert.',
+        cloud_reopen_message: 'Steam wurde für die Änderung geschlossen. Jetzt öffnen?',
+        cloud_resume_restart_message: 'Die Synchronisierung ist wieder verbunden. Steam muss neu starten, um Cloud-Spielstände erneut zu verwenden. Jetzt neu starten?',
+        cloud_error_generic: 'Synchronisierung konnte nicht geändert werden. Versuche es erneut.',
+        cloud_error_auth_required: 'Melde dich bei Merlin an und versuche es erneut.',
+        cloud_error_connection_failed: 'Keine Cloud-Verbindung. Versuche es erneut.',
+        cloud_error_steam_path_invalid: 'Richte zuerst den Steam-Ordner ein.',
+        cloud_error_steam_close_failed: 'Steam konnte nicht geschlossen werden. Beende es vollständig und versuche es erneut.',
+        cloud_error_cloud_files_missing: 'Die Synchronisierungsdateien fehlen in diesem Merlin-Paket.',
+        cloud_error_cloud_files_permission: 'Steam-Dateien konnten nicht aktualisiert werden. Starte Merlin als Administrator und versuche es erneut.',
+        cloud_error_steam_start_failed: 'Steam konnte nicht gestartet werden. Öffne es manuell.'
+    }
+};
+for (const [language, messages] of Object.entries(cloudTranslations)) Object.assign(translations[language], messages);
+
 window.merlinView = {
     get() {
         return document.body.dataset.merlinView || 'home';
@@ -1306,6 +1435,180 @@ function setupEventListeners() {
     });
     void updateSteamPluginCard();
     window.setInterval(() => { if (window.merlinView?.get() === 'settings') void updateSteamPluginCard(); }, 4000);
+
+    let cloudRestartPromptHandled = false;
+    const promptSteamRestartAfterCloudResume = async state => {
+        if (cloudRestartPromptHandled || !state.available || !state.connected || !state.filesReady || !state.restartSteamRequired) return;
+        cloudRestartPromptHandled = true;
+        const steamRunning = await window.electronAPI.isSteamRunning().catch(() => false);
+        if (!steamRunning) {
+            await window.electronAPI.cloudSync.acknowledgeSteamRestart();
+            return;
+        }
+        const accepted = await window.merlinRestartPrompt.ask({
+            title: t('cloud_title'),
+            message: t('cloud_resume_restart_message'),
+            cancelLabel: t('restart_prompt_later'),
+            actionLabel: t('restart_prompt_action')
+        });
+        if (!accepted) return;
+        try {
+            if (!await window.electronAPI.closeSteam()) throw new Error('steam_close_failed');
+            if (!await window.electronAPI.startSteam()) throw new Error('steam_start_failed');
+            await window.electronAPI.cloudSync.acknowledgeSteamRestart();
+            showNotification(t('steam_restarted'), 'success');
+        } catch (error) {
+            showNotification(t(error.message === 'steam_close_failed' ? 'cloud_error_steam_close_failed' : 'cloud_error_steam_start_failed'), 'error');
+        }
+    };
+    const cloudToggle = document.getElementById('cloudSyncToggle');
+    const enableCloudButton = document.getElementById('enableCloudSyncBtn');
+    const disableCloudButton = document.getElementById('disableCloudSyncBtn');
+    const updateCloudSyncCard = async () => {
+        const section = document.getElementById('cloudSyncSection');
+        const label = document.getElementById('cloudSyncStatus');
+        const enableButton = enableCloudButton;
+        const disableButton = disableCloudButton;
+        const retryButton = document.getElementById('retryCloudSyncBtn');
+        const openGamesButton = document.getElementById('openCloudSavesBtn');
+        try {
+            const state = await window.electronAPI.cloudSync.status();
+            if (section) section.hidden = !state.available;
+            if (!state.available) {
+                if (openGamesButton) openGamesButton.hidden = true;
+                return;
+            }
+            const ready = state.enabled && state.filesReady;
+            if (label) label.textContent = !ready ? t('cloud_off')
+                : state.connected ? t('cloud_on') : t('cloud_disconnected');
+            if (cloudToggle) {
+                cloudToggle.checked = ready;
+                // The control must remain usable when disabled so the user can
+                // opt in again. Connection failures are handled by the action
+                // itself and must not lock the setting in either direction.
+                cloudToggle.disabled = !state.available;
+            }
+            // The toggle is the only visible control for enabling/disabling.
+            // Keep the legacy action buttons in the DOM for the existing
+            // confirmation/IPC handlers, but never render them beside it.
+            if (enableButton) enableButton.hidden = true;
+            if (disableButton) disableButton.hidden = true;
+            if (retryButton) retryButton.hidden = !state.enabled || state.connected;
+            if (openGamesButton) openGamesButton.hidden = false;
+            void promptSteamRestartAfterCloudResume(state);
+        } catch (_) {
+            if (label) label.textContent = t('cloud_disconnected');
+        }
+    };
+    const cloudErrorMessage = code => {
+        const key = `cloud_error_${code}`;
+        return t(key) === key ? t('cloud_error_generic') : t(key);
+    };
+    const offerSteamStartAfterCloudChange = async steamWasRunning => {
+        if (!steamWasRunning) return;
+        const accepted = await window.merlinRestartPrompt.ask({
+            title: t('cloud_title'),
+            message: t('cloud_reopen_message'),
+            cancelLabel: t('restart_prompt_later'),
+            actionLabel: t('restart_prompt_action')
+        });
+        if (!accepted) return;
+        const started = await window.electronAPI.startSteam().catch(() => false);
+        showNotification(started ? t('steam_restarted') : t('cloud_error_steam_start_failed'), started ? 'success' : 'error');
+    };
+    document.getElementById('enableCloudSyncBtn')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        const steamRunning = await window.electronAPI.isSteamRunning().catch(() => false);
+        const accepted = await window.merlinRestartPrompt.ask({
+            title: t('cloud_enable_title'),
+            message: t(steamRunning ? 'cloud_enable_running' : 'cloud_enable_closed'),
+            cancelLabel: t('repair_steam_running_cancel'),
+            actionLabel: t('cloud_enable')
+        });
+        if (!accepted) {
+            await updateCloudSyncCard();
+            return;
+        }
+        button.dataset.defaultLabel = button.textContent;
+        setSteamPluginBusy(button, true, t('cloud_busy_enable'));
+        try {
+            const result = await window.electronAPI.cloudSync.enable();
+            if (!result.success) {
+                showNotification(cloudErrorMessage(result.code), 'error');
+                await offerSteamStartAfterCloudChange(result.steamWasRunning);
+                return;
+            }
+            showNotification(t('cloud_enabled_notice'), 'success');
+            await offerSteamStartAfterCloudChange(result.steamWasRunning);
+        } catch (_) {
+            showNotification(t('cloud_error_generic'), 'error');
+        } finally {
+            setSteamPluginBusy(button, false);
+            await updateCloudSyncCard();
+        }
+    });
+    document.getElementById('disableCloudSyncBtn')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        const steamRunning = await window.electronAPI.isSteamRunning().catch(() => false);
+        const accepted = await window.merlinRestartPrompt.ask({
+            title: t('cloud_disable_title'),
+            message: t(steamRunning ? 'cloud_disable_running' : 'cloud_disable_closed'),
+            cancelLabel: t('repair_steam_running_cancel'),
+            actionLabel: t('cloud_disable')
+        });
+        if (!accepted) {
+            await updateCloudSyncCard();
+            return;
+        }
+        button.dataset.defaultLabel = button.textContent;
+        setSteamPluginBusy(button, true, t('cloud_busy_disable'));
+        try {
+            const result = await window.electronAPI.cloudSync.disable();
+            if (!result.success) {
+                showNotification(cloudErrorMessage(result.code), 'error');
+                await offerSteamStartAfterCloudChange(result.steamWasRunning);
+                return;
+            }
+            showNotification(t('cloud_disabled_notice'), 'success');
+            await offerSteamStartAfterCloudChange(result.steamWasRunning);
+        } catch (_) {
+            showNotification(t('cloud_error_generic'), 'error');
+        } finally {
+            setSteamPluginBusy(button, false);
+            await updateCloudSyncCard();
+        }
+    });
+    document.getElementById('retryCloudSyncBtn')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+            const state = await window.electronAPI.cloudSync.retry();
+            if (!state.connected) showNotification(cloudErrorMessage(state.errorCode), 'error');
+        } catch (_) {
+            showNotification(t('cloud_error_connection_failed'), 'error');
+        } finally {
+            button.disabled = false;
+            await updateCloudSyncCard();
+        }
+    });
+    document.getElementById('openCloudSavesBtn')?.addEventListener('click', () => window.merlinView?.set?.('cloud-saves'));
+    cloudToggle?.addEventListener('change', () => {
+        const target = cloudToggle.checked ? enableCloudButton : disableCloudButton;
+        if (!target) {
+            void updateCloudSyncCard();
+            return;
+        }
+        cloudToggle.disabled = true;
+        target.click();
+    });
+    void updateCloudSyncCard();
+    window.electronAPI.cloudSync.onResumed(() => { void updateCloudSyncCard(); });
+    window.addEventListener('merlin-authenticated', () => {
+        cloudRestartPromptHandled = false;
+        void updateCloudSyncCard();
+    });
+    window.addEventListener('merlin-language-changed', () => { void updateCloudSyncCard(); });
+    window.setInterval(() => { if (window.merlinView?.get() === 'settings') void updateCloudSyncCard(); }, 10000);
 
     const logoutBtn = document.getElementById('logoutBtn');
     logoutBtn?.addEventListener('click', async () => {

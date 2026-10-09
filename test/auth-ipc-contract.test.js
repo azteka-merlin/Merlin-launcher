@@ -95,3 +95,21 @@ test('clears account-bound caches when logging out', async () => {
     assert.equal(logoutCalls, 1);
     assert.equal(cacheClears, 1);
 });
+
+test('successful login resumes optional cloud work without blocking account access', async () => {
+    const handlers = new Map();
+    let releaseCloud;
+    const cloudWork = new Promise(resolve => { releaseCloud = resolve; });
+    let started = false;
+    registerAuthIpc({
+        ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+        authSession: { login: async () => ({ authenticated: true }) },
+        shell: {},
+        apiBaseUrl: 'https://staging.api-merlin.com/api',
+        onAuthenticated: async () => { started = true; await cloudWork; }
+    });
+    assert.deepEqual(await handlers.get('auth:login')(null, 'KEY', false), { authenticated: true });
+    await Promise.resolve();
+    assert.equal(started, true);
+    releaseCloud();
+});

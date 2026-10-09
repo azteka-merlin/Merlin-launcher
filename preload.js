@@ -68,6 +68,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
         setStartAtLogin: enabled => ipcRenderer.invoke('steam-plugin:set-start-at-login', enabled),
         onOpen: callback => ipcRenderer.on('steam-plugin:open', (_event, payload) => callback(payload))
     },
+    cloudSync: {
+        status: () => ipcRenderer.invoke('cloud-sync:status'),
+        enable: () => ipcRenderer.invoke('cloud-sync:enable'),
+        disable: () => ipcRenderer.invoke('cloud-sync:disable'),
+        retry: () => ipcRenderer.invoke('cloud-sync:retry'),
+        listGames: () => ipcRenderer.invoke('cloud-sync:list-games'),
+        getGame: (appId) => ipcRenderer.invoke('cloud-sync:get-game', appId),
+        restore: (appId, recoveryId) => ipcRenderer.invoke('cloud-sync:restore', appId, recoveryId),
+        acknowledgeSteamRestart: () => ipcRenderer.invoke('cloud-sync:ack-steam-restart'),
+        onResumed: callback => ipcRenderer.on('cloud-sync:resumed', () => callback())
+    },
 
     // Events
     onDownloadProgress: (callback) => {

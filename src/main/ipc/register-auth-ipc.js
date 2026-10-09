@@ -15,14 +15,29 @@ function getAccessUrl(apiBaseUrl) {
     return `${getSignupUrl(apiBaseUrl).replace(/\/download\/?$/, '')}/meu-acesso`;
 }
 
-function registerAuthIpc({ ipcMain, authSession, shell, apiBaseUrl, onLogout }) {
+function registerAuthIpc({ ipcMain, authSession, shell, apiBaseUrl, onLogout, onBeforeLogout, onAuthenticated }) {
+    const resumeAfterAuthentication = result => {
+        if (result?.authenticated) {
+            void Promise.resolve().then(() => onAuthenticated?.()).catch(() => {
+                // Cloud connectivity must never delay or block account access.
+            });
+        }
+        return result;
+    };
     ipcMain.handle('auth:has-session', () => authSession.hasStoredSession());
     ipcMain.handle('auth:remembered-key', () => authSession.getRememberedKey());
     ipcMain.handle('auth:forget-remembered-key', () => authSession.forgetRememberedKey());
-    ipcMain.handle('auth:status', async () => authSession.status());
-    ipcMain.handle('auth:login', async (_event, licenseKey, rememberKey) => authSession.login(licenseKey, rememberKey));
+    ipcMain.handle('auth:status', async () => {
+        const result = await authSession.status();
+        return resumeAfterAuthentication(result);
+    });
+    ipcMain.handle('auth:login', async (_event, licenseKey, rememberKey) => {
+        const result = await authSession.login(licenseKey, rememberKey);
+        return resumeAfterAuthentication(result);
+    });
     ipcMain.handle('auth:reset-hwid', async (_event, licenseKey) => authSession.resetHwid(licenseKey));
-    ipcMain.handle('auth:logout', () => {
+    ipcMain.handle('auth:logout', async () => {
+        try { await onBeforeLogout?.(); } catch (_) {}
         const result = authSession.logout();
         onLogout?.();
         return result;

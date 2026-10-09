@@ -1,8 +1,40 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path').win32;
+const nativePath = require('node:path');
+const nativeFs = require('node:fs');
+const os = require('node:os');
 
 const { createDllInstaller } = require('../src/main/lumacore/dll-installer');
+
+test('cloud activation updates its two native DLLs and installs missing support files', () => {
+    const root = nativeFs.mkdtempSync(nativePath.join(os.tmpdir(), 'merlin-cloud-dll-'));
+    try {
+        const bundle = nativePath.join(root, 'bundle');
+        const steam = nativePath.join(root, 'steam');
+        nativeFs.mkdirSync(bundle);
+        nativeFs.mkdirSync(steam);
+        nativeFs.writeFileSync(nativePath.join(steam, 'steam.exe'), 'steam');
+        nativeFs.writeFileSync(nativePath.join(steam, 'OpenSteamTool.dll'), 'old');
+        nativeFs.writeFileSync(nativePath.join(steam, 'dwmapi.dll'), 'keep');
+        for (const name of ['OpenSteamTool.dll', 'merlin_cloud_redirect.dll', 'dwmapi.dll']) {
+            nativeFs.writeFileSync(nativePath.join(bundle, name), `new ${name}`);
+        }
+        const installer = createDllInstaller({
+            fs: nativeFs, path: nativePath, dialog: {}, getMainWindow: () => null,
+            requiredFiles: ['OpenSteamTool.dll', 'merlin_cloud_redirect.dll', 'dwmapi.dll']
+                .map(name => ({ name, relativeDestination: name })),
+            getSourcePath: file => nativePath.join(bundle, file.name)
+        });
+        assert.equal(installer.cloudSupportReady(steam), false);
+        assert.deepEqual(installer.installCloudSupport(steam).updated,
+            ['OpenSteamTool.dll', 'merlin_cloud_redirect.dll']);
+        assert.equal(installer.cloudSupportReady(steam), true);
+        assert.equal(nativeFs.readFileSync(nativePath.join(steam, 'dwmapi.dll'), 'utf8'), 'keep');
+    } finally {
+        nativeFs.rmSync(root, { recursive: true, force: true });
+    }
+});
 
 function createFixture({ existing = [], dialogResponse = 0 } = {}) {
     const existingPaths = new Set(existing.map(item => path.normalize(item)));
