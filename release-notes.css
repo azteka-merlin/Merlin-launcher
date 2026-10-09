@@ -131,6 +131,10 @@ body.release-notes-open { overflow: hidden; }
     .release-notes-full-list { padding-left: 35px; }
 }
 
+@media (min-width: 901px) {
+    .release-notes-major-art--cover > img { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; filter: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .release-notes-dialog *,
     .release-notes-dialog *::before,

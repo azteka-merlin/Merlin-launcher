@@ -169,7 +169,9 @@
             actions.append(explore, changes);
             copy.append(actions);
 
-            const art = element('div', 'release-notes-major-art');
+            const art = element('div', release.version === '2.1.0'
+                ? 'release-notes-major-art release-notes-major-art--cover'
+                : 'release-notes-major-art');
             if (release.heroAssetUrl) {
                 const image = document.createElement('img');
                 image.src = release.heroAssetUrl;
