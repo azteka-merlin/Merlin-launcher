@@ -72,6 +72,27 @@ test('reports merlin-helper.dll as missing in file status checks', () => {
     });
 });
 
+test('does not guess a Steam account after both Steam and Merlin restart', async () => {
+    const service = createSteamService({
+        fs: {}, path, platform: 'win32', userProfile: '',
+        exec: (_command, callback) => callback(null, 'ActiveUser    REG_DWORD    0x0')
+    });
+    assert.equal(await service.getActiveAccountId(), null);
+});
+
+test('remembers the observed Steam account only during the same Merlin process', async () => {
+    let active = true;
+    const service = createSteamService({
+        fs: {}, path, platform: 'win32', userProfile: '',
+        exec: (_command, callback) => callback(null, `ActiveUser    REG_DWORD    ${active ? '0x5a1d5ff6' : '0x0'}`)
+    });
+    assert.equal(await service.getActiveAccountId(), String(0x5a1d5ff6));
+    active = false;
+    assert.equal(await service.getActiveAccountId(), String(0x5a1d5ff6));
+    assert.equal(await service.getActiveAccountId({ liveOnly: true }), null);
+});
+
+
 test('finds an installed game by validating libraryfolders and the appmanifest', () => {
     const root = path.normalize('C:\\Steam');
     const secondaryLibrary = path.normalize('D:\\SteamLibrary');

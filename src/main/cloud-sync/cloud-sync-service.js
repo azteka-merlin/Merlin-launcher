@@ -3,11 +3,14 @@ const path = require('path');
 
 const RENEW_INTERVAL_MS = 5 * 60 * 1000;
 const STAGE_HOST = 'staging.api-merlin.com';
+const PRODUCTION_HOST = 'api-merlin.com';
 
 function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, localAppData, httpsAgent }) {
     const cloudDir = path.join(localAppData || '', 'Merlin', 'cloud');
     const configPath = path.join(cloudDir, 'config.json');
     const credentialsPath = path.join(cloudDir, 'credentials.json');
+    const keyIdPath = path.join(cloudDir, 'key-id.json');
+    const environmentPath = path.join(cloudDir, 'environment.json');
     let timer = null;
     let connecting = null;
     let lastConnectedAt = null;
@@ -16,10 +19,21 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     let stateEpoch = 0;
     let suspended = false;
     let restartSteamRequired = false;
+    let activeKeyId = null;
 
-    function isStage() {
-        try { return new URL(apiBaseUrl).hostname === STAGE_HOST; }
+    function supportedOrigin() {
+        try {
+            const url = new URL(apiBaseUrl);
+            return url.protocol === 'https:' && [STAGE_HOST, PRODUCTION_HOST].includes(url.hostname) ? url.origin : null;
+        }
         catch (_) { return false; }
+    }
+
+    function matchesLocalEnvironment() {
+        const origin = supportedOrigin();
+        if (!origin) return false;
+        try { return JSON.parse(fs.readFileSync(environmentPath, 'utf8')).origin === origin; }
+        catch (_) { return origin === `https://${STAGE_HOST}`; } // Existing stage pilots have no marker.
     }
 
     function enabled() {
@@ -39,10 +53,15 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     function existingKeyId() {
-        try {
-            const value = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-            return /^MCL[a-f0-9]{40}$/.test(value.access_key_id || '') ? value.access_key_id : null;
-        } catch (_) { return null; }
+        if (!matchesLocalEnvironment()) return null;
+        if (activeKeyId) return activeKeyId;
+        for (const [filePath, field] of [[keyIdPath, 'accessKeyId'], [credentialsPath, 'access_key_id']]) {
+            try {
+                const value = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                if (/^MCL[a-f0-9]{40}$/.test(value[field] || '')) return value[field];
+            } catch (_) { /* The native store may have encrypted credentials.json. */ }
+        }
+        return null;
     }
 
     function writeDisabledConfig() {
@@ -50,8 +69,11 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     function writeEnabledConfig(credentials) {
-        // CloudRedirect reads these only at Steam startup. Never write real R2
-        // credentials: these keys work solely against Merlin's stage gateway.
+        // CloudRedirect reloads this file for each S3 request. Never write real
+        // R2 credentials: these keys work solely against Merlin's gateway.
+        // The non-secret key ID survives a Merlin restart even after the DLL
+        // has DPAPI-encrypted credentials.json.
+        writeJsonAtomic(keyIdPath, { accessKeyId: credentials.accessKeyId });
         writeJsonAtomic(credentialsPath, {
             access_key_id: credentials.accessKeyId,
             secret_access_key: credentials.secretAccessKey,
@@ -74,11 +96,12 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
             sync_playtime: false,
             show_non_steam_game: false
         });
+        writeJsonAtomic(environmentPath, { origin: supportedOrigin() });
     }
 
     function status() {
         return {
-            available: isStage(),
+            available: Boolean(supportedOrigin()),
             enabled: enabled(),
             connected: enabled() && !suspended && !errorCode && Boolean(expiresAt && Date.parse(expiresAt) > Date.now()),
             lastConnectedAt,
@@ -89,7 +112,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     async function renew() {
-        if (!enabled() || !isStage() || suspended) return status();
+        if (!enabled() || !supportedOrigin() || suspended) return status();
         if (connecting) return connecting;
         const epoch = stateEpoch;
         connecting = (async () => {
@@ -111,6 +134,10 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
                 }
                 if (epoch !== stateEpoch || !enabled()) return status();
                 writeEnabledConfig(data);
+                // The native token store may DPAPI-encrypt credentials.json
+                // after reading it, so the next lease renewal cannot rely on
+                // parsing that file to identify the active gateway key.
+                activeKeyId = data.accessKeyId;
                 lastConnectedAt = new Date().toISOString();
                 expiresAt = data.expiresAt;
                 errorCode = null;
@@ -125,14 +152,14 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         finally { connecting = null; }
     }
 
-    async function requestCloudApi(method, pathname, data) {
-        if (!isStage() || !enabled()) throw Object.assign(new Error('cloud_unavailable'), { code: 'cloud_unavailable' });
+    async function requestCloudApi(method, pathname, data, timeout = 15_000) {
+        if (!supportedOrigin() || !enabled()) throw Object.assign(new Error('cloud_unavailable'), { code: 'cloud_unavailable' });
         const token = await authSession.getAccessToken();
         const response = await axios.request({
             method,
             url: `${apiBaseUrl}${pathname}`,
             data,
-            timeout: 15_000,
+            timeout,
             httpsAgent,
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'Content-Type': 'application/json' }
         });
@@ -161,17 +188,17 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         if (!/^\d{1,10}$/.test(account) || account === '0' || !/^\d{1,10}$/.test(app) || app === '0' || !/^[a-f0-9]{64}$/.test(recovery)) {
             throw Object.assign(new Error('invalid_recovery'), { code: 'invalid_recovery' });
         }
-        return requestCloudApi('POST', '/launcher/cloud/restore', { accountId: account, appId: app, recoveryId: recovery });
+        return requestCloudApi('POST', '/launcher/cloud/restore', { accountId: account, appId: app, recoveryId: recovery }, 120_000);
     }
 
     async function enable() {
-        if (!isStage()) return { ...status(), errorCode: 'stage_only' };
+        if (!supportedOrigin()) return { ...status(), errorCode: 'unavailable' };
         suspended = false;
         configStore.update({ cloudSync: { enabled: true, startAtLogin: true } });
         const current = await renew();
         if (!current.connected) {
             configStore.update({ cloudSync: { enabled: false, startAtLogin: false } });
-            writeDisabledConfig();
+            clearLocalConnection();
             return status();
         }
         startTimer();
@@ -180,7 +207,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
 
     async function revokeCredentials() {
         const accessKeyId = existingKeyId();
-        if (isStage() && accessKeyId) {
+        if (supportedOrigin() && accessKeyId) {
             try {
                 const token = await authSession.getAccessToken();
                 await axios.post(`${apiBaseUrl}/launcher/cloud/revoke`, { accessKeyId }, {
@@ -193,6 +220,9 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     function clearLocalConnection() {
         writeDisabledConfig();
         try { fs.rmSync(credentialsPath, { force: true }); } catch (_) {}
+        try { fs.rmSync(keyIdPath, { force: true }); } catch (_) {}
+        try { fs.rmSync(environmentPath, { force: true }); } catch (_) {}
+        activeKeyId = null;
         expiresAt = null;
     }
 
@@ -209,7 +239,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     async function resumeAfterLogin() {
-        if (!enabled() || !isStage()) return status();
+        if (!enabled() || !supportedOrigin()) return status();
         if (connecting) await connecting;
         suspended = false;
         if (!status().connected) await renew();
@@ -241,17 +271,16 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     function start() {
-        if (!isStage()) {
-            // Stage and production share the Windows profile. Production must
-            // never inherit a stage gateway configuration left by a pilot run.
+        if (!supportedOrigin() || (enabled() && !matchesLocalEnvironment())) {
+            // Stage and production share the Windows profile. Never silently
+            // reuse a cloud opt-in or gateway key from the other environment.
             if (enabled()) configStore.update({ cloudSync: { enabled: false, startAtLogin: false } });
-            writeDisabledConfig();
-            try { fs.rmSync(credentialsPath, { force: true }); } catch (_) {}
+            clearLocalConnection();
             return;
         }
         if (!enabled()) {
             // Keep the opt-in state authoritative even after a failed previous run.
-            writeDisabledConfig();
+            clearLocalConnection();
             return;
         }
         try {

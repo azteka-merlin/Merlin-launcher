@@ -5,6 +5,11 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         filesReady: dllInstaller.cloudSupportReady(getSteamPath())
     });
     ipcMain.handle('cloud-sync:status', status);
+    ipcMain.handle('cloud-sync:account-status', async () => {
+        const steamRunning = await isSteamRunning();
+        const accountId = steamRunning ? await getSteamAccountId?.({ liveOnly: true }) : null;
+        return { steamRunning, accountAvailable: Boolean(accountId) };
+    });
     ipcMain.handle('cloud-sync:enable', async () => {
         if (busy) return { success: false, code: 'busy' };
         busy = true;
@@ -67,7 +72,8 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
     });
     ipcMain.handle('cloud-sync:list-games', async () => {
         if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
-        const accountId = await getSteamAccountId?.();
+        if (!await isSteamRunning()) return { success: false, code: 'steam_closed' };
+        const accountId = await getSteamAccountId?.({ liveOnly: true });
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         try {
             const result = await cloudSyncService.listGames(accountId);
@@ -78,6 +84,8 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
     });
     ipcMain.handle('cloud-sync:get-game', async (_event, appId) => {
         if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
+        // An already opened game can still refresh after a restore even if
+        // Steam was closed in the meantime. The account is process-cached.
         const accountId = await getSteamAccountId?.();
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         try {
@@ -89,14 +97,23 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
     ipcMain.handle('cloud-sync:restore', async (_event, appId, recoveryId) => {
         if (busy) return { success: false, code: 'busy' };
         if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
-        if (await isSteamRunning()) return { success: false, code: 'steam_running' };
         const accountId = await getSteamAccountId?.();
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         busy = true;
         try {
             return await cloudSyncService.restoreGame(accountId, appId, recoveryId);
         } catch (error) {
-            return { success: false, code: error.response?.status === 401 ? 'auth_required' : error.code || 'cloud_restore_failed' };
+            const status = error.response?.status;
+            return {
+                success: false,
+                code: status === 401 ? 'auth_required'
+                    : error.response?.data?.code
+                        || (status === 404 ? 'recovery_not_found'
+                            : status === 409 ? 'recovery_conflict'
+                                : status >= 500 ? 'cloud_server_error'
+                                    : error.code === 'ECONNABORTED' ? 'cloud_timeout'
+                                        : error.code || 'cloud_restore_failed')
+            };
         } finally { busy = false; }
     });
     ipcMain.handle('cloud-sync:ack-steam-restart', () => cloudSyncService.acknowledgeSteamRestart());

@@ -42,8 +42,7 @@ protected:
     virtual bool ProbeVersioningAtInit() const { return true; }
     virtual const char* LogTag() const { return "[S3]"; }
 
-    std::string m_accessKey;
-    std::string m_secretKey;
+    std::string m_credentialsPath;
     std::string m_bucket;
     std::string m_host;
     std::string m_region;
@@ -61,6 +60,7 @@ protected:
     std::unique_ptr<IHttpTransport> m_transport;
 
 private:
+    bool LoadSigningCredentials(std::string& accessKey, std::string& secretKey) const;
     std::string ToObjectKey(const std::string& relPath) const;
     std::string CanonicalUri(const std::string& objectKey) const;
 

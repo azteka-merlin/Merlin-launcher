@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     cloudSync: {
         status: () => ipcRenderer.invoke('cloud-sync:status'),
+        accountStatus: () => ipcRenderer.invoke('cloud-sync:account-status'),
         enable: () => ipcRenderer.invoke('cloud-sync:enable'),
         disable: () => ipcRenderer.invoke('cloud-sync:disable'),
         retry: () => ipcRenderer.invoke('cloud-sync:retry'),

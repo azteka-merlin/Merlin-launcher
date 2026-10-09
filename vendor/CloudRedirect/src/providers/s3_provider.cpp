@@ -76,15 +76,19 @@ bool S3Provider::Init(const std::string& configPath) {
     std::string json = store->Read(configPath);
     if (json.empty()) return false;
 
-    m_accessKey = ExtractJsonString(json, "access_key_id");
-    m_secretKey = ExtractJsonString(json, "secret_access_key");
+    const std::string accessKey = ExtractJsonString(json, "access_key_id");
+    const std::string secretKey = ExtractJsonString(json, "secret_access_key");
     m_bucket    = ExtractJsonString(json, "bucket");
     m_keyPrefix = ExtractJsonString(json, "key_prefix");
 
     if (!ParseExtraCredentials(json)) return false;
 
-    if (m_accessKey.empty() || m_secretKey.empty() || m_bucket.empty())
+    if (accessKey.empty() || secretKey.empty() || m_bucket.empty())
         return false;
+
+    // Merlin replaces this file atomically when it renews the gateway lease.
+    // Keep its path, not the original keys: Steam can remain open for days.
+    m_credentialsPath = configPath;
 
     m_scheme = "https";
     std::string endpoint = ExtractJsonString(json, "endpoint");
@@ -164,6 +168,20 @@ std::string S3Provider::CanonicalUri(const std::string& objectKey) const {
     return uri;
 }
 
+bool S3Provider::LoadSigningCredentials(std::string& accessKey,
+                                        std::string& secretKey) const {
+    auto store = CreateTokenStore();
+    if (!store || m_credentialsPath.empty()) return false;
+
+    const std::string json = store->Read(m_credentialsPath);
+    if (json.empty() || ExtractJsonString(json, "bucket") != m_bucket)
+        return false;
+
+    accessKey = ExtractJsonString(json, "access_key_id");
+    secretKey = ExtractJsonString(json, "secret_access_key");
+    return !accessKey.empty() && !secretKey.empty();
+}
+
 HttpUtil::HttpResp S3Provider::SignedRequest(
         const char* method, const std::string& objectKey,
         const std::string& canonicalQuery, const std::string& body,
@@ -195,14 +213,23 @@ HttpUtil::HttpResp S3Provider::SignedRequest(
         std::string amzDate, dateStamp;
         sigv4::FormatSigV4Time((int64_t)time(nullptr), amzDate, dateStamp);
 
+        // Reload for every request/retry so a renewed Merlin session takes
+        // effect without restarting Steam. Missing credentials (e.g. logout)
+        // must fail closed rather than silently reuse a revoked key.
+        std::string accessKey, secretKey;
+        if (!LoadSigningCredentials(accessKey, secretKey)) {
+            LOG("[S3] Cloud credentials unavailable; request cancelled");
+            return resp;
+        }
+
         sigv4::SignInput in;
         in.method = method;
         in.canonicalUri = canonicalUri;
         in.canonicalQuery = canonicalQuery;
         in.payloadHash = payloadHash;
         in.region = m_region;
-        in.accessKey = m_accessKey;
-        in.secretKey = m_secretKey;
+        in.accessKey = accessKey;
+        in.secretKey = secretKey;
         in.amzDate = amzDate;
         in.dateStamp = dateStamp;
         in.headers = {

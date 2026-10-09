@@ -726,7 +726,7 @@ registerCloudSyncIpc({
     dllInstaller,
     getSteamPath: () => configStore.get().steamPath,
     getSteamReadiness: () => steamService.getActivationReadiness(configStore.get().steamPath),
-    getSteamAccountId: () => steamService.getActiveAccountId(),
+    getSteamAccountId: options => steamService.getActiveAccountId(options),
     isSteamRunning: () => steamService.isRunning(),
     stopSteam: () => steamService.close(configStore.get().steamPath),
     onStateChanged: () => { applyLoginItemSettings(); updateTray(); }

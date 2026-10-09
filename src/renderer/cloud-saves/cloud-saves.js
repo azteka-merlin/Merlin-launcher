@@ -25,6 +25,31 @@
     Object.assign(messages.es, { cloud_description: 'Mantén tu progreso sincronizado entre ordenadores en los juegos añadidos por Merlin. Los juegos comprados siguen usando Steam Cloud normalmente.', cloud_toggle_aria: 'Activar o desactivar la sincronización de partidas' });
     Object.assign(messages.fr, { cloud_description: 'Gardez votre progression synchronisée entre ordinateurs pour les jeux ajoutés par Merlin. Les jeux achetés continuent d’utiliser Steam Cloud normalement.', cloud_toggle_aria: 'Activer ou désactiver la synchronisation des sauvegardes' });
     Object.assign(messages.de, { cloud_description: 'Halte deinen Fortschritt auf Merlin-Spielen zwischen Computern synchron. Gekaufte Spiele verwenden weiterhin Steam Cloud.', cloud_toggle_aria: 'Synchronisierung der Spielstände aktivieren oder deaktivieren' });
+    Object.assign(messages.ptbr, { cloud_saves_restore_notice: 'Feche o jogo antes de restaurar. A Steam pode continuar aberta.', cloud_saves_restore_message: 'Feche o jogo antes de restaurar este backup. A Steam pode continuar aberta; ao iniciar o jogo novamente, ele receberá os arquivos restaurados.', cloud_saves_restored: 'Backup restaurado. Abra o jogo para carregar o save recuperado.', cloud_saves_error_game_active: 'Feche o jogo antes de restaurar o backup. Não é preciso fechar a Steam.', cloud_saves_error_recovery_incomplete: 'Este backup está incompleto e não pode ser restaurado com segurança.', cloud_saves_unavailable_steam_closed: 'Abra a Steam e entre na conta desejada para ver seus saves.', cloud_saves_unavailable_account: 'Entre em uma conta Steam para ver seus saves.', cloud_saves_unavailable_disconnected: 'Conecte a sincronização de saves para ver seus jogos.' });
+    Object.assign(messages.en, { cloud_saves_restore_notice: 'Close the game before restoring. Steam can stay open.', cloud_saves_restore_message: 'Close the game before restoring this backup. Steam can stay open; the restored files will load when you next start the game.', cloud_saves_restored: 'Backup restored. Start the game to load the recovered save.', cloud_saves_error_game_active: 'Close the game before restoring. Steam can stay open.', cloud_saves_error_recovery_incomplete: 'This backup is incomplete and cannot be restored safely.', cloud_saves_unavailable_steam_closed: 'Open Steam and sign in to the account you want to view.', cloud_saves_unavailable_account: 'Sign in to a Steam account to view your saves.', cloud_saves_unavailable_disconnected: 'Connect save synchronization to view your games.' });
+    Object.assign(messages.es, { cloud_saves_restore_notice: 'Cierra el juego antes de restaurar. Steam puede seguir abierto.', cloud_saves_restore_message: 'Cierra el juego antes de restaurar esta copia. Steam puede seguir abierto; los archivos se cargarán al iniciar el juego de nuevo.', cloud_saves_restored: 'Copia restaurada. Inicia el juego para cargar la partida recuperada.', cloud_saves_error_game_active: 'Cierra el juego antes de restaurar. No hace falta cerrar Steam.', cloud_saves_error_recovery_incomplete: 'Esta copia está incompleta y no se puede restaurar de forma segura.', cloud_saves_unavailable_steam_closed: 'Abre Steam e inicia sesión en la cuenta que quieras consultar.', cloud_saves_unavailable_account: 'Inicia sesión en Steam para ver tus partidas.', cloud_saves_unavailable_disconnected: 'Conecta la sincronización para ver tus juegos.' });
+    Object.assign(messages.fr, { cloud_saves_restore_notice: 'Fermez le jeu avant la restauration. Steam peut rester ouvert.', cloud_saves_restore_message: 'Fermez le jeu avant de restaurer cette sauvegarde. Steam peut rester ouvert ; les fichiers seront chargés au prochain lancement du jeu.', cloud_saves_restored: 'Sauvegarde restaurée. Lancez le jeu pour charger la progression récupérée.', cloud_saves_error_game_active: 'Fermez le jeu avant la restauration. Steam peut rester ouvert.', cloud_saves_error_recovery_incomplete: 'Cette sauvegarde est incomplète et ne peut pas être restaurée en toute sécurité.', cloud_saves_unavailable_steam_closed: 'Ouvrez Steam et connectez-vous au compte à consulter.', cloud_saves_unavailable_account: 'Connectez-vous à Steam pour voir vos sauvegardes.', cloud_saves_unavailable_disconnected: 'Connectez la synchronisation pour voir vos jeux.' });
+    Object.assign(messages.de, { cloud_saves_restore_notice: 'Schließe das Spiel vor der Wiederherstellung. Steam kann geöffnet bleiben.', cloud_saves_restore_message: 'Schließe das Spiel, bevor du dieses Backup wiederherstellst. Steam kann geöffnet bleiben; die Dateien werden beim nächsten Spielstart geladen.', cloud_saves_restored: 'Backup wiederhergestellt. Starte das Spiel, um den Spielstand zu laden.', cloud_saves_error_game_active: 'Schließe das Spiel vor der Wiederherstellung. Steam kann geöffnet bleiben.', cloud_saves_error_recovery_incomplete: 'Dieses Backup ist unvollständig und kann nicht sicher wiederhergestellt werden.', cloud_saves_unavailable_steam_closed: 'Öffne Steam und melde dich mit dem gewünschten Konto an.', cloud_saves_unavailable_account: 'Melde dich bei Steam an, um deine Spielstände zu sehen.', cloud_saves_unavailable_disconnected: 'Verbinde die Synchronisierung, um deine Spiele zu sehen.' });
+    Object.assign(messages.ptbr, { cloud_saves_error_recovery_not_found: 'Esse backup mudou desde que a tela foi aberta. A lista foi atualizada; escolha novamente.', cloud_saves_error_recovery_conflict: 'O backup mudou durante a restauração. Atualize a lista e tente novamente.', cloud_saves_error_cloud_timeout: 'A restauração demorou demais para responder. Confira a versão atual antes de tentar novamente.', cloud_saves_error_cloud_server_error: 'O servidor não conseguiu concluir a restauração. Seus saves atuais não foram alterados.', cloud_saves_backup_changed: 'A lista de backups mudou. Confira a versão disponível e escolha novamente.' });
+    Object.assign(messages.en, { cloud_saves_error_recovery_not_found: 'This backup changed since the screen was opened. The list has been refreshed; choose again.', cloud_saves_error_recovery_conflict: 'The backup changed during restoration. Refresh the list and try again.', cloud_saves_error_cloud_timeout: 'The restore took too long to respond. Check the current version before trying again.', cloud_saves_error_cloud_server_error: 'The server could not complete the restore. Your current saves were not changed.', cloud_saves_backup_changed: 'The backup list changed. Review the available version and choose again.' });
+    Object.assign(messages.es, { cloud_saves_error_recovery_not_found: 'Esta copia cambió desde que abriste la pantalla. La lista se actualizó; elige de nuevo.', cloud_saves_error_recovery_conflict: 'La copia cambió durante la restauración. Actualiza la lista e inténtalo de nuevo.', cloud_saves_error_cloud_timeout: 'La restauración tardó demasiado en responder. Revisa la versión actual antes de repetirla.', cloud_saves_error_cloud_server_error: 'El servidor no pudo completar la restauración. Tus partidas actuales no se modificaron.', cloud_saves_backup_changed: 'La lista de copias cambió. Revisa la versión disponible y elige de nuevo.' });
+    Object.assign(messages.fr, { cloud_saves_error_recovery_not_found: 'Cette sauvegarde a changé depuis l’ouverture de l’écran. La liste a été actualisée ; choisissez à nouveau.', cloud_saves_error_recovery_conflict: 'La sauvegarde a changé pendant la restauration. Actualisez la liste et réessayez.', cloud_saves_error_cloud_timeout: 'La restauration a mis trop de temps à répondre. Vérifiez la version actuelle avant de réessayer.', cloud_saves_error_cloud_server_error: 'Le serveur n’a pas pu terminer la restauration. Vos sauvegardes actuelles n’ont pas été modifiées.', cloud_saves_backup_changed: 'La liste des sauvegardes a changé. Vérifiez la version disponible et choisissez à nouveau.' });
+    Object.assign(messages.de, { cloud_saves_error_recovery_not_found: 'Dieses Backup hat sich seit dem Öffnen geändert. Die Liste wurde aktualisiert; wähle erneut.', cloud_saves_error_recovery_conflict: 'Das Backup hat sich während der Wiederherstellung geändert. Aktualisiere die Liste und versuche es erneut.', cloud_saves_error_cloud_timeout: 'Die Wiederherstellung hat zu lange gedauert. Prüfe die aktuelle Version vor einem neuen Versuch.', cloud_saves_error_cloud_server_error: 'Der Server konnte die Wiederherstellung nicht abschließen. Deine aktuellen Spielstände wurden nicht geändert.', cloud_saves_backup_changed: 'Die Backup-Liste hat sich geändert. Prüfe die verfügbare Version und wähle erneut.' });
+    Object.assign(messages.ptbr, { cloud_saves_restore_message: 'Os arquivos deste backup serão recuperados; os demais arquivos do jogo permanecerão como estão. Feche o jogo antes de continuar. A Steam pode ficar aberta.', cloud_saves_error_cloud_server_error: 'O servidor não conseguiu confirmar a restauração. Confira a versão atual antes de tentar novamente.' });
+    Object.assign(messages.en, { cloud_saves_restore_message: 'The files in this backup will be recovered; other game files will stay as they are. Close the game before continuing. Steam can stay open.', cloud_saves_error_cloud_server_error: 'The server could not confirm the restore. Check the current version before trying again.' });
+    Object.assign(messages.es, { cloud_saves_restore_message: 'Se recuperarán los archivos de esta copia; los demás archivos del juego permanecerán como están. Cierra el juego antes de continuar. Steam puede seguir abierto.', cloud_saves_error_cloud_server_error: 'El servidor no pudo confirmar la restauración. Revisa la versión actual antes de repetirla.' });
+    Object.assign(messages.fr, { cloud_saves_restore_message: 'Les fichiers de cette sauvegarde seront récupérés ; les autres fichiers du jeu resteront inchangés. Fermez le jeu avant de continuer. Steam peut rester ouvert.', cloud_saves_error_cloud_server_error: 'Le serveur n’a pas pu confirmer la restauration. Vérifiez la version actuelle avant de réessayer.' });
+    Object.assign(messages.de, { cloud_saves_restore_message: 'Die Dateien dieses Backups werden wiederhergestellt; andere Spieldateien bleiben unverändert. Schließe das Spiel, bevor du fortfährst. Steam kann geöffnet bleiben.', cloud_saves_error_cloud_server_error: 'Der Server konnte die Wiederherstellung nicht bestätigen. Prüfe die aktuelle Version vor einem neuen Versuch.' });
+    Object.assign(messages.ptbr, { cloud_saves_checking_backup: 'Conferindo backup…' });
+    Object.assign(messages.en, { cloud_saves_checking_backup: 'Checking backup…' });
+    Object.assign(messages.es, { cloud_saves_checking_backup: 'Comprobando copia…' });
+    Object.assign(messages.fr, { cloud_saves_checking_backup: 'Vérification de la sauvegarde…' });
+    Object.assign(messages.de, { cloud_saves_checking_backup: 'Backup wird geprüft…' });
+    Object.assign(messages.ptbr, { cloud_saves_loading_details: 'Carregando saves do jogo…' });
+    Object.assign(messages.en, { cloud_saves_loading_details: 'Loading game saves…' });
+    Object.assign(messages.es, { cloud_saves_loading_details: 'Cargando partidas del juego…' });
+    Object.assign(messages.fr, { cloud_saves_loading_details: 'Chargement des sauvegardes du jeu…' });
+    Object.assign(messages.de, { cloud_saves_loading_details: 'Spielstände werden geladen…' });
     window.merlinI18n?.register(messages);
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -40,7 +65,12 @@
             empty: document.getElementById('cloudSavesEmptyState'),
             noResults: document.getElementById('cloudSavesNoResultsState'),
             list: document.getElementById('cloudSavesGameList'),
-            back: document.getElementById('cloudSavesBackBtn'),
+            detailsLoading: document.getElementById('cloudSavesDetailsLoadingState'),
+            detailsContent: document.getElementById('cloudSavesDetailsContent'),
+            listCrumb: document.getElementById('cloudSavesListCrumb'),
+            listCurrentCrumb: document.getElementById('cloudSavesListCurrentCrumb'),
+            gameCrumb: document.getElementById('cloudSavesGameCrumb'),
+            gameCrumbName: document.getElementById('cloudSavesGameCrumbName'),
             cover: document.getElementById('cloudSavesGameCover'),
             coverFallback: document.querySelector('.cloud-saves-game-cover-fallback'),
             name: document.getElementById('cloudSavesGameName'),
@@ -55,10 +85,14 @@
         const tr = (key, values = {}) => Object.entries(values).reduce((value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement)), window.merlinI18n.t(key));
         const locale = () => ({ ptbr: 'pt-BR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE' }[window.merlinI18n.current()] || 'en-US');
         const date = value => value ? new Intl.DateTimeFormat(locale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—';
+        const fallbackCoverUrl = appId => /^\d+$/.test(String(appId || '').trim())
+            ? `https://generator.ryuu.lol/files/images/${String(appId).trim()}.jpg`
+            : null;
+        const coverCandidates = game => [...new Set([game?.coverUrl, fallbackCoverUrl(game?.appId)].filter(Boolean))];
         const bytes = value => {
             const size = Number(value) || 0;
             if (size < 1024) return `${size} B`;
-            const units = ['KB', 'MB', 'GB'];
+            const units = ['B', 'KB', 'MB', 'GB'];
             let amount = size;
             let unit = units[0];
             for (let index = 0; amount >= 1024 && index < units.length - 1; index += 1) {
@@ -70,10 +104,13 @@
         const notify = (message, type = 'info') => window.showNotification?.(message, type);
         const plural = (count, one, many) => tr(count === 1 ? one : many, { count });
         const fileSummary = (count, size) => tr(count === 1 ? 'cloud_saves_file_one' : 'cloud_saves_file_many', { count, size: bytes(size) });
-        const state = { games: [], selected: null, loading: false, error: false };
+        const state = { games: [], selected: null, loading: false, error: false, detailRequestId: 0 };
 
         function errorMessage(code) {
-            if (code === 'steam_running') return tr('cloud_saves_error_steam_running');
+            if (code === 'game_active') return tr('cloud_saves_error_game_active');
+            if (code === 'recovery_incomplete') return tr('cloud_saves_error_recovery_incomplete');
+            if (['recovery_not_found', 'recovery_conflict', 'cloud_timeout', 'cloud_server_error'].includes(code)) return tr(`cloud_saves_error_${code}`);
+            if (code === 'steam_closed') return tr('cloud_saves_unavailable_steam_closed');
             if (code === 'steam_account_unavailable') return tr('cloud_saves_error_account');
             return tr('cloud_saves_error_generic');
         }
@@ -82,6 +119,16 @@
             const active = window.merlinView?.get?.() === 'cloud-saves';
             elements.view.hidden = !active;
             if (active && !state.games.length && !state.loading) void loadGames();
+        }
+
+        function renderBreadcrumb() {
+            const inDetails = Boolean(state.selected);
+            elements.listCrumb.hidden = !inDetails;
+            elements.listCurrentCrumb.hidden = inDetails;
+            elements.gameCrumb.hidden = !inDetails;
+            const name = inDetails ? state.selected.name || '—' : '';
+            elements.gameCrumbName.textContent = name;
+            elements.gameCrumbName.title = name;
         }
 
         function renderList() {
@@ -102,12 +149,18 @@
                 row.dataset.appId = game.appId;
                 const cover = document.createElement('span');
                 cover.className = 'cloud-saves-row-cover';
-                if (game.coverUrl) {
+                const candidates = coverCandidates(game);
+                if (candidates.length) {
                     const image = document.createElement('img');
-                    image.src = game.coverUrl;
                     image.alt = '';
                     image.loading = 'lazy';
-                    image.addEventListener('error', () => { image.remove(); cover.classList.add('is-fallback'); }, { once: true });
+                    const loadNext = () => {
+                        const url = candidates.shift();
+                        if (url) image.src = url;
+                        else { image.remove(); cover.classList.add('is-fallback'); }
+                    };
+                    image.addEventListener('error', loadNext);
+                    loadNext();
                     cover.append(image);
                 } else cover.classList.add('is-fallback');
                 const info = document.createElement('span');
@@ -135,12 +188,24 @@
             elements.meta.textContent = plural(game.currentVersion?.fileCount || 0, 'cloud_saves_synced_files_one', 'cloud_saves_synced_files_many');
             elements.currentDate.textContent = date(game.currentVersion?.createdAt);
             elements.currentSummary.textContent = fileSummary(game.currentVersion?.fileCount || 0, game.currentVersion?.totalSize);
-            elements.cover.hidden = !game.coverUrl;
-            elements.coverFallback.hidden = Boolean(game.coverUrl);
-            if (game.coverUrl) {
-                elements.cover.src = game.coverUrl;
-                elements.cover.onerror = () => { elements.cover.hidden = true; elements.coverFallback.hidden = false; };
-            }
+            const candidates = coverCandidates(game);
+            elements.cover.hidden = candidates.length === 0;
+            elements.coverFallback.hidden = candidates.length > 0;
+            elements.cover.onerror = null;
+            elements.cover.removeAttribute('src');
+            const loadNext = () => {
+                const url = candidates.shift();
+                if (url) {
+                    elements.cover.src = url;
+                    elements.cover.hidden = false;
+                    elements.coverFallback.hidden = true;
+                } else {
+                    elements.cover.hidden = true;
+                    elements.coverFallback.hidden = false;
+                }
+            };
+            elements.cover.onerror = loadNext;
+            loadNext();
             elements.backups.replaceChildren();
             const backups = Array.isArray(game.backups) ? game.backups : [];
             elements.noBackups.hidden = backups.length > 0;
@@ -184,30 +249,58 @@
         }
 
         async function openGame(appId) {
+            const requestId = ++state.detailRequestId;
+            state.selected = state.games.find(game => String(game.appId) === String(appId)) || { appId };
+            renderBreadcrumb();
+            elements.listState.hidden = true;
+            elements.detailsState.hidden = false;
+            elements.detailsContent.hidden = true;
+            elements.detailsLoading.hidden = false;
+            elements.listCrumb.focus();
             try {
                 const result = await window.electronAPI.cloudSync.getGame(appId);
+                if (requestId !== state.detailRequestId) return;
                 if (!result?.success || !result.game) throw new Error(result?.code || 'cloud_game_failed');
                 state.selected = result.game;
                 renderDetails(state.selected);
-                elements.listState.hidden = true;
-                elements.detailsState.hidden = false;
-                elements.back.focus();
+                renderBreadcrumb();
+                elements.detailsContent.hidden = false;
             } catch (error) {
+                if (requestId !== state.detailRequestId) return;
+                state.selected = null;
+                renderBreadcrumb();
+                elements.detailsState.hidden = true;
+                elements.listState.hidden = false;
                 notify(errorMessage(error.message), 'error');
+            } finally {
+                if (requestId === state.detailRequestId) elements.detailsLoading.hidden = true;
             }
         }
 
         async function restoreBackup(game, backup, button) {
-            const accepted = await window.merlinRestartPrompt?.ask?.({ title: tr('cloud_saves_restore_title'), message: tr('cloud_saves_restore_message'), cancelLabel: window.merlinI18n.t('repair_steam_running_cancel'), actionLabel: tr('cloud_saves_restore_action') });
-            if (!accepted) return;
+            if (button.disabled) return;
             button.disabled = true;
-            button.textContent = tr('cloud_saves_restoring');
             try {
+                const accepted = await window.merlinRestartPrompt?.ask?.({ title: tr('cloud_saves_restore_title'), message: tr('cloud_saves_restore_message'), cancelLabel: window.merlinI18n.t('repair_steam_running_cancel'), actionLabel: tr('cloud_saves_restore_action') });
+                if (!accepted) return;
+
+                button.textContent = tr('cloud_saves_checking_backup');
+                const latest = await window.electronAPI.cloudSync.getGame(game.appId);
+                if (!latest?.success || !latest.game) throw new Error(latest?.code || 'cloud_game_failed');
+                if (!latest.game.backups?.some(item => item.id === backup.id)) {
+                    state.selected = latest.game;
+                    renderDetails(state.selected);
+                    notify(tr('cloud_saves_backup_changed'));
+                    return;
+                }
+
+                button.textContent = tr('cloud_saves_restoring');
                 const result = await window.electronAPI.cloudSync.restore(game.appId, backup.id);
                 if (!result?.success) throw new Error(result?.code || 'cloud_restore_failed');
                 notify(tr('cloud_saves_restored'), 'success');
                 await openGame(game.appId);
             } catch (error) {
+                if (error.message === 'recovery_not_found') await openGame(game.appId);
                 notify(errorMessage(error.message), 'error');
             } finally {
                 button.disabled = false;
@@ -215,12 +308,13 @@
             }
         }
 
-        elements.button?.addEventListener('click', () => window.merlinView?.set?.('cloud-saves'));
-        document.getElementById('cloudSavesConfigBackBtn')?.addEventListener('click', () => window.merlinView?.set?.('settings'));
+        document.getElementById('cloudSavesConfigCrumb')?.addEventListener('click', () => window.merlinView?.set?.('settings'));
         elements.search?.addEventListener('input', renderList);
         elements.retry?.addEventListener('click', () => void loadGames());
-        elements.back?.addEventListener('click', () => {
+        elements.listCrumb?.addEventListener('click', () => {
+            state.detailRequestId += 1;
             state.selected = null;
+            renderBreadcrumb();
             elements.detailsState.hidden = true;
             elements.listState.hidden = false;
             renderList();
@@ -228,8 +322,9 @@
         });
         window.addEventListener('merlin-view-changed', syncVisibility);
         window.addEventListener('merlin-authenticated', () => { state.games = []; if (window.merlinView?.get?.() === 'cloud-saves') void loadGames(); });
-        window.addEventListener('merlin-logout', () => { state.games = []; state.selected = null; elements.detailsState.hidden = true; elements.listState.hidden = false; });
+        window.addEventListener('merlin-logout', () => { state.detailRequestId += 1; state.games = []; state.selected = null; renderBreadcrumb(); elements.detailsState.hidden = true; elements.listState.hidden = false; });
         window.addEventListener('merlin-language-changed', () => { renderList(); if (state.selected) renderDetails(state.selected); });
+        renderBreadcrumb();
         syncVisibility();
     });
 })();

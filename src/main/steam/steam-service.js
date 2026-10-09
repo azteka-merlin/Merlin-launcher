@@ -9,6 +9,7 @@ const REQUIRED_STEAM_FILES = [
 ];
 
 function createSteamService({ fs, path, exec, platform, userProfile }) {
+    let lastActiveAccountId = null;
     function parseQuotedVdf(raw) {
         const source = String(raw || '');
         const tokens = [];
@@ -163,16 +164,22 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
         });
     }
 
-    function getActiveAccountId() {
+    function getActiveAccountId({ liveOnly = false } = {}) {
         if (platform !== 'win32') return Promise.resolve(null);
         return new Promise(resolve => {
             exec('reg query "HKCU\\Software\\Valve\\Steam\\ActiveProcess" /v ActiveUser', (error, stdout) => {
-                if (error) return resolve(null);
-                const match = String(stdout || '').match(/ActiveUser\s+REG_(?:DWORD|QWORD)\s+([^\s]+)/i);
-                if (!match) return resolve(null);
-                const raw = match[1].replace(/^0x/i, '');
-                const value = /^0x/i.test(match[1]) ? Number.parseInt(raw, 16) : Number.parseInt(raw, 10);
-                resolve(Number.isSafeInteger(value) && value > 0 ? String(value) : null);
+                const match = !error && String(stdout || '').match(/ActiveUser\s+REG_(?:DWORD|QWORD)\s+([^\s]+)/i);
+                const raw = match?.[1]?.replace(/^0x/i, '');
+                const value = raw ? (/^0x/i.test(match[1]) ? Number.parseInt(raw, 16) : Number.parseInt(raw, 10)) : 0;
+                if (Number.isSafeInteger(value) && value > 0) {
+                    lastActiveAccountId = String(value);
+                    resolve(lastActiveAccountId);
+                } else {
+                    // After Steam exits, ActiveUser becomes zero. Keep only the
+                    // account observed in this Merlin process; loginusers.vdf
+                    // cannot tell which profile the user will choose next.
+                    resolve(liveOnly ? null : lastActiveAccountId);
+                }
             });
         });
     }

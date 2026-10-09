@@ -1471,11 +1471,12 @@ function setupEventListeners() {
         const disableButton = disableCloudButton;
         const retryButton = document.getElementById('retryCloudSyncBtn');
         const openGamesButton = document.getElementById('openCloudSavesBtn');
+        const openGamesWrap = document.getElementById('openCloudSavesWrap');
         try {
             const state = await window.electronAPI.cloudSync.status();
             if (section) section.hidden = !state.available;
             if (!state.available) {
-                if (openGamesButton) openGamesButton.hidden = true;
+                if (openGamesWrap) openGamesWrap.hidden = true;
                 return;
             }
             const ready = state.enabled && state.filesReady;
@@ -1494,7 +1495,21 @@ function setupEventListeners() {
             if (enableButton) enableButton.hidden = true;
             if (disableButton) disableButton.hidden = true;
             if (retryButton) retryButton.hidden = !state.enabled || state.connected;
-            if (openGamesButton) openGamesButton.hidden = false;
+            if (openGamesWrap) openGamesWrap.hidden = false;
+            if (openGamesButton && openGamesWrap) {
+                openGamesButton.disabled = true;
+                const account = state.connected
+                    ? await window.electronAPI.cloudSync.accountStatus().catch(() => null)
+                    : null;
+                const reason = !state.connected ? 'cloud_saves_unavailable_disconnected'
+                    : !account?.steamRunning ? 'cloud_saves_unavailable_steam_closed'
+                    : !account.accountAvailable ? 'cloud_saves_unavailable_account' : null;
+                openGamesButton.disabled = Boolean(reason);
+                openGamesWrap.classList.toggle('is-unavailable', Boolean(reason));
+                openGamesWrap.dataset.tooltip = reason ? t(reason) : '';
+                openGamesWrap.tabIndex = reason ? 0 : -1;
+                openGamesWrap.setAttribute('aria-label', reason ? `${t('cloud_open_games')}: ${t(reason)}` : t('cloud_open_games'));
+            }
             void promptSteamRestartAfterCloudResume(state);
         } catch (_) {
             if (label) label.textContent = t('cloud_disconnected');
@@ -1591,7 +1606,14 @@ function setupEventListeners() {
             await updateCloudSyncCard();
         }
     });
-    document.getElementById('openCloudSavesBtn')?.addEventListener('click', () => window.merlinView?.set?.('cloud-saves'));
+    document.getElementById('openCloudSavesBtn')?.addEventListener('click', async () => {
+        const account = await window.electronAPI.cloudSync.accountStatus().catch(() => null);
+        if (!account?.steamRunning || !account.accountAvailable) {
+            await updateCloudSyncCard();
+            return;
+        }
+        window.merlinView?.set?.('cloud-saves');
+    });
     cloudToggle?.addEventListener('change', () => {
         const target = cloudToggle.checked ? enableCloudButton : disableCloudButton;
         if (!target) {
@@ -1608,6 +1630,8 @@ function setupEventListeners() {
         void updateCloudSyncCard();
     });
     window.addEventListener('merlin-language-changed', () => { void updateCloudSyncCard(); });
+    window.addEventListener('merlin-view-changed', event => { if (event.detail?.view === 'settings') void updateCloudSyncCard(); });
+    window.addEventListener('focus', () => { if (window.merlinView?.get() === 'settings') void updateCloudSyncCard(); });
     window.setInterval(() => { if (window.merlinView?.get() === 'settings') void updateCloudSyncCard(); }, 10000);
 
     const logoutBtn = document.getElementById('logoutBtn');

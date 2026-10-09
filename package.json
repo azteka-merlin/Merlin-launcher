@@ -1,6 +1,6 @@
 {
   "name": "merlin",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "description": "Steam game injector with manifest and lua support",
   "main": "main.js",
   "scripts": {
