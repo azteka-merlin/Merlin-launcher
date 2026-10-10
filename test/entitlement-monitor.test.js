@@ -72,6 +72,26 @@ test('access notice distinguishes automatic card renewal and excludes non-recurr
     assert.equal(getAccessNoticeType(session, now), null);
 });
 
+test('semiannual card and Pix access receive their respective renewal notices', () => {
+    const now = Date.parse('2026-10-01T12:00:00.000Z');
+    const session = {
+        license: {
+            status: 'active',
+            billing: {
+                accessType: 'semiannual_subscription',
+                billingStatus: 'active',
+                entitlementExpiresAt: '2026-10-05T12:00:00.000Z',
+                canManageSubscription: true,
+                cancelAtPeriodEnd: false
+            }
+        }
+    };
+    assert.equal(getAccessNoticeType(session, now), 'auto_renewing');
+    session.license.billing.accessType = 'semiannual_manual';
+    session.license.billing.canManageSubscription = false;
+    assert.equal(getAccessNoticeType(session, now), 'expiring');
+});
+
 test('entitlement monitor checks every five minutes and forwards a confirmed expired session', async () => {
     let scheduled = null;
     const received = [];

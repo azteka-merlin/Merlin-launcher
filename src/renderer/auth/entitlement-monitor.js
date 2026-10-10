@@ -13,7 +13,7 @@
         if (license?.status !== 'active') return null;
 
         const billing = license.billing || {};
-        if (!['monthly_subscription', 'annual_subscription', 'annual_manual'].includes(billing.accessType)) return null;
+        if (!['monthly_subscription', 'semiannual_subscription', 'semiannual_manual', 'annual_subscription', 'annual_manual'].includes(billing.accessType)) return null;
         const rawExpiry = billing.entitlementExpiresAt || billing.currentPeriodEnd || license.expiresAt;
         // The login payload may contain a date without a time. Treat that as
         // the end of the displayed day; paid plans normally include the exact

@@ -4,6 +4,12 @@ Este arquivo registra regras de negocio observadas no launcher. Ele nao deve ser
 
 ## Licenca E Auth
 
+### Periodos pagos
+
+- O Launcher reconhece mensal, semestral e anual nos avisos de vencimento. Semestral usa `semiannual_subscription` no cartao e `semiannual_manual` no Pix.
+- Preco, renovacao e vencimento sao decididos pela API. O Launcher nao cobra nem soma meses localmente; abre Meu acesso com o handoff autenticado existente.
+- Cartao permanece automatico e Pix manual. A cota Premium Bronze continua mensal independentemente do periodo de cobranca.
+
 - A chave deve seguir o formato `MERLIN-XXXX-XXXX-XXXX`.
 - Letras ambiguas sao evitadas pelo regex atual.
 - Login envia `licenseKey` e `hwid` para `/auth/login`.
