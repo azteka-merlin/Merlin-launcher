@@ -1464,7 +1464,19 @@ function setupEventListeners() {
     const cloudToggle = document.getElementById('cloudSyncToggle');
     const enableCloudButton = document.getElementById('enableCloudSyncBtn');
     const disableCloudButton = document.getElementById('disableCloudSyncBtn');
+    let cloudTogglePending = false;
+    let cloudToggleWorking = false;
+    let cloudCardRequestId = 0;
+    const setCloudToggleWorking = working => {
+        cloudToggleWorking = working;
+        cloudToggle?.closest('.merlin-plugin-card__cloud-control')?.classList.toggle('is-busy', working);
+        const label = document.getElementById('cloudSyncStatus');
+        if (label && cloudTogglePending) label.textContent = t(working
+            ? (cloudToggle.checked ? 'cloud_busy_enable' : 'cloud_busy_disable')
+            : (cloudToggle.checked ? 'cloud_on' : 'cloud_off'));
+    };
     const updateCloudSyncCard = async () => {
+        const requestId = ++cloudCardRequestId;
         const section = document.getElementById('cloudSyncSection');
         const label = document.getElementById('cloudSyncStatus');
         const enableButton = enableCloudButton;
@@ -1474,20 +1486,23 @@ function setupEventListeners() {
         const openGamesWrap = document.getElementById('openCloudSavesWrap');
         try {
             const state = await window.electronAPI.cloudSync.status();
+            if (requestId !== cloudCardRequestId) return;
             if (section) section.hidden = !state.available;
             if (!state.available) {
                 if (openGamesWrap) openGamesWrap.hidden = true;
                 return;
             }
             const ready = state.enabled && state.filesReady;
-            if (label) label.textContent = !ready ? t('cloud_off')
-                : state.connected ? t('cloud_on') : t('cloud_disconnected');
+            if (label) label.textContent = cloudTogglePending ? t(cloudToggleWorking
+                ? (cloudToggle?.checked ? 'cloud_busy_enable' : 'cloud_busy_disable')
+                : (cloudToggle?.checked ? 'cloud_on' : 'cloud_off'))
+                : !ready ? t('cloud_off') : state.connected ? t('cloud_on') : t('cloud_disconnected');
             if (cloudToggle) {
-                cloudToggle.checked = ready;
+                if (!cloudTogglePending) cloudToggle.checked = ready;
                 // The control must remain usable when disabled so the user can
                 // opt in again. Connection failures are handled by the action
                 // itself and must not lock the setting in either direction.
-                cloudToggle.disabled = !state.available;
+                cloudToggle.disabled = !state.available || cloudTogglePending;
             }
             // The toggle is the only visible control for enabling/disabling.
             // Keep the legacy action buttons in the DOM for the existing
@@ -1501,6 +1516,7 @@ function setupEventListeners() {
                 const account = state.connected
                     ? await window.electronAPI.cloudSync.accountStatus().catch(() => null)
                     : null;
+                if (requestId !== cloudCardRequestId) return;
                 const reason = !state.connected ? 'cloud_saves_unavailable_disconnected'
                     : !account?.steamRunning ? 'cloud_saves_unavailable_steam_closed'
                     : !account.accountAvailable ? 'cloud_saves_unavailable_account' : null;
@@ -1510,9 +1526,9 @@ function setupEventListeners() {
                 openGamesWrap.tabIndex = reason ? 0 : -1;
                 openGamesWrap.setAttribute('aria-label', reason ? `${t('cloud_open_games')}: ${t(reason)}` : t('cloud_open_games'));
             }
-            void promptSteamRestartAfterCloudResume(state);
+            if (!cloudTogglePending) void promptSteamRestartAfterCloudResume(state);
         } catch (_) {
-            if (label) label.textContent = t('cloud_disconnected');
+            if (requestId === cloudCardRequestId && label && !cloudTogglePending) label.textContent = t('cloud_disconnected');
         }
     };
     const cloudErrorMessage = code => {
@@ -1526,7 +1542,7 @@ function setupEventListeners() {
             message: t('cloud_reopen_message'),
             cancelLabel: t('restart_prompt_later'),
             actionLabel: t('restart_prompt_action')
-        });
+        }).catch(() => false);
         if (!accepted) return;
         const started = await window.electronAPI.startSteam().catch(() => false);
         showNotification(started ? t('steam_restarted') : t('cloud_error_steam_start_failed'), started ? 'success' : 'error');
@@ -1539,28 +1555,34 @@ function setupEventListeners() {
             message: t(steamRunning ? 'cloud_enable_running' : 'cloud_enable_closed'),
             cancelLabel: t('repair_steam_running_cancel'),
             actionLabel: t('cloud_enable')
-        });
+        }).catch(() => false);
         if (!accepted) {
+            cloudTogglePending = false;
+            setCloudToggleWorking(false);
+            cloudToggle.disabled = false;
             await updateCloudSyncCard();
             return;
         }
         button.dataset.defaultLabel = button.textContent;
         setSteamPluginBusy(button, true, t('cloud_busy_enable'));
+        setCloudToggleWorking(true);
+        let steamWasRunningAfterChange = false;
         try {
             const result = await window.electronAPI.cloudSync.enable();
+            steamWasRunningAfterChange = Boolean(result.steamWasRunning);
             if (!result.success) {
                 showNotification(cloudErrorMessage(result.code), 'error');
-                await offerSteamStartAfterCloudChange(result.steamWasRunning);
-                return;
-            }
-            showNotification(t('cloud_enabled_notice'), 'success');
-            await offerSteamStartAfterCloudChange(result.steamWasRunning);
+            } else showNotification(t('cloud_enabled_notice'), 'success');
         } catch (_) {
             showNotification(t('cloud_error_generic'), 'error');
         } finally {
             setSteamPluginBusy(button, false);
+            cloudTogglePending = false;
+            setCloudToggleWorking(false);
+            cloudToggle.disabled = false;
             await updateCloudSyncCard();
         }
+        await offerSteamStartAfterCloudChange(steamWasRunningAfterChange);
     });
     document.getElementById('disableCloudSyncBtn')?.addEventListener('click', async event => {
         const button = event.currentTarget;
@@ -1570,28 +1592,34 @@ function setupEventListeners() {
             message: t(steamRunning ? 'cloud_disable_running' : 'cloud_disable_closed'),
             cancelLabel: t('repair_steam_running_cancel'),
             actionLabel: t('cloud_disable')
-        });
+        }).catch(() => false);
         if (!accepted) {
+            cloudTogglePending = false;
+            setCloudToggleWorking(false);
+            cloudToggle.disabled = false;
             await updateCloudSyncCard();
             return;
         }
         button.dataset.defaultLabel = button.textContent;
         setSteamPluginBusy(button, true, t('cloud_busy_disable'));
+        setCloudToggleWorking(true);
+        let steamWasRunningAfterChange = false;
         try {
             const result = await window.electronAPI.cloudSync.disable();
+            steamWasRunningAfterChange = Boolean(result.steamWasRunning);
             if (!result.success) {
                 showNotification(cloudErrorMessage(result.code), 'error');
-                await offerSteamStartAfterCloudChange(result.steamWasRunning);
-                return;
-            }
-            showNotification(t('cloud_disabled_notice'), 'success');
-            await offerSteamStartAfterCloudChange(result.steamWasRunning);
+            } else showNotification(t('cloud_disabled_notice'), 'success');
         } catch (_) {
             showNotification(t('cloud_error_generic'), 'error');
         } finally {
             setSteamPluginBusy(button, false);
+            cloudTogglePending = false;
+            setCloudToggleWorking(false);
+            cloudToggle.disabled = false;
             await updateCloudSyncCard();
         }
+        await offerSteamStartAfterCloudChange(steamWasRunningAfterChange);
     });
     document.getElementById('retryCloudSyncBtn')?.addEventListener('click', async event => {
         const button = event.currentTarget;
@@ -1620,7 +1648,10 @@ function setupEventListeners() {
             void updateCloudSyncCard();
             return;
         }
+        cloudTogglePending = true;
+        cloudCardRequestId += 1;
         cloudToggle.disabled = true;
+        setCloudToggleWorking(false);
         target.click();
     });
     void updateCloudSyncCard();

@@ -50,6 +50,11 @@
     Object.assign(messages.es, { cloud_saves_loading_details: 'Cargando partidas del juego…' });
     Object.assign(messages.fr, { cloud_saves_loading_details: 'Chargement des sauvegardes du jeu…' });
     Object.assign(messages.de, { cloud_saves_loading_details: 'Spielstände werden geladen…' });
+    Object.assign(messages.ptbr, { cloud_saves_refresh: 'Atualizar jogos', cloud_saves_refreshing: 'Atualizando…' });
+    Object.assign(messages.en, { cloud_saves_refresh: 'Refresh games', cloud_saves_refreshing: 'Refreshing…' });
+    Object.assign(messages.es, { cloud_saves_refresh: 'Actualizar juegos', cloud_saves_refreshing: 'Actualizando…' });
+    Object.assign(messages.fr, { cloud_saves_refresh: 'Actualiser les jeux', cloud_saves_refreshing: 'Actualisation…' });
+    Object.assign(messages.de, { cloud_saves_refresh: 'Spiele aktualisieren', cloud_saves_refreshing: 'Aktualisiere…' });
     window.merlinI18n?.register(messages);
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -59,6 +64,8 @@
             listState: document.getElementById('cloudSavesListState'),
             detailsState: document.getElementById('cloudSavesDetailsState'),
             search: document.getElementById('cloudSavesSearchInput'),
+            refresh: document.getElementById('cloudSavesRefreshBtn'),
+            refreshText: document.getElementById('cloudSavesRefreshText'),
             loading: document.getElementById('cloudSavesLoadingState'),
             error: document.getElementById('cloudSavesErrorState'),
             retry: document.getElementById('cloudSavesRetryBtn'),
@@ -105,6 +112,7 @@
         const plural = (count, one, many) => tr(count === 1 ? one : many, { count });
         const fileSummary = (count, size) => tr(count === 1 ? 'cloud_saves_file_one' : 'cloud_saves_file_many', { count, size: bytes(size) });
         const state = { games: [], selected: null, loading: false, error: false, detailRequestId: 0 };
+        let wasActive = false;
 
         function errorMessage(code) {
             if (code === 'game_active') return tr('cloud_saves_error_game_active');
@@ -118,7 +126,8 @@
         function syncVisibility() {
             const active = window.merlinView?.get?.() === 'cloud-saves';
             elements.view.hidden = !active;
-            if (active && !state.games.length && !state.loading) void loadGames();
+            if (active && !wasActive) void loadGames();
+            wasActive = active;
         }
 
         function renderBreadcrumb() {
@@ -232,6 +241,12 @@
             if (state.loading) return;
             state.loading = true;
             state.error = false;
+            if (elements.refresh) {
+                elements.refresh.disabled = true;
+                elements.refresh.classList.add('loading');
+                elements.refresh.setAttribute('aria-busy', 'true');
+            }
+            if (elements.refreshText) elements.refreshText.textContent = tr('cloud_saves_refreshing');
             renderList();
             try {
                 const result = await window.electronAPI.cloudSync.listGames();
@@ -244,6 +259,12 @@
                 notify(errorMessage(error.message), 'error');
             } finally {
                 state.loading = false;
+                if (elements.refresh) {
+                    elements.refresh.disabled = false;
+                    elements.refresh.classList.remove('loading');
+                    elements.refresh.removeAttribute('aria-busy');
+                }
+                if (elements.refreshText) elements.refreshText.textContent = tr('cloud_saves_refresh');
                 renderList();
             }
         }
@@ -311,6 +332,7 @@
         document.getElementById('cloudSavesConfigCrumb')?.addEventListener('click', () => window.merlinView?.set?.('settings'));
         elements.search?.addEventListener('input', renderList);
         elements.retry?.addEventListener('click', () => void loadGames());
+        elements.refresh?.addEventListener('click', () => void loadGames());
         elements.listCrumb?.addEventListener('click', () => {
             state.detailRequestId += 1;
             state.selected = null;
