@@ -28,6 +28,7 @@ const { createCorrectionsCatalogStore } = require('./src/main/corrections/correc
 const { createCorrectionsService } = require('./src/main/corrections/corrections-service');
 const { createLicenseTokenClient } = require('./src/main/corrections/license-token-client');
 const { createSpecialCorrection } = require('./src/main/corrections/special-correction');
+const { createElevatedDirectoryCopy } = require('./src/main/files/elevated-directory-copy');
 const { createAuthSession } = require('./src/main/auth/auth-session');
 const { createAnnouncementsClient } = require('./src/main/announcements/announcements-client');
 const { createAnnouncementsService } = require('./src/main/announcements/announcements-service');
@@ -387,6 +388,7 @@ const specialCorrection = createSpecialCorrection({
     programDataPath: process.env.ProgramData || process.env.PROGRAMDATA,
     licenseTokenClient: correctionsLicenseTokenClient
 });
+const elevatedDirectoryCopy = createElevatedDirectoryCopy({ execFile });
 const correctionsService = createCorrectionsService({
     app,
     fs,
@@ -408,6 +410,7 @@ const correctionsService = createCorrectionsService({
     libraryCatalogService,
     downloadManager,
     specialCorrection,
+    elevatedDirectoryCopy,
     launcherVersion
 });
 const premiumCatalogStore = createPremiumCatalogStore({

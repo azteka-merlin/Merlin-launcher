@@ -17,12 +17,11 @@ function createFixture() {
     fs.mkdirSync(licenseDirectory, { recursive: true });
     fs.mkdirSync(extractedPath, { recursive: true });
     fs.writeFileSync(path.join(licenseDirectory, '16425884_sc.dlf'), Buffer.from('license'));
-    fs.writeFileSync(path.join(extractedPath, 'token.ini'), '[token]\ntoken=RETORNO_TOKEN_MERLIN\n');
     fs.writeFileSync(path.join(extractedPath, 'anadius.cfg'), '"Token" "RETORNO_TOKEN_MERLIN"\n');
     return { root, programDataPath, extractedPath };
 }
 
-test('replaces exactly one placeholder in each extracted template', async t => {
+test('generates a token and fills anadius.cfg without requiring token.ini', async t => {
     const fixture = createFixture();
     t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
     let receivedLicense;
@@ -46,11 +45,65 @@ test('replaces exactly one placeholder in each extracted template', async t => {
 
     assert.equal(receivedLicense.appId, '4407750');
     assert.equal(receivedLicense.licenseBytes.toString(), 'license');
-    assert.equal(fs.readFileSync(path.join(fixture.extractedPath, 'token.ini'), 'utf8'), '[token]\ntoken=generated-token\n');
     assert.equal(fs.readFileSync(path.join(fixture.extractedPath, 'anadius.cfg'), 'utf8'), '"Token" "generated-token"\n');
+    assert.equal(fs.existsSync(path.join(fixture.extractedPath, 'token.ini')), false);
 });
 
-test('rejects missing license and invalid templates before writing either template', async t => {
+test('detects Steam and EA App installations for FC 27 without duplicating paths', t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    const eaAppGamePath = path.join(fixture.root, 'EA Games', 'EA SPORTS FC 27');
+    const steamGamePath = path.join(fixture.root, 'Steam', 'steamapps', 'common', 'EA SPORTS FC 27');
+    fs.mkdirSync(eaAppGamePath, { recursive: true });
+    fs.mkdirSync(steamGamePath, { recursive: true });
+
+    const special = createSpecialCorrection({
+        fs,
+        path,
+        programDataPath: fixture.programDataPath,
+        eaAppGamePath,
+        licenseTokenClient: { generate: async () => 'generated-token' }
+    });
+    const item = { appId: '4407750', activationType: 'license_token' };
+
+    assert.deepEqual(
+        special.findInstallations({
+            item,
+            steamInstallation: {
+                installed: true,
+                appId: '4407750',
+                gamePath: steamGamePath
+            }
+        }).map(installation => ({
+            platform: installation.platform,
+            gamePath: installation.gamePath
+        })),
+        [
+            { platform: 'steam', gamePath: steamGamePath },
+            { platform: 'ea_app', gamePath: eaAppGamePath }
+        ]
+    );
+
+    const eaOnly = special.findInstallations({ item });
+    assert.deepEqual(eaOnly, [{
+        installed: true,
+        appId: '4407750',
+        platform: 'ea_app',
+        gamePath: eaAppGamePath
+    }]);
+
+    const deduplicated = special.findInstallations({
+        item,
+        steamInstallation: {
+            installed: true,
+            appId: '4407750',
+            gamePath: eaAppGamePath
+        }
+    });
+    assert.equal(deduplicated.length, 1);
+});
+
+test('rejects missing license and invalid anadius.cfg before writing it', async t => {
     const fixture = createFixture();
     t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
     const special = createSpecialCorrection({
@@ -66,9 +119,9 @@ test('rejects missing license and invalid templates before writing either templa
 
     fs.writeFileSync(path.join(fixture.programDataPath, 'Electronic Arts', 'EA Services', 'License', '16425884_sc.dlf'), 'license');
     fs.writeFileSync(path.join(fixture.extractedPath, 'anadius.cfg'), 'missing placeholder');
-    const originalTokenIni = fs.readFileSync(path.join(fixture.extractedPath, 'token.ini'), 'utf8');
+    const originalAnadiusConfig = fs.readFileSync(path.join(fixture.extractedPath, 'anadius.cfg'), 'utf8');
     await assert.rejects(() => special.prepare({ item, extractedPath: fixture.extractedPath }), { code: 'token_templates_invalid' });
-    assert.equal(fs.readFileSync(path.join(fixture.extractedPath, 'token.ini'), 'utf8'), originalTokenIni);
+    assert.equal(fs.readFileSync(path.join(fixture.extractedPath, 'anadius.cfg'), 'utf8'), originalAnadiusConfig);
 });
 
 test('rejects license files above the one megabyte request limit', async t => {

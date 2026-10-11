@@ -15,6 +15,7 @@ function createCorrectionsService({
     libraryCatalogService,
     downloadManager,
     specialCorrection,
+    elevatedDirectoryCopy,
     launcherVersion
 }) {
     const { createZipArchiveTools } = require('../files/zip-archive-tools');
@@ -305,23 +306,39 @@ function createCorrectionsService({
         const item = await findItem(appId);
         if (!item) return { success: false, code: 'not_found' };
 
+        const isSpecialCorrection = specialCorrection?.appliesTo(item) === true;
         const steam = configuredSteamPath();
-        if (!steam.success) return steam;
+        if (!steam.success && !isSpecialCorrection) return steam;
 
-        const installation = steamService.findInstalledGame(item.appId, steam.steamPath);
-        if (!installation.installed) {
+        const steamInstallation = steam.success
+            ? steamService.findInstalledGame(item.appId, steam.steamPath)
+            : null;
+
+        if (!isSpecialCorrection && !steamInstallation.installed) {
             return {
                 success: false,
-                code: installation.code === 'not_installed'
+                code: steamInstallation.code === 'not_installed'
                     ? 'game_not_installed'
-                    : installation.code
+                    : steamInstallation.code
             };
         }
+
+        const installations = isSpecialCorrection
+            ? specialCorrection.findInstallations({ item, steamInstallation })
+            : [steamInstallation];
+        if (installations.length === 0) {
+            return { success: false, code: 'game_not_installed' };
+        }
+
+        const gamePaths = installations.map(installation => installation.gamePath);
 
         return {
             success: true,
             item: cloneItem(item),
-            installation
+            installation: installations[0],
+            installations,
+            gamePath: gamePaths[0],
+            gamePaths
         };
     }
 
@@ -493,6 +510,27 @@ function createCorrectionsService({
                 fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
                 fs.copyFileSync(sourcePath, destinationPath);
             }
+        }
+    }
+
+    async function applyToInstallation(sourceRoot, installation, operation) {
+        try {
+            copyDirectoryContents(sourceRoot, installation.gamePath, operation);
+        } catch (error) {
+            const needsElevation = installation.platform === 'ea_app'
+                && (error?.code === 'EPERM' || error?.code === 'EACCES');
+            if (needsElevation && elevatedDirectoryCopy?.copy) {
+                await elevatedDirectoryCopy.copy({
+                    sourcePath: sourceRoot,
+                    destinationPath: installation.gamePath
+                });
+                return;
+            }
+
+            const wrapped = new Error(error?.message || 'Unable to apply correction files.');
+            wrapped.code = needsElevation ? 'apply_permission_denied' : 'apply_failed';
+            wrapped.cause = error;
+            throw wrapped;
         }
     }
 
@@ -674,7 +712,10 @@ function createCorrectionsService({
                 stage: 'applying',
                 percent: 92
             });
-            copyDirectoryContents(extractedPath, prepared.installation.gamePath, operation);
+            for (const installation of prepared.installations) {
+                throwIfCancelled(operation);
+                await applyToInstallation(extractedPath, installation, operation);
+            }
 
             emitProgress(onProgress, item, {
                 operationId,
@@ -694,7 +735,12 @@ function createCorrectionsService({
                 success: true,
                 appId: item.appId,
                 gameName: item.gameName,
-                gamePath: prepared.installation.gamePath
+                gamePath: prepared.gamePath,
+                gamePaths: prepared.gamePaths,
+                installations: prepared.installations.map(installation => ({
+                    platform: installation.platform || 'steam',
+                    gamePath: installation.gamePath
+                }))
             };
         } catch (error) {
             if (error.code === 'cancelled') {

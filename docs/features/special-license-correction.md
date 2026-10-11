@@ -6,10 +6,11 @@ Este fluxo existe apenas para o AppID `4407750`. Ele esta separado de Premium: n
 
 1. O catalogo informa `activationType: "license_token"`, versao minima `1.6.8` e, quando configurada no override, `imageUrl`.
 2. **Baixar** salva o ZIP original e nao tenta gerar token.
-3. **Baixar e instalar** exige Steam pronta e jogo instalado, baixa/extrai o ZIP em diretorio temporario e le `%ProgramData%\Electronic Arts\EA Services\License\16425884_sc.dlf`.
+3. **Baixar e instalar** detecta o jogo pela Steam e/ou em `C:\Program Files\EA Games\EA SPORTS FC 27`, baixa/extrai o ZIP em diretorio temporario e le `%ProgramData%\Electronic Arts\EA Services\License\16425884_sc.dlf`.
 4. O launcher envia apenas esse `.dlf` autenticado para `/fixes/license-token?appid=4407750` com `X-Merlin-Version`.
-5. Antes de copiar qualquer arquivo para o jogo, exige exatamente um `token.ini` e um `anadius.cfg`, cada um com uma ocorrencia de `RETORNO_TOKEN_MERLIN`.
-6. O token substitui somente esse placeholder nos dois templates; depois os arquivos extraidos sao copiados para a pasta do jogo e os temporarios sao removidos.
+5. Antes de copiar qualquer arquivo para o jogo, exige exatamente um `anadius.cfg` com uma ocorrencia de `RETORNO_TOKEN_MERLIN`. `token.ini` nao e necessario.
+6. O token substitui somente esse placeholder no `anadius.cfg`; depois os arquivos extraidos sao copiados para todas as instalacoes detectadas (Steam, EA App ou ambas) e os temporarios sao removidos.
+7. No EA App, arquivos originais instalados sob `Program Files` podem exigir permissao administrativa para sobrescrita. O Launcher tenta a copia normal primeiro e solicita elevacao somente quando o Windows retorna `EPERM`/`EACCES` nesse destino.
 
 ## Regras e protecoes
 
