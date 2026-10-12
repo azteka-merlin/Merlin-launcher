@@ -155,6 +155,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
 
+    customGames: {
+        list: () => ipcRenderer.invoke('custom-games:list'),
+        refresh: () => ipcRenderer.invoke('custom-games:refresh'),
+        drives: () => ipcRenderer.invoke('custom-games:drives'),
+        install: (id, drive) => ipcRenderer.invoke('custom-games:install', { id, drive }),
+        cancel: () => ipcRenderer.invoke('custom-games:cancel'),
+        play: id => ipcRenderer.invoke('custom-games:play', id),
+        openFolder: id => ipcRenderer.invoke('custom-games:open-folder', id),
+        uninstall: id => ipcRenderer.invoke('custom-games:uninstall', id),
+        onProgress: callback => ipcRenderer.on('custom-games:progress', (_event, state) => callback(state)),
+        removeListeners: () => ipcRenderer.removeAllListeners('custom-games:progress')
+    },
+
     premium: {
         list: (payload) => ipcRenderer.invoke('premium:list', payload),
         refresh: () => ipcRenderer.invoke('premium:refresh'),

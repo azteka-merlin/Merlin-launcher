@@ -70,6 +70,7 @@
                     <button id="addGamesNavBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/plus.svg" alt=""><span data-i18n="add_game_source">Add game</span></button>
                     <button id="libraryBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/library.svg" alt=""><span data-i18n="library_button">Library</span></button>
                     <button id="correctionsBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/wrench.svg" alt=""><span data-i18n="corrections_button">Corrections</span></button>
+                    <button id="customGamesBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/gamepad-2.svg" alt=""><span data-i18n="custom_games_nav">Baixe e Jogue</span></button>
                     <button id="premiumBtn" class="side-nav-btn" type="button" aria-pressed="false"><img src="node_modules/lucide-static/icons/crown.svg" alt=""><span data-i18n="premium_button">Premium</span></button>
                 </nav>
                 <div class="sidebar-divider"></div>
@@ -499,6 +500,15 @@
                         </div>
                     </section>
 
+                    <section id="customGamesView" class="library-view corrections-view" aria-labelledby="customGamesTitle" hidden>
+                        <div class="library-card corrections-card custom-games-card">
+                            <header class="library-header"><h2 id="customGamesTitle" data-i18n="custom_games_title">Baixe e Jogue</h2><p data-i18n="custom_games_subtitle">Escolha um disco, instale e abra seus jogos pelo Merlin.</p></header>
+                            <div class="library-controls"><button id="customGamesRefresh" class="library-refresh-btn" type="button"><img src="node_modules/lucide-static/icons/refresh-cw.svg" alt=""><span data-i18n="custom_games_refresh">Atualizar</span></button><div class="library-search-wrap"><img src="node_modules/lucide-static/icons/search.svg" alt=""><label class="sr-only" for="customGamesSearch" data-i18n="custom_games_search">Buscar jogos</label><input id="customGamesSearch" type="search" data-i18n="custom_games_search_placeholder" placeholder="Buscar por nome" autocomplete="off"></div><label class="custom-games-preferred-drive"><span data-i18n="custom_games_drive">Disco</span><select id="customGamesPreferredDrive"></select></label></div>
+                            <div id="customGamesState" class="library-state" role="status"><span class="library-spinner" aria-hidden="true"></span><p data-i18n="custom_games_loading">Carregando jogos…</p></div>
+                            <div id="customGamesGrid" class="corrections-grid custom-games-grid" hidden></div>
+                        </div>
+                    </section>
+
                     <section id="premiumView" class="library-view corrections-view" aria-labelledby="premiumTitle" hidden>
                         <div class="library-card corrections-card premium-card-shell">
                             <header class="library-header">
@@ -857,6 +867,15 @@
             </div>
         </div>
     </div>
+
+    <div id="customGamesInstallModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="customGamesInstallTitle" hidden>
+        <div class="library-modal-card custom-games-modal-card"><h2 id="customGamesInstallTitle" data-i18n="custom_games_install_title">Instalar jogo</h2><p id="customGamesInstallName"></p><div id="customGamesInstallNote" class="corrections-admin-note-text" hidden></div><label class="custom-games-drive-label"><span data-i18n="custom_games_choose_drive">Escolha o disco</span><select id="customGamesDrive"></select></label><p id="customGamesInstallPath" class="custom-games-path"></p><div class="library-modal-actions"><button id="customGamesInstallCancel" class="btn btn-secondary" type="button" data-i18n="custom_games_cancel">Cancelar</button><button id="customGamesInstallConfirm" class="btn btn-primary" type="button" data-i18n="custom_games_install">Baixar e instalar</button></div></div>
+    </div>
+    <div id="customGamesProgressModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="customGamesProgressTitle" hidden>
+        <div class="library-modal-card corrections-progress-card"><p class="corrections-progress-eyebrow" data-i18n="custom_games_title">Baixe e Jogue</p><h2 id="customGamesProgressTitle" data-i18n="custom_games_downloading">Baixando jogo</h2><p id="customGamesProgressName"></p><p id="customGamesProgressDetail"></p><div class="progress-bar corrections-progress-bar"><div id="customGamesProgressBar" class="progress-fill"></div></div><div class="library-modal-actions"><button id="customGamesProgressCancel" class="btn btn-secondary" type="button" data-i18n="custom_games_cancel_download">Cancelar download</button><button id="customGamesProgressClose" class="btn btn-primary" type="button" data-i18n="custom_games_close" hidden>Fechar</button></div></div>
+    </div>
+    <div id="customGamesInfoModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="customGamesInfoTitle" hidden><div class="library-modal-card corrections-admin-note-card"><h2 id="customGamesInfoTitle" data-i18n="custom_games_info">Instruções</h2><p id="customGamesInfoName"></p><div id="customGamesInfoText" class="corrections-admin-note-text"></div><div class="library-modal-actions"><button id="customGamesInfoClose" class="btn btn-primary" type="button" data-i18n="custom_games_close">Fechar</button></div></div></div>
+    <div id="customGamesUninstallModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="customGamesUninstallTitle" hidden><div class="library-modal-card"><h2 id="customGamesUninstallTitle" data-i18n="custom_games_uninstall_title">Desinstalar jogo?</h2><p id="customGamesUninstallName"></p><p data-i18n="custom_games_uninstall_message">A pasta do jogo será movida para a Lixeira. Seus saves fora dela não serão removidos.</p><div class="library-modal-actions"><button id="customGamesUninstallCancel" class="btn btn-secondary" type="button" data-i18n="custom_games_cancel">Cancelar</button><button id="customGamesUninstallConfirm" class="btn btn-danger" type="button" data-i18n="custom_games_uninstall">Desinstalar</button></div></div></div>
 
     <div id="correctionsConfirmModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="correctionsConfirmTitle" hidden>
         <div class="library-modal-card">
@@ -1330,6 +1349,7 @@
     <script src="src/renderer/library/library-model.js"></script>
     <script src="src/renderer/library/library.js"></script>
     <script src="src/renderer/corrections/corrections.js"></script>
+    <script src="src/renderer/custom-games/custom-games.js"></script>
     <script src="src/renderer/premium/premium.js"></script>
     <script src="src/renderer/cloud-saves/cloud-saves.js"></script>
     <script src="src/renderer/access/access.js"></script>

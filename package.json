@@ -1,6 +1,6 @@
 {
   "name": "merlin",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Steam game injector with manifest and lua support",
   "main": "main.js",
   "scripts": {
@@ -36,7 +36,8 @@
     "cheerio": "^1.0.0-rc.12",
     "lucide-static": "^1.45.0",
     "node-unrar-js": "^2.0.2",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "yauzl": "^3.3.0"
   },
   "build": {
     "appId": "com.merlin.app",

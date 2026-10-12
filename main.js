@@ -47,6 +47,8 @@ const { createGameInstaller } = require('./src/main/games/game-installer');
 const { createManifestOverrideService } = require('./src/main/games/manifest-override-service');
 const { parseSteamGameLink } = require('./src/main/games/steam-link-parser');
 const { registerCorrectionsIpc } = require('./src/main/ipc/register-corrections-ipc');
+const { registerCustomGamesIpc } = require('./src/main/ipc/register-custom-games-ipc');
+const { createCustomGamesService } = require('./src/main/custom-games/custom-games-service');
 const { registerExistingIpc } = require('./src/main/ipc/register-existing-ipc');
 const { registerAuthIpc } = require('./src/main/ipc/register-auth-ipc');
 const { registerAnnouncementsIpc } = require('./src/main/ipc/register-announcements-ipc');
@@ -315,6 +317,7 @@ const authSession = createAuthSession({
     baseUrl: apiBaseUrl,
     onAuthRequired: code => mainWindow?.webContents.send('auth:required', { code })
 });
+const customGamesService = createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell });
 const cloudSyncService = createCloudSyncService({
     axios,
     authSession,
@@ -706,6 +709,7 @@ registerSupportLogIpc({
 registerGamesIpc({ ipcMain, addGamesService });
 registerLibraryIpc({ ipcMain, libraryService });
 registerCorrectionsIpc({ ipcMain, correctionsService });
+registerCustomGamesIpc({ ipcMain, service: customGamesService });
 registerPremiumIpc({ ipcMain, premiumService });
 registerPollsIpc({ ipcMain, pollsService });
 registerSteamPluginIpc({
