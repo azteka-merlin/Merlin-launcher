@@ -709,7 +709,7 @@ registerSupportLogIpc({
 registerGamesIpc({ ipcMain, addGamesService });
 registerLibraryIpc({ ipcMain, libraryService });
 registerCorrectionsIpc({ ipcMain, correctionsService });
-registerCustomGamesIpc({ ipcMain, service: customGamesService });
+registerCustomGamesIpc({ ipcMain, service: customGamesService, getMainWindow: () => mainWindow });
 registerPremiumIpc({ ipcMain, premiumService });
 registerPollsIpc({ ipcMain, pollsService });
 registerSteamPluginIpc({

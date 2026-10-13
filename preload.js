@@ -158,7 +158,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     customGames: {
         list: () => ipcRenderer.invoke('custom-games:list'),
         refresh: () => ipcRenderer.invoke('custom-games:refresh'),
-        drives: () => ipcRenderer.invoke('custom-games:drives'),
+        drives: id => ipcRenderer.invoke('custom-games:drives', id),
         install: (id, drive) => ipcRenderer.invoke('custom-games:install', { id, drive }),
         cancel: () => ipcRenderer.invoke('custom-games:cancel'),
         play: id => ipcRenderer.invoke('custom-games:play', id),

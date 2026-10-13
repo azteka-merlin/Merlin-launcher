@@ -14,7 +14,9 @@ const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
 
 function updateCrc(crc, bytes) {
     let value = crc;
-    for (const byte of bytes) value = CRC_TABLE[(value ^ byte) & 0xff] ^ (value >>> 8);
+    for (let index = 0; index < bytes.length; index++) {
+        value = CRC_TABLE[(value ^ bytes[index]) & 0xff] ^ (value >>> 8);
+    }
     return value >>> 0;
 }
 
@@ -43,7 +45,49 @@ function openEntryStream(zipfile, entry) {
         (error, stream) => error ? reject(error) : resolve(stream)));
 }
 
+async function inspectArchive(zipPath, destination, isCancelled) {
+    const zipfile = await openZip(zipPath);
+    const seen = new Set();
+    let files = 0;
+    let totalBytes = 0;
+
+    return new Promise((resolve, reject) => {
+        let finished = false;
+        const fail = error => {
+            if (finished) return;
+            finished = true;
+            zipfile.close();
+            reject(error);
+        };
+        zipfile.on('error', fail);
+        zipfile.on('end', () => {
+            if (finished) return;
+            finished = true;
+            zipfile.close();
+            resolve({ files, totalBytes });
+        });
+        zipfile.on('entry', entry => {
+            try {
+                if (isCancelled()) throw new Error('cancelled');
+                const normalized = entry.fileName.replace(/\\/g, '/');
+                safeEntryPath(destination, normalized);
+                const relative = normalized.replace(/\/$/, '').toLowerCase();
+                if (seen.has(relative)) throw new Error('duplicate_archive_path');
+                seen.add(relative);
+                const unixMode = entry.externalFileAttributes >>> 16;
+                if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
+                if (++files > MAX_FILES) throw new Error('archive_file_limit');
+                totalBytes += entry.uncompressedSize;
+                if (totalBytes > MAX_UNCOMPRESSED) throw new Error('archive_size_limit');
+                zipfile.readEntry();
+            } catch (error) { fail(error); }
+        });
+        zipfile.readEntry();
+    });
+}
+
 async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCancelled = () => false) {
+    const archive = await inspectArchive(zipPath, destination, isCancelled);
     const zipfile = await openZip(zipPath);
     const seen = new Set();
     let files = 0;
@@ -85,6 +129,7 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
                             extracted += chunk.length;
                             if (size > entry.uncompressedSize || extracted > MAX_UNCOMPRESSED) return callback(new Error('archive_size_limit'));
                             crc = updateCrc(crc, chunk);
+                            onProgress({ files, totalFiles: archive.files, bytes: extracted, totalBytes: archive.totalBytes });
                             callback(null, chunk);
                         }
                     });
@@ -94,7 +139,7 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
                         throw new Error('archive_integrity_failed');
                     }
                 }
-                onProgress({ files, bytes: extracted, totalBytes: declaredTotal });
+                onProgress({ files, totalFiles: archive.files, bytes: extracted, totalBytes: archive.totalBytes });
                 zipfile.readEntry();
             } catch (error) { fail(error); }
         });

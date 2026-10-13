@@ -1,11 +1,14 @@
-function registerCustomGamesIpc({ ipcMain, service }) {
+function registerCustomGamesIpc({ ipcMain, service, getMainWindow = () => null }) {
+    service.subscribeProgress?.(progress => {
+        const window = getMainWindow();
+        if (window && !window.isDestroyed?.() && !window.webContents.isDestroyed()) {
+            window.webContents.send('custom-games:progress', progress);
+        }
+    });
     ipcMain.handle('custom-games:list', () => service.list());
     ipcMain.handle('custom-games:refresh', () => service.refresh());
-    ipcMain.handle('custom-games:drives', () => service.listDrives());
-    ipcMain.handle('custom-games:install', (event, { id, drive }) =>
-        service.install(id, drive, progress => {
-            if (!event.sender.isDestroyed()) event.sender.send('custom-games:progress', progress);
-        }));
+    ipcMain.handle('custom-games:drives', (_event, id) => service.listDrives(id));
+    ipcMain.handle('custom-games:install', (_event, { id, drive }) => service.install(id, drive));
     ipcMain.handle('custom-games:cancel', () => service.cancel());
     ipcMain.handle('custom-games:play', (_event, id) => service.play(id));
     ipcMain.handle('custom-games:open-folder', (_event, id) => service.openFolder(id));
