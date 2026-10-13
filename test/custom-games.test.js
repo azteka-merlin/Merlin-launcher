@@ -220,6 +220,7 @@ test('folder packages download files directly without ZIP extraction', async () 
         const id = '35b22b86-7c0a-4a68-b845-f1807277995a';
         const firstId = 'ad35e85d-86ac-4ed2-8c27-2c891a6717c1';
         const secondId = '97ab9873-99ea-49d4-bfab-7a80002744cb';
+        const emptyId = '9d589f0a-428d-48b1-96b4-2f5f216e1cc3';
         const contents = new Map([
             [firstId, Buffer.from('game executable fixture')],
             [secondId, Buffer.from('nested data fixture')],
@@ -231,6 +232,8 @@ test('folder packages download files directly without ZIP extraction', async () 
         const manifest = { success: true, gameId: id, totalSizeBytes, files: [
             { id: firstId, path: 'Bin/Game.exe', sizeBytes: contents.get(firstId).length, etag: 'etag-one' },
             { id: secondId, path: 'Data/level.dat', sizeBytes: contents.get(secondId).length, etag: 'etag-two' },
+            { id: emptyId, path: 'Data/empty.flag', sizeBytes: 0,
+                sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' },
         ] };
         const requests = [];
         const axios = { get: async (url, options = {}) => {
@@ -259,6 +262,7 @@ test('folder packages download files directly without ZIP extraction', async () 
         assert.equal(result.success, true);
         assert.equal(fs.readFileSync(path.join(result.path, 'Bin', 'Game.exe'), 'utf8'), 'game executable fixture');
         assert.equal(fs.readFileSync(path.join(result.path, 'Data', 'level.dat'), 'utf8'), 'nested data fixture');
+        assert.equal(fs.statSync(path.join(result.path, 'Data', 'empty.flag')).size, 0);
         assert.equal(fs.readFileSync(path.join(result.path, '.merlin-install.json'), 'utf8').includes(item.archiveKey), true);
         assert.equal(progress.some(state => state.stage === 'extracting'), false);
         assert.equal(progress.at(-1).stage, 'completed');

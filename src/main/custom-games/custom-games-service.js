@@ -447,8 +447,12 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const seen = new Set();
         const normalizedFiles = files.map(file => {
             if (!/^[a-f0-9-]{36}$/i.test(String(file.id || '')) || !Number.isSafeInteger(file.sizeBytes) ||
-                file.sizeBytes < 1 || file.sizeBytes > 30 * 1024 ** 3 || typeof file.path !== 'string' ||
+                file.sizeBytes < 0 || file.sizeBytes > 30 * 1024 ** 3 || typeof file.path !== 'string' ||
                 (file.sha256 != null && !/^[a-f0-9]{64}$/i.test(String(file.sha256)))) {
+                throw new Error('invalid_folder_manifest');
+            }
+            if (file.sizeBytes === 0 && String(file.sha256).toLowerCase() !==
+                'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855') {
                 throw new Error('invalid_folder_manifest');
             }
             const target = safeEntryPath(staging, file.path);
@@ -516,6 +520,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             }
             const existing = await fs.promises.lstat(file.target).catch(() => null);
             if (existing && (!existing.isFile() || existing.isSymbolicLink())) throw new Error('unsafe_install_path');
+            if (!existing && file.sizeBytes === 0) await fs.promises.writeFile(file.target, Buffer.alloc(0), { flag: 'wx' });
             if (existing && existing.size > file.sizeBytes) {
                 await fs.promises.rm(file.target, { force: true });
                 localSizes.set(file.id, 0);
