@@ -45,6 +45,21 @@ test('ZIP extraction streams game files into the selected staging folder', async
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('bundle extraction rejects an entry not declared in the manifest before writing files', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-bundle-guard-'));
+    try {
+        const zip = new AdmZip();
+        zip.addFile('Game/expected.dat', Buffer.from('ok'));
+        zip.addFile('Game/unexpected.dat', Buffer.from('no'));
+        const archive = path.join(root, 'bundle.zip');
+        zip.writeZip(archive);
+        const staging = path.join(root, 'staging');
+        await assert.rejects(extractSafeZip(archive, staging, () => {}, () => false,
+            new Map([['game/expected.dat', 2]])), /archive_manifest_mismatch/);
+        assert.equal(fs.existsSync(path.join(staging, 'Game', 'expected.dat')), false);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('extraction progress is throttled so large archives do not flood the renderer', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-progress-'));
     const originalNow = Date.now;
@@ -590,5 +605,51 @@ test('a catalog executable added after installation enables Play despite an old 
         const result = await service.list();
         assert.equal(result.games[0].installed.path, installedPath);
         assert.equal(result.games[0].executablePath, 'SonsOfSparta-PS5.exe');
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('hybrid folder installs a bundled small file and a direct large file atomically', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-hybrid-folder-'));
+    try {
+        const disk = path.join(root, 'disk');
+        fs.mkdirSync(disk);
+        const id = 'f87393ac-325e-4bb9-bad5-4cd0e514482a';
+        const directId = '029e2660-0901-4e09-af3c-331b4a114e8c';
+        const bundleId = '30cf327e-fc88-4448-ae09-102f82f88bee';
+        const direct = Buffer.from('large file fixture');
+        const small = Buffer.from('small bundled fixture');
+        const zip = new AdmZip();
+        zip.addFile('Data/small.txt', small);
+        const archive = zip.toBuffer();
+        const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+        const item = { id, name: 'Hybrid Game', installName: 'Hybrid Game', packageType: 'folder',
+            archiveKey: `${id}/manifests/7508225a-baa4-43a6-8023-81888e5bfa60.json`,
+            archiveSize: direct.length + small.length, executablePath: null };
+        const objects = new Map([[directId, direct], [bundleId, archive]]);
+        const manifest = { gameId: id, totalSizeBytes: item.archiveSize,
+            files: [{ id: directId, path: 'Data/large.dat', sizeBytes: direct.length,
+                sha256: digest(direct) }],
+            bundles: [{ id: bundleId, sizeBytes: archive.length, sha256: digest(archive),
+                files: [{ path: 'Data/small.txt', sizeBytes: small.length, sha256: digest(small) }] }] };
+        const axios = { get: async (url, options = {}) => {
+            if (url.endsWith('/custom-games')) return { data: { games: [item] } };
+            if (url.endsWith('/manifest')) return { data: manifest };
+            const fileId = url.split('/').at(-1);
+            const body = objects.get(fileId);
+            const match = /^bytes=(\d+)-(\d+)$/.exec(options.headers.Range);
+            const start = Number(match[1]);
+            const end = Number(match[2]);
+            return { status: 206, headers: { 'content-range': `bytes ${start}-${end}/${body.length}` },
+                data: Readable.from([body.subarray(start, end + 1)]) };
+        } };
+        const service = createCustomGamesService({ app: { getPath: () => root }, axios,
+            authSession: { getAccessToken: async () => 'token' },
+            apiBaseUrl: 'https://staging.api-merlin.com/api', shell: {}, testDriveRoot: () => disk });
+        await service.list();
+        const result = await service.install(id, 'X');
+        assert.equal(result.success, true, JSON.stringify(result));
+        assert.equal(fs.readFileSync(path.join(result.path, 'Data', 'large.dat'), 'utf8'), direct.toString());
+        assert.equal(fs.readFileSync(path.join(result.path, 'Data', 'small.txt'), 'utf8'), small.toString());
+        assert.equal(fs.existsSync(path.join(result.path, `.merlin-bundle-${bundleId}.zip`)), false);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

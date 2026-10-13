@@ -45,7 +45,7 @@ function openEntryStream(zipfile, entry) {
         (error, stream) => error ? reject(error) : resolve(stream)));
 }
 
-async function inspectArchive(zipPath, destination, isCancelled) {
+async function inspectArchive(zipPath, destination, isCancelled, expectedEntries = null) {
     const zipfile = await openZip(zipPath);
     const seen = new Set();
     let files = 0;
@@ -62,6 +62,7 @@ async function inspectArchive(zipPath, destination, isCancelled) {
         zipfile.on('error', fail);
         zipfile.on('end', () => {
             if (finished) return;
+            if (expectedEntries && seen.size !== expectedEntries.size) return fail(new Error('archive_manifest_mismatch'));
             finished = true;
             zipfile.close();
             resolve({ files, totalBytes });
@@ -74,6 +75,8 @@ async function inspectArchive(zipPath, destination, isCancelled) {
                 const relative = normalized.replace(/\/$/, '').toLowerCase();
                 if (seen.has(relative)) throw new Error('duplicate_archive_path');
                 seen.add(relative);
+                if (expectedEntries && (normalized.endsWith('/') ||
+                    expectedEntries.get(relative) !== entry.uncompressedSize)) throw new Error('archive_manifest_mismatch');
                 const unixMode = entry.externalFileAttributes >>> 16;
                 if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
                 if (++files > MAX_FILES) throw new Error('archive_file_limit');
@@ -86,8 +89,8 @@ async function inspectArchive(zipPath, destination, isCancelled) {
     });
 }
 
-async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCancelled = () => false) {
-    const archive = await inspectArchive(zipPath, destination, isCancelled);
+async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCancelled = () => false, expectedEntries = null) {
+    const archive = await inspectArchive(zipPath, destination, isCancelled, expectedEntries);
     const zipfile = await openZip(zipPath);
     const seen = new Set();
     let files = 0;
@@ -118,8 +121,13 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
                 if (declaredTotal > MAX_UNCOMPRESSED) throw new Error('archive_size_limit');
                 if (entry.fileName.endsWith('/')) {
                     await fs.promises.mkdir(target, { recursive: true });
+                    if ((await fs.promises.realpath(target)).toLowerCase() !== target.toLowerCase()) {
+                        throw new Error('unsafe_install_path');
+                    }
                 } else {
                     await fs.promises.mkdir(path.dirname(target), { recursive: true });
+                    if ((await fs.promises.realpath(path.dirname(target))).toLowerCase() !==
+                        path.dirname(target).toLowerCase()) throw new Error('unsafe_install_path');
                     let size = 0;
                     let crc = 0xffffffff;
                     const verifier = new Transform({

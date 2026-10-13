@@ -437,8 +437,12 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         });
         const manifest = response.data;
         const files = manifest?.files;
+        const bundles = manifest?.bundles || [];
         const total = Number(manifest?.totalSizeBytes);
-        if (manifest?.gameId !== item.id || !validFolderManifestFileCount(files) ||
+        const finalFileCount = (Array.isArray(files) ? files.length : 0) +
+            (Array.isArray(bundles) ? bundles.reduce((sum, bundle) => sum + (Array.isArray(bundle.files) ? bundle.files.length : 0), 0) : 0);
+        if (manifest?.gameId !== item.id || !Array.isArray(files) || !Array.isArray(bundles) ||
+            finalFileCount < 1 || finalFileCount > 20000 || bundles.length > 100 ||
             !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
@@ -464,6 +468,41 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 sha256: file.sha256 ? String(file.sha256).toLowerCase() : null,
                 target, count: Math.ceil(file.sizeBytes / FOLDER_CHUNK_SIZE) };
         });
+        const normalizedBundles = bundles.map(bundle => {
+            if (!/^[a-f0-9-]{36}$/i.test(String(bundle.id || '')) ||
+                !Number.isSafeInteger(bundle.sizeBytes) || bundle.sizeBytes < 1 || bundle.sizeBytes > 1024 ** 3 ||
+                !/^[a-f0-9]{64}$/i.test(String(bundle.sha256 || '')) ||
+                !Array.isArray(bundle.files) || bundle.files.length < 1 || bundle.files.length > 3000 ||
+                normalizedFiles.some(file => file.id.toLowerCase() === bundle.id.toLowerCase())) {
+                throw new Error('invalid_folder_manifest');
+            }
+            const members = bundle.files.map(member => {
+                if (!Number.isSafeInteger(member.sizeBytes) || member.sizeBytes < 0 || member.sizeBytes >= 1024 ** 2 ||
+                    typeof member.path !== 'string' || !/^[a-f0-9]{64}$/i.test(String(member.sha256 || ''))) {
+                    throw new Error('invalid_folder_manifest');
+                }
+                const target = safeEntryPath(staging, member.path);
+                const relative = path.relative(staging, target).toLocaleLowerCase();
+                if (seen.has(relative)) throw new Error('invalid_folder_manifest');
+                seen.add(relative);
+                declared += member.sizeBytes;
+                return { path: member.path, target, sizeBytes: member.sizeBytes,
+                    sha256: String(member.sha256).toLowerCase() };
+            });
+            const virtualPath = `.merlin-bundle-${bundle.id}.zip`;
+            if (seen.has(virtualPath.toLowerCase())) throw new Error('invalid_folder_manifest');
+            seen.add(virtualPath.toLowerCase());
+            return { id: bundle.id, path: virtualPath, sizeBytes: bundle.sizeBytes,
+                etag: bundle.etag || null, sha256: String(bundle.sha256).toLowerCase(),
+                target: safeEntryPath(staging, virtualPath), members,
+                count: Math.ceil(bundle.sizeBytes / FOLDER_CHUNK_SIZE) };
+        });
+        const bundleIds = new Set(normalizedBundles.map(bundle => bundle.id.toLowerCase()));
+        if (bundleIds.size !== normalizedBundles.length ||
+            normalizedBundles.some(bundle => normalizedFiles.some(file => file.id.toLowerCase() === bundle.id.toLowerCase()))) {
+            throw new Error('invalid_folder_manifest');
+        }
+        normalizedFiles.push(...normalizedBundles);
         if (declared !== total) throw new Error('invalid_folder_manifest');
         for (const relative of seen) {
             const parts = relative.split(path.sep);
@@ -540,16 +579,18 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             emit(operation, onProgress, 'verifying', { bytes: verifiedExistingBytes, totalBytes: verifyTotal });
         }
         const alreadyDownloaded = [...localSizes.values()].reduce((sum, bytes) => sum + bytes, 0);
+        const transferTotal = normalizedFiles.reduce((sum, file) => sum + file.sizeBytes, 0);
         const statfs = await fs.promises.statfs(gamesRoot);
         const available = Number(statfs.bavail) * Number(statfs.bsize);
-        if (available < total - alreadyDownloaded + INSTALL_SAFETY_BYTES) throw new Error('disk_space');
+        if (available < total + normalizedBundles.reduce((sum, bundle) => sum + bundle.sizeBytes, 0) -
+            alreadyDownloaded + INSTALL_SAFETY_BYTES) throw new Error('disk_space');
         await saveJson(stateFile, state);
 
         let received = alreadyDownloaded;
         let completedFiles = normalizedFiles.filter(file => localSizes.get(file.id) === file.sizeBytes).length;
         const inFlight = new Map();
         const report = (force = false) => emit(operation, onProgress, 'downloading', {
-            received, total, completedFiles, totalFiles: normalizedFiles.length,
+            received, total: transferTotal, completedFiles, totalFiles: normalizedFiles.length,
         }, force);
         report();
 
@@ -593,7 +634,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                                 inFlight.set(file.id, position - start);
                                 emit(operation, onProgress, 'downloading', {
                                     received: received + [...inFlight.values()].reduce((sum, bytes) => sum + bytes, 0),
-                                    total, completedFiles, totalFiles: normalizedFiles.length,
+                                    total: transferTotal, completedFiles, totalFiles: normalizedFiles.length,
                                 });
                             }
                             if (position !== end + 1) throw new Error('incomplete_range');
@@ -658,8 +699,30 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         await runQueue(orderedFiles.filter(file => file.sizeBytes >= SMALL_FILE_LIMIT), DOWNLOAD_WORKERS);
         await runQueue(orderedFiles.filter(file => file.sizeBytes < SMALL_FILE_LIMIT), SMALL_FILE_WORKERS);
         if (normalizedFiles.some(file => localSizes.get(file.id) !== file.sizeBytes)) throw new Error('incomplete_download');
+        for (const bundle of normalizedBundles) {
+            const expected = new Map(bundle.members.map(member => [member.path.toLowerCase(), member.sizeBytes]));
+            // A previous run may have stopped halfway through extraction. Keep its ZIP
+            // for resume, but discard only that bundle's incomplete output before retry.
+            for (const member of bundle.members) {
+                const existing = await fs.promises.lstat(member.target).catch(() => null);
+                if (existing && (!existing.isFile() || existing.isSymbolicLink())) throw new Error('unsafe_install_path');
+                if (existing) await fs.promises.unlink(member.target);
+            }
+            emit(operation, onProgress, 'extracting', { files: 0, totalFiles: bundle.members.length,
+                bytes: 0, totalBytes: bundle.members.reduce((sum, member) => sum + member.sizeBytes, 0) });
+            await extractSafeZip(bundle.target, staging,
+                details => emit(operation, onProgress, 'extracting', details),
+                () => operation.controller.signal.aborted, expected);
+            for (const member of bundle.members) {
+                const actual = await sha256File(member.target, bytes => emit(operation, onProgress, 'verifying', {
+                    bytes, totalBytes: member.sizeBytes,
+                }), operation.controller.signal);
+                if (actual !== member.sha256) throw new Error('checksum_mismatch');
+            }
+            await fs.promises.unlink(bundle.target);
+        }
         await saveJson(stateFile, state);
-        report(true);
+        if (!normalizedBundles.length) report(true);
         return { staging, stateFile, gamesRoot, folder: true, gamesRootPath };
     }
 
