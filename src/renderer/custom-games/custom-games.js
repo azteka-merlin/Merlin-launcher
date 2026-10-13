@@ -267,6 +267,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let detail = '';
         if (state.stage === 'downloading') {
             detail = tr('custom_games_progress', { received: size(current), total: size(total), percent });
+            if (Number.isInteger(state.totalFiles) && state.totalFiles > 0) {
+                detail += ` · ${state.completedFiles || 0}/${state.totalFiles}`;
+            }
         } else if (extracting) {
             detail = tr('custom_games_extract_progress', { files: state.files || 0 });
         } else if (verifying) {
@@ -282,7 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const eta = Number.isFinite(Number(state.etaSeconds)) && state.etaSeconds !== null
             ? tr('custom_games_speed_eta', { speed: size(speed), time: formatEta(state.etaSeconds) })
             : tr('custom_games_eta_calculating');
-        const rate = terminal ? '' : eta;
+        // Folder checksums are per-file, not a monotonic whole-game progress.
+        // A time estimate based on one file would be misleading here.
+        const rate = terminal || verifying ? '' : eta;
         el.customGamesProgressTitle.textContent = title;
         el.customGamesProgressName.textContent = name;
         el.customGamesProgressDetail.textContent = detail;

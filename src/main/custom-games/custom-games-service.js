@@ -7,6 +7,9 @@ const { extractSafeZip, safeEntryPath } = require('./safe-zip');
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
 const DOWNLOAD_WORKERS = 4;
+const SMALL_FILE_WORKERS = 12;
+const SMALL_FILE_LIMIT = 64 * 1024 * 1024;
+const RATE_WINDOW_MS = 30_000;
 const INSTALL_SAFETY_BYTES = 512 * 1024 * 1024;
 const MARKER = '.merlin-install.json';
 
@@ -208,31 +211,31 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const progressTotal = stage === 'downloading' ? Number(extra.total) : Number(extra.totalBytes);
         const terminal = ['completed', 'failed', 'cancelled'].includes(stage);
         const stageChanged = stage !== operation.rateStage;
-        if (stageChanged) {
-            operation.rateStage = stage;
-            operation.rateSamples = [];
-            operation.lastRateSample = null;
-        }
+        operation.rateStage = stage;
+        operation.rateStats ||= Object.create(null);
+        const rate = operation.rateStats[stage] ||= { samples: [], last: null };
 
         // Extraction can report once per decompressed stream chunk. Keep the same
         // bounded IPC cadence for every stage and do rate math only when publishing.
         const shouldPublish = force || terminal || stageChanged || now - (operation.lastEmit || 0) >= 400;
         if (shouldPublish && Number.isFinite(progressValue) && Number.isFinite(progressTotal)) {
-            const previous = operation.lastRateSample;
-            if (previous && now > previous.at && progressValue >= previous.value) {
-                operation.rateSamples.push({ at: now, bytes: progressValue - previous.value });
-                operation.rateSamples = operation.rateSamples.filter(sample => now - sample.at <= 8000);
+            const previous = rate.last;
+            if (previous && (now - previous.at > RATE_WINDOW_MS || progressValue < previous.value)) {
+                rate.samples = [];
+            } else if (previous && now > previous.at) {
+                rate.samples.push({ from: previous.at, at: now, bytes: progressValue - previous.value });
             }
-            operation.lastRateSample = { at: now, value: progressValue };
+            rate.samples = rate.samples.filter(sample => now - sample.at <= RATE_WINDOW_MS);
+            rate.last = { at: now, value: progressValue };
         }
         let speedBytesPerSecond = operation.snapshot?.speedBytesPerSecond || 0;
         let etaSeconds = operation.snapshot?.etaSeconds ?? null;
         if (shouldPublish) {
-            const sampleBytes = operation.rateSamples.reduce((sum, sample) => sum + sample.bytes, 0);
-            const firstSampleAt = operation.rateSamples[0]?.at;
-            const elapsedMs = firstSampleAt ? Math.max(0, now - firstSampleAt) : 0;
+            const sampleBytes = rate.samples.reduce((sum, sample) => sum + sample.bytes, 0);
+            const firstSampleAt = rate.samples[0]?.from;
+            const elapsedMs = firstSampleAt == null ? 0 : Math.max(0, now - firstSampleAt);
             speedBytesPerSecond = elapsedMs > 0 ? sampleBytes * 1000 / elapsedMs : 0;
-            etaSeconds = speedBytesPerSecond > 0 && Number.isFinite(progressValue) && Number.isFinite(progressTotal)
+            etaSeconds = elapsedMs >= 8_000 && speedBytesPerSecond > 0 && Number.isFinite(progressValue) && Number.isFinite(progressTotal)
                 ? Math.max(0, Math.ceil((progressTotal - progressValue) / speedBytesPerSecond)) : null;
         }
         operation.snapshot = {
@@ -533,8 +536,11 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         await saveJson(stateFile, state);
 
         let received = alreadyDownloaded;
+        let completedFiles = normalizedFiles.filter(file => localSizes.get(file.id) === file.sizeBytes).length;
         const inFlight = new Map();
-        const report = (force = false) => emit(operation, onProgress, 'downloading', { received, total }, force);
+        const report = (force = false) => emit(operation, onProgress, 'downloading', {
+            received, total, completedFiles, totalFiles: normalizedFiles.length,
+        }, force);
         report();
 
         const downloadFile = async (file, integrityAttempt = 0) => {
@@ -576,7 +582,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                                 position += chunk.length;
                                 inFlight.set(file.id, position - start);
                                 emit(operation, onProgress, 'downloading', {
-                                    received: received + [...inFlight.values()].reduce((sum, bytes) => sum + bytes, 0), total,
+                                    received: received + [...inFlight.values()].reduce((sum, bytes) => sum + bytes, 0),
+                                    total, completedFiles, totalFiles: normalizedFiles.length,
                                 });
                             }
                             if (position !== end + 1) throw new Error('incomplete_range');
@@ -620,22 +627,26 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                     return downloadFile(file, integrityAttempt + 1);
                 }
             }
+            completedFiles += 1;
+            report();
         };
-        const orderedFiles = [...normalizedFiles].sort((a, b) => b.sizeBytes - a.sizeBytes);
-        let next = 0;
-        const worker = async () => {
-            while (next < orderedFiles.length) {
-                const file = orderedFiles[next++];
-                try { await downloadFile(file); }
-                catch (error) { operation.controller.abort(); throw error; }
-            }
+        const orderedFiles = normalizedFiles.filter(file => localSizes.get(file.id) !== file.sizeBytes)
+            .sort((a, b) => b.sizeBytes - a.sizeBytes);
+        const runQueue = async (queue, workers) => {
+            let next = 0;
+            const worker = async () => {
+                while (next < queue.length) {
+                    const file = queue[next++];
+                    try { await downloadFile(file); }
+                    catch (error) { operation.controller.abort(); throw error; }
+                }
+            };
+            const results = await Promise.allSettled(Array.from({ length: Math.min(workers, queue.length) }, worker));
+            const failure = results.find(result => result.status === 'rejected');
+            if (failure) throw failure.reason;
         };
-        const results = await Promise.allSettled(Array.from({ length: Math.min(DOWNLOAD_WORKERS, orderedFiles.length) }, worker));
-        const failure = results.find(result => result.status === 'rejected');
-        if (failure) {
-            operation.controller.abort();
-            throw failure.reason;
-        }
+        await runQueue(orderedFiles.filter(file => file.sizeBytes >= SMALL_FILE_LIMIT), DOWNLOAD_WORKERS);
+        await runQueue(orderedFiles.filter(file => file.sizeBytes < SMALL_FILE_LIMIT), SMALL_FILE_WORKERS);
         if (normalizedFiles.some(file => localSizes.get(file.id) !== file.sizeBytes)) throw new Error('incomplete_download');
         await saveJson(stateFile, state);
         report(true);

@@ -261,6 +261,51 @@ test('folder packages download files directly without ZIP extraction', async () 
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('folder packages fetch small files concurrently and report completed file count', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-folder-small-'));
+    try {
+        const disk = path.join(root, 'disk');
+        fs.mkdirSync(disk);
+        const id = '35b22b86-7c0a-4a68-b845-f1807277995b';
+        const files = Array.from({ length: 16 }, (_, index) => ({
+            id: `ad35e85d-86ac-4ed2-8c27-${String(index).padStart(12, '0')}`,
+            path: `data/${index}.bin`, sizeBytes: 1,
+        }));
+        const item = { id, name: 'Small Files', installName: 'Small Files', packageType: 'folder',
+            archiveKey: `manifests/${id}.json`, archiveSize: files.length, executablePath: null };
+        let inFlight = 0;
+        let peak = 0;
+        const axios = { get: async (url, options = {}) => {
+            if (url.endsWith('/custom-games')) return { data: { games: [item] } };
+            if (url.endsWith('/manifest')) return { data: {
+                gameId: id, totalSizeBytes: files.length, files,
+            } };
+            inFlight++;
+            peak = Math.max(peak, inFlight);
+            await new Promise(resolve => setTimeout(resolve, 20));
+            inFlight--;
+            const file = files.find(entry => url.endsWith(`/files/${entry.id}`));
+            assert.ok(file);
+            assert.equal(options.headers.Range, 'bytes=0-0');
+            return { status: 206, headers: { 'content-range': 'bytes 0-0/1' },
+                data: Readable.from([Buffer.from('x')]) };
+        } };
+        const service = createCustomGamesService({
+            app: { getPath: () => root }, axios, authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://staging.api-merlin.com/api', shell: { openPath: async () => '' },
+            testDriveRoot: () => disk,
+        });
+        await service.list();
+        const progress = [];
+        const result = await service.install(id, 'X', state => progress.push(state));
+        assert.equal(result.success, true);
+        assert.ok(peak > 4 && peak <= 12, `expected adaptive concurrency, got ${peak}`);
+        const completed = progress.filter(state => state.stage === 'downloading').at(-1);
+        assert.equal(completed.completedFiles, files.length);
+        assert.equal(completed.totalFiles, files.length);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('folder package retries an interrupted range without double-counting progress', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-folder-resume-'));
     try {
