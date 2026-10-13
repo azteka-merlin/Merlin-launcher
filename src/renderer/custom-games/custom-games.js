@@ -17,6 +17,8 @@ const customGameTranslations = {
         custom_games_verifying: 'Verificando integridade', custom_games_verify_progress: '{received} de {total} verificados · {percent}%',
         custom_games_progress: '{received} de {total} · {percent}%', custom_games_extract_progress: '{files} arquivos extraídos',
         custom_games_speed_eta: '{speed}/s · Restante: {time}', custom_games_eta_calculating: 'Calculando tempo restante…',
+        custom_games_reconnecting: 'Conexão interrompida. Reconectando trecho ({attempt}/{max})…',
+        custom_games_connection_failed: 'A conexão parou de responder. Clique em Baixar para retomar de onde parou.',
         custom_games_continue: 'Continuar usando Merlin', custom_games_show_progress: 'Ver progresso',
         custom_games_install_failed: 'Não foi possível concluir a instalação', custom_games_cancelled_title: 'Download cancelado',
         custom_games_cancel_download: 'Cancelar download', custom_games_close: 'Fechar',
@@ -57,6 +59,8 @@ const customGameTranslations = {
         custom_games_verifying: 'Verifying integrity', custom_games_verify_progress: '{received} of {total} verified · {percent}%',
         custom_games_progress: '{received} of {total} · {percent}%', custom_games_extract_progress: '{files} files extracted',
         custom_games_speed_eta: '{speed}/s · Remaining: {time}', custom_games_eta_calculating: 'Calculating time remaining…',
+        custom_games_reconnecting: 'Connection interrupted. Reconnecting this part ({attempt}/{max})…',
+        custom_games_connection_failed: 'The connection stopped responding. Click Download to resume where it stopped.',
         custom_games_continue: 'Continue using Merlin', custom_games_show_progress: 'View progress',
         custom_games_install_failed: 'The installation could not be completed', custom_games_cancelled_title: 'Download canceled',
         custom_games_cancel_download: 'Cancel download', custom_games_close: 'Close',
@@ -97,6 +101,8 @@ const customGameTranslations = {
         custom_games_verifying: 'Verificando integridad', custom_games_verify_progress: '{received} de {total} verificados · {percent}%',
         custom_games_progress: '{received} de {total} · {percent}%', custom_games_extract_progress: '{files} archivos extraídos',
         custom_games_speed_eta: '{speed}/s · Restante: {time}', custom_games_eta_calculating: 'Calculando el tiempo restante…',
+        custom_games_reconnecting: 'Conexión interrumpida. Reconectando este tramo ({attempt}/{max})…',
+        custom_games_connection_failed: 'La conexión dejó de responder. Haz clic en Descargar para reanudar desde donde se detuvo.',
         custom_games_continue: 'Seguir usando Merlin', custom_games_show_progress: 'Ver progreso',
         custom_games_install_failed: 'No se pudo completar la instalación', custom_games_cancelled_title: 'Descarga cancelada',
         custom_games_cancel_download: 'Cancelar descarga', custom_games_close: 'Cerrar',
@@ -137,6 +143,8 @@ const customGameTranslations = {
         custom_games_verifying: 'Vérification de l’intégrité', custom_games_verify_progress: '{received} sur {total} vérifiés · {percent} %',
         custom_games_progress: '{received} sur {total} · {percent} %', custom_games_extract_progress: '{files} fichiers extraits',
         custom_games_speed_eta: '{speed}/s · Restant : {time}', custom_games_eta_calculating: 'Calcul du temps restant…',
+        custom_games_reconnecting: 'Connexion interrompue. Reconnexion à cette partie ({attempt}/{max})…',
+        custom_games_connection_failed: 'La connexion ne répond plus. Cliquez sur Télécharger pour reprendre là où le transfert s’est arrêté.',
         custom_games_continue: 'Continuer à utiliser Merlin', custom_games_show_progress: 'Voir la progression',
         custom_games_install_failed: 'Impossible de terminer l’installation', custom_games_cancelled_title: 'Téléchargement annulé',
         custom_games_cancel_download: 'Annuler le téléchargement', custom_games_close: 'Fermer',
@@ -177,6 +185,8 @@ const customGameTranslations = {
         custom_games_verifying: 'Integrität wird geprüft', custom_games_verify_progress: '{received} von {total} geprüft · {percent} %',
         custom_games_progress: '{received} von {total} · {percent} %', custom_games_extract_progress: '{files} Dateien entpackt',
         custom_games_speed_eta: '{speed}/s · Verbleibend: {time}', custom_games_eta_calculating: 'Verbleibende Zeit wird berechnet…',
+        custom_games_reconnecting: 'Verbindung unterbrochen. Dieser Abschnitt wird erneut verbunden ({attempt}/{max})…',
+        custom_games_connection_failed: 'Die Verbindung antwortet nicht mehr. Klicke auf Herunterladen, um fortzufahren.',
         custom_games_continue: 'Merlin weiter verwenden', custom_games_show_progress: 'Fortschritt anzeigen',
         custom_games_install_failed: 'Die Installation konnte nicht abgeschlossen werden', custom_games_cancelled_title: 'Download abgebrochen',
         custom_games_cancel_download: 'Download abbrechen', custom_games_close: 'Schließen',
@@ -287,7 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
             : tr('custom_games_eta_calculating');
         // Folder checksums are per-file, not a monotonic whole-game progress.
         // A time estimate based on one file would be misleading here.
-        const rate = terminal || verifying ? '' : eta;
+        const rate = terminal || verifying ? '' : state.retryAttempt
+            ? tr('custom_games_reconnecting', { attempt: state.retryAttempt, max: state.maxAttempts || 4 }) : eta;
         el.customGamesProgressTitle.textContent = title;
         el.customGamesProgressName.textContent = name;
         el.customGamesProgressDetail.textContent = detail;
@@ -407,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function errorText(code) {
         if (code === 'busy') return tr('custom_games_busy');
+        if (code === 'download_stalled') return tr('custom_games_connection_failed');
         if (code === 'trash_failed') return tr('custom_games_uninstall_failed');
         if (code === 'disk_space') return tr('custom_games_disk_space');
         if (code === 'EACCES' || code === 'EPERM') return tr('custom_games_permission');

@@ -166,6 +166,11 @@ test('refresh button shares the library and corrections icon, styles and loading
     assert.match(script, /customGamesRefresh\.classList\.toggle\('loading', force\)/);
 });
 
+test('instructions button keeps a stationary hit area on hover', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+    assert.match(css, /#customGamesView \.correction-card-note:hover\s*\{\s*transform:\s*none;\s*\}/);
+});
+
 test('downloads a ZIP into the chosen Merlin-games drive, resumes metadata and exposes only its own installation', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-install-'));
     try {
@@ -370,6 +375,98 @@ test('folder package retries an interrupted range without double-counting progre
         assert.equal(attempts, 2);
         assert.deepEqual(fs.readFileSync(path.join(result.path, 'data.bin')), data);
         assert.equal(Math.max(...progress.filter(state => state.stage === 'downloading').map(state => state.received)), data.length);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('folder package abandons an idle range and retries without losing downloaded bytes', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-folder-idle-'));
+    try {
+        const disk = path.join(root, 'disk');
+        fs.mkdirSync(disk);
+        const id = '8e5e1abd-0354-46b8-bc28-d93134ad743f';
+        const fileId = '8c2509f8-d494-4c02-ad5d-8790ad1a57e0';
+        const data = Buffer.from('download must retry a silent connection safely');
+        const item = { id, name: 'Idle Game', installName: 'Idle Game', packageType: 'folder',
+            archiveKey: `manifests/${id}.json`, archiveSize: data.length, executablePath: null };
+        const manifest = { gameId: id, totalSizeBytes: data.length, files: [{
+            id: fileId, path: 'data.bin', sizeBytes: data.length,
+            sha256: createHash('sha256').update(data).digest('hex'),
+        }] };
+        let attempts = 0;
+        const axios = { get: async (url, options = {}) => {
+            if (url.endsWith('/custom-games')) return { data: { games: [item] } };
+            if (url.endsWith('/manifest')) return { data: manifest };
+            attempts++;
+            const stream = attempts === 1 ? new Readable({ read() {} }) : Readable.from([data]);
+            if (attempts === 1) {
+                stream.push(data.subarray(0, 8));
+                options.signal.addEventListener('abort', () => stream.destroy(new Error('idle request aborted')), { once: true });
+            }
+            return { status: 206, headers: { 'content-range': `bytes 0-${data.length - 1}/${data.length}` }, data: stream };
+        } };
+        const service = createCustomGamesService({
+            app: { getPath: () => root }, axios, authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://staging.api-merlin.com/api', shell: { openPath: async () => '' },
+            testDriveRoot: () => disk, downloadIdleTimeoutMs: 40,
+        });
+        await service.list();
+        const progress = [];
+        const result = await service.install(id, 'X', state => progress.push(state));
+        assert.equal(result.success, true);
+        assert.equal(attempts, 2);
+        assert.deepEqual(fs.readFileSync(path.join(result.path, 'data.bin')), data);
+        assert.ok(progress.some(state => state.retryAttempt === 2));
+        assert.equal(Math.max(...progress.filter(state => state.stage === 'downloading').map(state => state.received)), data.length);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('exhausted idle retries preserve folder bytes for a later resume', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-folder-idle-resume-'));
+    try {
+        const disk = path.join(root, 'disk');
+        fs.mkdirSync(disk);
+        const id = '9e5e1abd-0354-46b8-bc28-d93134ad743f';
+        const fileId = '9c2509f8-d494-4c02-ad5d-8790ad1a57e0';
+        const data = Buffer.from('resume the bytes saved before every idle connection');
+        const item = { id, name: 'Resume After Idle', installName: 'Resume After Idle', packageType: 'folder',
+            archiveKey: `manifests/${id}.json`, archiveSize: data.length, executablePath: null };
+        const manifest = { gameId: id, totalSizeBytes: data.length, files: [{
+            id: fileId, path: 'data.bin', sizeBytes: data.length,
+            sha256: createHash('sha256').update(data).digest('hex'),
+        }] };
+        const ranges = [];
+        const axios = { get: async (url, options = {}) => {
+            if (url.endsWith('/custom-games')) return { data: { games: [item] } };
+            if (url.endsWith('/manifest')) return { data: manifest };
+            ranges.push(options.headers.Range);
+            const [, startText, endText] = /^bytes=(\d+)-(\d+)$/.exec(options.headers.Range);
+            const start = Number(startText);
+            const end = Number(endText);
+            if (ranges.length <= 4) {
+                const stream = new Readable({ read() {} });
+                if (ranges.length === 1) stream.push(data.subarray(0, 8));
+                options.signal.addEventListener('abort', () => stream.destroy(new Error('idle request aborted')), { once: true });
+                return { status: 206, headers: { 'content-range': `bytes ${start}-${end}/${data.length}` }, data: stream };
+            }
+            return { status: 206, headers: { 'content-range': `bytes ${start}-${end}/${data.length}` },
+                data: Readable.from([data.subarray(start, end + 1)]) };
+        } };
+        const service = createCustomGamesService({
+            app: { getPath: () => root }, axios, authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://staging.api-merlin.com/api', shell: { openPath: async () => '' },
+            testDriveRoot: () => disk, downloadIdleTimeoutMs: 30,
+        });
+        await service.list();
+        const first = await service.install(id, 'X');
+        assert.equal(first.success, false);
+        assert.equal(first.code, 'download_stalled');
+        const stage = path.join(disk, 'Merlin-games', `.merlin-installing-${id}`);
+        assert.equal(fs.existsSync(path.join(stage, 'data.bin')), true);
+        assert.equal(fs.existsSync(path.join(disk, 'Merlin-games', '.merlin-downloads', `${id}.folder.json`)), true);
+        const resumed = await service.install(id, 'X');
+        assert.equal(resumed.success, true);
+        assert.equal(ranges.at(-1), `bytes=8-${data.length - 1}`);
+        assert.deepEqual(fs.readFileSync(path.join(resumed.path, 'data.bin')), data);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -608,7 +705,7 @@ test('a catalog executable added after installation enables Play despite an old 
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('hybrid folder installs a bundled small file and a direct large file atomically', async () => {
+test('hybrid folder installs a bundled 2 MiB file and a direct file atomically', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-hybrid-folder-'));
     try {
         const disk = path.join(root, 'disk');
@@ -617,7 +714,7 @@ test('hybrid folder installs a bundled small file and a direct large file atomic
         const directId = '029e2660-0901-4e09-af3c-331b4a114e8c';
         const bundleId = '30cf327e-fc88-4448-ae09-102f82f88bee';
         const direct = Buffer.from('large file fixture');
-        const small = Buffer.from('small bundled fixture');
+        const small = Buffer.alloc(2 * 1024 * 1024, 0x5a);
         const zip = new AdmZip();
         zip.addFile('Data/small.txt', small);
         const archive = zip.toBuffer();
@@ -649,7 +746,7 @@ test('hybrid folder installs a bundled small file and a direct large file atomic
         const result = await service.install(id, 'X');
         assert.equal(result.success, true, JSON.stringify(result));
         assert.equal(fs.readFileSync(path.join(result.path, 'Data', 'large.dat'), 'utf8'), direct.toString());
-        assert.equal(fs.readFileSync(path.join(result.path, 'Data', 'small.txt'), 'utf8'), small.toString());
+        assert.deepEqual(fs.readFileSync(path.join(result.path, 'Data', 'small.txt')), small);
         assert.equal(fs.existsSync(path.join(result.path, `.merlin-bundle-${bundleId}.zip`)), false);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

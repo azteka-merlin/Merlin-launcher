@@ -7,10 +7,13 @@ const { extractSafeZip, safeEntryPath } = require('./safe-zip');
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
 const MAX_FOLDER_MANIFEST_FILES = 100000;
+const MAX_FOLDER_BUNDLES = 2500;
+const MAX_BUNDLE_MEMBER_SIZE = 200 * 1024 * 1024;
 const DOWNLOAD_WORKERS = 4;
 const SMALL_FILE_WORKERS = 12;
 const SMALL_FILE_LIMIT = 64 * 1024 * 1024;
 const RATE_WINDOW_MS = 30_000;
+const DOWNLOAD_IDLE_TIMEOUT_MS = 45_000;
 const INSTALL_SAFETY_BYTES = 512 * 1024 * 1024;
 const MARKER = '.merlin-install.json';
 
@@ -56,7 +59,7 @@ function moveWithWindowsShellToRecycleBin(targetPath) {
 }
 
 function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, testDriveRoot = null,
-    windowsRecycleBinMove = moveWithWindowsShellToRecycleBin }) {
+    windowsRecycleBinMove = moveWithWindowsShellToRecycleBin, downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS }) {
     const dataRoot = app.getPath('userData');
     const source = new URL(apiBaseUrl).hostname.replace(/[^a-z0-9.-]/gi, '_');
     const registryFile = path.join(dataRoot, `custom-games-installs-${source}.json`);
@@ -246,6 +249,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         operation.snapshot = {
             id: operation.item.id, name: operation.item.name, drive: operation.drive,
             stage, ...extra, speedBytesPerSecond, etaSeconds,
+            retryAttempt: operation.retrying?.size ? Math.max(...operation.retrying.values()) : null,
+            maxAttempts: 4,
         };
         if (!shouldPublish) return;
         operation.lastEmit = now;
@@ -442,7 +447,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const finalFileCount = (Array.isArray(files) ? files.length : 0) +
             (Array.isArray(bundles) ? bundles.reduce((sum, bundle) => sum + (Array.isArray(bundle.files) ? bundle.files.length : 0), 0) : 0);
         if (manifest?.gameId !== item.id || !Array.isArray(files) || !Array.isArray(bundles) ||
-            finalFileCount < 1 || finalFileCount > 20000 || bundles.length > 100 ||
+            finalFileCount < 1 || finalFileCount > 20000 || bundles.length > MAX_FOLDER_BUNDLES ||
             !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
@@ -477,7 +482,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 throw new Error('invalid_folder_manifest');
             }
             const members = bundle.files.map(member => {
-                if (!Number.isSafeInteger(member.sizeBytes) || member.sizeBytes < 0 || member.sizeBytes >= 1024 ** 2 ||
+                if (!Number.isSafeInteger(member.sizeBytes) || member.sizeBytes < 0 || member.sizeBytes > MAX_BUNDLE_MEMBER_SIZE ||
                     typeof member.path !== 'string' || !/^[a-f0-9]{64}$/i.test(String(member.sha256 || ''))) {
                     throw new Error('invalid_folder_manifest');
                 }
@@ -589,6 +594,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         let received = alreadyDownloaded;
         let completedFiles = normalizedFiles.filter(file => localSizes.get(file.id) === file.sizeBytes).length;
         const inFlight = new Map();
+        operation.retrying = new Map();
         const report = (force = false) => emit(operation, onProgress, 'downloading', {
             received, total: transferTotal, completedFiles, totalFiles: normalizedFiles.length,
         }, force);
@@ -607,11 +613,26 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                     for (let attempt = 0; attempt < 4; attempt++) {
                         if (operation.controller.signal.aborted) throw new Error('cancelled');
                         let rangeResponse;
+                        const requestController = new AbortController();
+                        const abortRequest = () => requestController.abort();
+                        operation.controller.signal.addEventListener('abort', abortRequest, { once: true });
+                        let idleTimer;
+                        let stalled = false;
+                        const armIdleTimer = () => {
+                            clearTimeout(idleTimer);
+                            idleTimer = setTimeout(() => {
+                                stalled = true;
+                                requestController.abort();
+                                rangeResponse?.data?.destroy(new Error('download_stalled'));
+                            }, downloadIdleTimeoutMs);
+                            idleTimer.unref?.();
+                        };
                         try {
                             const accessToken = await authSession.getAccessToken();
+                            armIdleTimer();
                             rangeResponse = await axios.get(`${apiBaseUrl}/custom-games/${item.id}/files/${file.id}`, {
                                 responseType: 'stream', decompress: false, timeout: 600000,
-                                signal: operation.controller.signal,
+                                signal: requestController.signal,
                                 headers: { Authorization: `Bearer ${accessToken}`, Range: `bytes=${start}-${end}` },
                             });
                             if (rangeResponse.status !== 206 || rangeResponse.headers['content-range'] !==
@@ -623,6 +644,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                             let position = start;
                             for await (const chunk of rangeResponse.data) {
                                 if (operation.controller.signal.aborted) throw new Error('cancelled');
+                                clearTimeout(idleTimer);
+                                if (operation.retrying.delete(file.id)) report(true);
                                 if (position + chunk.length > end + 1) throw new Error('invalid_range_response');
                                 let written = 0;
                                 while (written < chunk.length) {
@@ -636,25 +659,39 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                                     received: received + [...inFlight.values()].reduce((sum, bytes) => sum + bytes, 0),
                                     total: transferTotal, completedFiles, totalFiles: normalizedFiles.length,
                                 });
+                                armIdleTimer();
                             }
+                            clearTimeout(idleTimer);
                             if (position !== end + 1) throw new Error('incomplete_range');
                             offset = end + 1;
                             received += end + 1 - start;
                             inFlight.delete(file.id);
+                            operation.retrying.delete(file.id);
                             localSizes.set(file.id, offset);
                             lastError = null;
                             report();
                             break;
                         } catch (error) {
-                            lastError = error;
+                            lastError = stalled ? new Error('download_stalled') : error;
                             inFlight.delete(file.id);
-                            report();
                             if (operation.controller.signal.aborted) throw new Error('cancelled');
                             if (attempt === 3) break;
+                            operation.retrying.set(file.id, attempt + 2);
+                            report(true);
                             await new Promise(resolve => setTimeout(resolve, 900 * (attempt + 1)));
-                        } finally { rangeResponse?.data?.destroy(); }
+                        } finally {
+                            clearTimeout(idleTimer);
+                            operation.controller.signal.removeEventListener('abort', abortRequest);
+                            rangeResponse?.data?.destroy();
+                        }
                     }
                     if (lastError) {
+                        operation.retrying.delete(file.id);
+                        report(true);
+                        console.warn('[CustomGames] Download range failed', {
+                            gameId: item.id, fileId: file.id, start, end,
+                            reason: lastError.message === 'download_stalled' ? 'idle_timeout' : lastError.code || 'stream_error',
+                        });
                         const actual = await fs.promises.stat(file.target).then(value => value.size).catch(() => 0);
                         if (actual > offset) {
                             received += actual - offset;

@@ -5669,6 +5669,7 @@ body[data-merlin-view="steam-store"] .steam-context-bar {
 #customGamesView .library-controls { gap: .85rem; margin-bottom: .8rem; }
 #customGamesView .custom-games-grid { gap: .85rem; margin-top: .7rem; }
 #customGamesView .custom-game-card { gap: .8rem; padding: .95rem; border-color: var(--merlin-shell-border); background: linear-gradient(145deg, rgb(17, 19, 31), rgb(13, 15, 24)); box-shadow: inset 0 1px rgba(255, 255, 255, .025), 0 10px 24px rgba(0, 0, 0, .12); }
+#customGamesView .correction-card-note:hover { transform: none; }
 #customGamesView .custom-game-card .correction-card-image-wrap { aspect-ratio: 460 / 215; }
 #customGamesView .custom-game-card .correction-card-cover { height: 100%; display: block; }
 .custom-game-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; }
