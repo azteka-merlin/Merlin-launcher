@@ -1,7 +1,7 @@
 {
   "name": "merlin",
   "version": "2.1.5",
-  "description": "Steam game injector with manifest and lua support",
+  "description": "Merlin game launcher",
   "main": "main.js",
   "scripts": {
     "start": "node scripts/start-dev.js",
