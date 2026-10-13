@@ -6,12 +6,17 @@ const { extractSafeZip, safeEntryPath } = require('./safe-zip');
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
+const MAX_FOLDER_MANIFEST_FILES = 100000;
 const DOWNLOAD_WORKERS = 4;
 const SMALL_FILE_WORKERS = 12;
 const SMALL_FILE_LIMIT = 64 * 1024 * 1024;
 const RATE_WINDOW_MS = 30_000;
 const INSTALL_SAFETY_BYTES = 512 * 1024 * 1024;
 const MARKER = '.merlin-install.json';
+
+function validFolderManifestFileCount(files) {
+    return Array.isArray(files) && files.length > 0 && files.length <= MAX_FOLDER_MANIFEST_FILES;
+}
 
 function requiredFreeBytes(archiveSize, partialSize = 0, packageType = 'zip') {
     const size = Number(archiveSize);
@@ -433,7 +438,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const manifest = response.data;
         const files = manifest?.files;
         const total = Number(manifest?.totalSizeBytes);
-        if (manifest?.gameId !== item.id || !Array.isArray(files) || !files.length || files.length > 10000 ||
+        if (manifest?.gameId !== item.id || !validFolderManifestFileCount(files) ||
             !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
@@ -806,4 +811,5 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     return { list, refresh, install, cancel, openFolder, play, uninstall, listDrives, subscribeProgress };
 }
 
-module.exports = { createCustomGamesService, requiredFreeBytes, moveWithWindowsShellToRecycleBin };
+module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount,
+    moveWithWindowsShellToRecycleBin };

@@ -9,7 +9,13 @@ const AdmZip = require('adm-zip');
 const { Readable } = require('node:stream');
 const { extractSafeZip, safeEntryPath } = require('../src/main/custom-games/safe-zip');
 const { registerCustomGamesIpc } = require('../src/main/ipc/register-custom-games-ipc');
-const { createCustomGamesService, requiredFreeBytes } = require('../src/main/custom-games/custom-games-service');
+const { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount } = require('../src/main/custom-games/custom-games-service');
+
+test('folder manifest safety ceiling accepts 20,000 files without mirroring the Admin limit', () => {
+    assert.equal(validFolderManifestFileCount(new Array(11_000)), true);
+    assert.equal(validFolderManifestFileCount(new Array(20_000)), true);
+    assert.equal(validFolderManifestFileCount(new Array(100_001)), false);
+});
 
 test('installation checks room for the ZIP, extraction and a safety margin', () => {
     const gib = 1024 ** 3;
