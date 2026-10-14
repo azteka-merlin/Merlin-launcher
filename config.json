@@ -4,5 +4,15 @@
   "tutorialPromptSeen": true,
   "correctionsDisclaimerSeen": true,
   "discordAnnouncementSeen": true,
+  "lastSeenChangelogVersion": "2.1.0",
+  "steamPlugin": {
+    "enabled": false,
+    "markerOwned": false,
+    "startAtLogin": false
+  },
+  "cloudSync": {
+    "enabled": false,
+    "startAtLogin": false
+  },
   "premiumIntroSeen": true
 }

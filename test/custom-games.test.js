@@ -9,11 +9,36 @@ const AdmZip = require('adm-zip');
 const { Readable } = require('node:stream');
 const { extractSafeZip, safeEntryPath } = require('../src/main/custom-games/safe-zip');
 const { registerCustomGamesIpc } = require('../src/main/ipc/register-custom-games-ipc');
-const { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount } = require('../src/main/custom-games/custom-games-service');
+const { createCustomGamesService, requiredFreeBytes, validArchiveSize, validFolderManifestFileCount } = require('../src/main/custom-games/custom-games-service');
 
-test('folder manifest safety ceiling accepts 20,000 files without mirroring the Admin limit', () => {
+test('ZIP archive size ceiling is 100 GiB inclusive', () => {
+    const max = 100 * 1024 ** 3;
+    assert.equal(validArchiveSize(max), true);
+    assert.equal(validArchiveSize(max + 1), false);
+    assert.equal(validArchiveSize(0), false);
+    assert.equal(validArchiveSize(Number.MAX_SAFE_INTEGER + 1), false);
+});
+
+test('a server-side Gold denial never falls back to a cached catalog', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-games-gold-'));
+    try {
+        const service = createCustomGamesService({
+            app: { getPath: () => root },
+            axios: { get: async () => { throw Object.assign(new Error('forbidden'), { response: { status: 403 } }); } },
+            authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://api-merlin.com/api', shell: { openPath: async () => '' },
+            initialCatalog: [{ id: 'cached', name: 'Cached game', archiveSize: 1 }],
+        });
+        assert.deepEqual(await service.list(), { success: false, code: 'gold_required' });
+        assert.deepEqual(await service.refresh(), { success: false, code: 'gold_required' });
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('folder manifest safety ceiling accepts up to 100,000 files', () => {
     assert.equal(validFolderManifestFileCount(new Array(11_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(20_000)), true);
+    assert.equal(validFolderManifestFileCount(new Array(30_000)), true);
+    assert.equal(validFolderManifestFileCount(new Array(100_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(100_001)), false);
 });
 
@@ -519,7 +544,8 @@ test('folder package detects a corrupt file and retries only that file before at
         assert.equal(fileRequests.get(validId), 1);
         assert.equal(fs.readFileSync(path.join(result.path, 'bin', 'game.exe')).toString(), contents.get(corruptId).toString());
         assert.equal(fs.readFileSync(path.join(result.path, 'data', 'level.dat')).toString(), contents.get(validId).toString());
-        assert.equal(progress.some(state => state.stage === 'verifying'), true);
+        assert.equal(progress.at(-1).installedFiles, manifest.files.length);
+        assert.equal(progress.at(-1).totalInstallFiles, manifest.files.length);
         assert.equal(fs.existsSync(path.join(disk, 'Merlin-games', item.installName)), true);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
@@ -570,7 +596,8 @@ test('large folder files use streamed SHA-256 verification without a full-file b
         assert.equal((await fs.promises.stat(installedFile)).size, fileSize);
         assert.equal(rangeRequests, 1);
         assert.ok(peakRss - baselineRss < fileSize, 'verification should not allocate a buffer as large as the file');
-        assert.equal(progress.some(state => state.stage === 'verifying'), true);
+        assert.equal(progress.at(-1).installedFiles, 1);
+        assert.equal(progress.at(-1).totalInstallFiles, 1);
         assert.equal(fs.existsSync(path.join(disk, 'Merlin-games', item.installName, '.merlin-install.json')), true);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

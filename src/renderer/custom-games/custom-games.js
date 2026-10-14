@@ -17,6 +17,11 @@ const customGameTranslations = {
         custom_games_verifying: 'Verificando integridade', custom_games_verify_progress: '{received} de {total} verificados · {percent}%',
         custom_games_progress: '{received} de {total} · {percent}%', custom_games_extract_progress: '{files} arquivos extraídos',
         custom_games_speed_eta: '{speed}/s · Restante: {time}', custom_games_eta_calculating: 'Calculando tempo restante…',
+        custom_games_install_files: '{files} de {total} arquivos prontos · {remaining} restantes',
+        custom_games_network_eta: 'Download: {speed}/s · Restante do download: {time}',
+        custom_games_network_calculating: 'Download: calculando tempo restante…',
+        custom_games_extraction_eta: 'Extração: {speed}/s · Restante da extração: {time}',
+        custom_games_extraction_calculating: 'Extração: calculando tempo restante…',
         custom_games_reconnecting: 'Conexão interrompida. Reconectando trecho ({attempt}/{max})…',
         custom_games_connection_failed: 'A conexão parou de responder. Clique em Baixar para retomar de onde parou.',
         custom_games_continue: 'Continuar usando Merlin', custom_games_show_progress: 'Ver progresso',
@@ -59,6 +64,11 @@ const customGameTranslations = {
         custom_games_verifying: 'Verifying integrity', custom_games_verify_progress: '{received} of {total} verified · {percent}%',
         custom_games_progress: '{received} of {total} · {percent}%', custom_games_extract_progress: '{files} files extracted',
         custom_games_speed_eta: '{speed}/s · Remaining: {time}', custom_games_eta_calculating: 'Calculating time remaining…',
+        custom_games_install_files: '{files} of {total} files ready · {remaining} remaining',
+        custom_games_network_eta: 'Download: {speed}/s · Download remaining: {time}',
+        custom_games_network_calculating: 'Download: calculating time remaining…',
+        custom_games_extraction_eta: 'Extraction: {speed}/s · Extraction remaining: {time}',
+        custom_games_extraction_calculating: 'Extraction: calculating time remaining…',
         custom_games_reconnecting: 'Connection interrupted. Reconnecting this part ({attempt}/{max})…',
         custom_games_connection_failed: 'The connection stopped responding. Click Download to resume where it stopped.',
         custom_games_continue: 'Continue using Merlin', custom_games_show_progress: 'View progress',
@@ -101,6 +111,11 @@ const customGameTranslations = {
         custom_games_verifying: 'Verificando integridad', custom_games_verify_progress: '{received} de {total} verificados · {percent}%',
         custom_games_progress: '{received} de {total} · {percent}%', custom_games_extract_progress: '{files} archivos extraídos',
         custom_games_speed_eta: '{speed}/s · Restante: {time}', custom_games_eta_calculating: 'Calculando el tiempo restante…',
+        custom_games_install_files: '{files} de {total} archivos listos · {remaining} restantes',
+        custom_games_network_eta: 'Descarga: {speed}/s · Tiempo restante de descarga: {time}',
+        custom_games_network_calculating: 'Descarga: calculando el tiempo restante…',
+        custom_games_extraction_eta: 'Extracción: {speed}/s · Tiempo restante de extracción: {time}',
+        custom_games_extraction_calculating: 'Extracción: calculando el tiempo restante…',
         custom_games_reconnecting: 'Conexión interrumpida. Reconectando este tramo ({attempt}/{max})…',
         custom_games_connection_failed: 'La conexión dejó de responder. Haz clic en Descargar para reanudar desde donde se detuvo.',
         custom_games_continue: 'Seguir usando Merlin', custom_games_show_progress: 'Ver progreso',
@@ -143,6 +158,11 @@ const customGameTranslations = {
         custom_games_verifying: 'Vérification de l’intégrité', custom_games_verify_progress: '{received} sur {total} vérifiés · {percent} %',
         custom_games_progress: '{received} sur {total} · {percent} %', custom_games_extract_progress: '{files} fichiers extraits',
         custom_games_speed_eta: '{speed}/s · Restant : {time}', custom_games_eta_calculating: 'Calcul du temps restant…',
+        custom_games_install_files: '{files} fichiers prêts sur {total} · {remaining} restants',
+        custom_games_network_eta: 'Téléchargement : {speed}/s · Temps restant : {time}',
+        custom_games_network_calculating: 'Téléchargement : calcul du temps restant…',
+        custom_games_extraction_eta: 'Extraction : {speed}/s · Temps restant : {time}',
+        custom_games_extraction_calculating: 'Extraction : calcul du temps restant…',
         custom_games_reconnecting: 'Connexion interrompue. Reconnexion à cette partie ({attempt}/{max})…',
         custom_games_connection_failed: 'La connexion ne répond plus. Cliquez sur Télécharger pour reprendre là où le transfert s’est arrêté.',
         custom_games_continue: 'Continuer à utiliser Merlin', custom_games_show_progress: 'Voir la progression',
@@ -185,6 +205,11 @@ const customGameTranslations = {
         custom_games_verifying: 'Integrität wird geprüft', custom_games_verify_progress: '{received} von {total} geprüft · {percent} %',
         custom_games_progress: '{received} von {total} · {percent} %', custom_games_extract_progress: '{files} Dateien entpackt',
         custom_games_speed_eta: '{speed}/s · Verbleibend: {time}', custom_games_eta_calculating: 'Verbleibende Zeit wird berechnet…',
+        custom_games_install_files: '{files} von {total} Dateien bereit · {remaining} verbleibend',
+        custom_games_network_eta: 'Download: {speed}/s · Verbleibende Downloadzeit: {time}',
+        custom_games_network_calculating: 'Download: verbleibende Zeit wird berechnet…',
+        custom_games_extraction_eta: 'Entpacken: {speed}/s · Verbleibende Entpackzeit: {time}',
+        custom_games_extraction_calculating: 'Entpacken: verbleibende Zeit wird berechnet…',
         custom_games_reconnecting: 'Verbindung unterbrochen. Dieser Abschnitt wird erneut verbunden ({attempt}/{max})…',
         custom_games_connection_failed: 'Die Verbindung antwortet nicht mehr. Klicke auf Herunterladen, um fortzufahren.',
         custom_games_continue: 'Merlin weiter verwenden', custom_games_show_progress: 'Fortschritt anzeigen',
@@ -237,9 +262,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeStage = null;
     let progressSnapshot = null;
     let progressModalDismissed = false;
+    let pendingProgress = null;
+    let progressFrame = null;
+    let gridDirty = false;
+    let uninstallPending = false;
+    let hasGoldAccess = false;
     const tr = (key, values = {}) => Object.entries(values).reduce((value, [name, replacement]) =>
         value.replaceAll(`{${name}}`, replacement), window.merlinI18n.t(key));
     const notify = (message, type = 'info') => window.showNotification?.(message, type);
+    const updateGoldAccess = detail => {
+        hasGoldAccess = detail?.authenticated === true && detail?.expired !== true &&
+            String(detail?.planTier || '').trim().toLowerCase() === 'ouro';
+        el.customGamesBtn.hidden = !hasGoldAccess;
+        if (!hasGoldAccess && !el.customGamesView.hidden) window.merlinView.set('home');
+    };
     const noteFor = game => game.adminNotes?.[window.merlinI18n.current()] || game.adminNote || '';
     const size = bytes => {
         const value = Number(bytes) || 0;
@@ -254,6 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const remainingSeconds = value % 60;
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
     };
+    const setText = (element, value) => { if (element.textContent !== value) element.textContent = value; };
+    const knownEta = value => value !== null && value !== undefined && Number.isFinite(Number(value)) && Number(value) >= 0;
 
     function renderProgress(state) {
         if (!state?.id) return;
@@ -265,23 +303,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const extracting = state.stage === 'extracting';
         const verifying = state.stage === 'verifying';
         const terminal = ['completed', 'failed', 'cancelled'].includes(state.stage);
-        busy = !terminal;
+        if (terminal && progressFrame !== null) {
+            window.cancelAnimationFrame(progressFrame);
+            progressFrame = null;
+            pendingProgress = null;
+        }
+        const nextBusy = !terminal;
+        const busyChanged = busy !== nextBusy;
+        busy = nextBusy;
         const title = tr(extracting ? 'custom_games_extracting' : verifying ? 'custom_games_verifying' : state.stage === 'completed'
             ? 'custom_games_install_success' : state.stage === 'cancelled' || state.code === 'cancelled'
                 ? 'custom_games_cancelled_title' : state.stage === 'failed'
                     ? 'custom_games_install_failed' : 'custom_games_downloading');
         const name = state.name || selected.name || '';
-        const current = extracting || verifying ? Number(state.bytes) || 0 : Number(state.received) || 0;
-        const total = extracting || verifying ? Number(state.totalBytes) || 0 : Number(state.total) || 0;
+        const globalExtraction = extracting && Number(state.extractionTotalBytes) > 0;
+        const current = globalExtraction ? Number(state.extractedBytes) || 0
+            : extracting || verifying ? Number(state.bytes) || 0 : Number(state.received) || 0;
+        const total = globalExtraction ? Number(state.extractionTotalBytes)
+            : extracting || verifying ? Number(state.totalBytes) || 0 : Number(state.total) || 0;
         const percent = total > 0 ? Math.min(100, Math.floor(current / total * 100)) : 0;
+        const totalInstallFiles = Number.isInteger(state.totalInstallFiles) && state.totalInstallFiles > 0
+            ? state.totalInstallFiles : extracting && Number.isInteger(state.totalFiles) && state.totalFiles > 0 ? state.totalFiles : 0;
+        const installedFiles = Math.min(totalInstallFiles, Math.max(0,
+            Number(state.installedFiles ?? (extracting ? state.files : 0)) || 0));
+        const installationDetail = totalInstallFiles ? tr('custom_games_install_files', {
+            files: installedFiles, total: totalInstallFiles, remaining: totalInstallFiles - installedFiles,
+        }) : '';
         let detail = '';
         if (state.stage === 'downloading') {
             detail = tr('custom_games_progress', { received: size(current), total: size(total), percent });
-            if (Number.isInteger(state.totalFiles) && state.totalFiles > 0) {
+            if (installationDetail) detail += ` · ${installationDetail}`;
+            else if (Number.isInteger(state.totalFiles) && state.totalFiles > 0) {
                 detail += ` · ${state.completedFiles || 0}/${state.totalFiles}`;
             }
         } else if (extracting) {
-            detail = tr('custom_games_extract_progress', { files: state.files || 0 });
+            detail = installationDetail || tr('custom_games_extract_progress', { files: state.files || 0 });
+            if (total > 0) detail += ` · ${tr('custom_games_progress', { received: size(current), total: size(total), percent })}`;
         } else if (verifying) {
             detail = tr('custom_games_verify_progress', { received: size(current), total: size(total), percent });
         } else if (state.stage === 'completed') {
@@ -292,31 +349,47 @@ document.addEventListener('DOMContentLoaded', () => {
             detail = errorText(state.code);
         }
         const speed = Number(state.speedBytesPerSecond) || 0;
-        const eta = Number.isFinite(Number(state.etaSeconds)) && state.etaSeconds !== null
-            ? tr('custom_games_speed_eta', { speed: size(speed), time: formatEta(state.etaSeconds) })
-            : tr('custom_games_eta_calculating');
-        // Folder checksums are per-file, not a monotonic whole-game progress.
-        // A time estimate based on one file would be misleading here.
-        const rate = terminal || verifying ? '' : state.retryAttempt
-            ? tr('custom_games_reconnecting', { attempt: state.retryAttempt, max: state.maxAttempts || 4 }) : eta;
-        el.customGamesProgressTitle.textContent = title;
-        el.customGamesProgressName.textContent = name;
-        el.customGamesProgressDetail.textContent = detail;
-        el.customGamesProgressRate.textContent = rate;
+        const extractionRate = knownEta(state.extractionEtaSeconds) ? tr('custom_games_extraction_eta', {
+            speed: size(Number(state.extractionSpeedBytesPerSecond) || 0), time: formatEta(state.extractionEtaSeconds),
+        }) : tr('custom_games_extraction_calculating');
+        const networkRate = knownEta(state.etaSeconds)
+            ? tr('custom_games_network_eta', { speed: size(speed), time: formatEta(state.etaSeconds) })
+            : tr('custom_games_network_calculating');
+        // A network estimate does not include pending extraction. Keep both
+        // estimates named while the service overlaps the two kinds of work.
+        let rate = terminal || verifying ? '' : extracting
+            ? globalExtraction ? extractionRate : knownEta(state.etaSeconds)
+                ? tr('custom_games_speed_eta', { speed: size(speed), time: formatEta(state.etaSeconds) }) : tr('custom_games_eta_calculating')
+            : networkRate;
+        if (!terminal && !verifying && state.retryAttempt) rate = tr('custom_games_reconnecting', {
+            attempt: state.retryAttempt, max: state.maxAttempts || 4,
+        });
+        if (state.stage === 'downloading' && Number(state.extractionTotalBytes) > 0 && Number(state.extractedBytes) > 0) {
+            rate += ` · ${extractionRate}`;
+        }
+        setText(el.customGamesProgressTitle, title);
+        setText(el.customGamesProgressName, name);
+        setText(el.customGamesProgressDetail, detail);
+        setText(el.customGamesProgressRate, rate);
         el.customGamesProgressBar.style.width = `${extracting ? percent : state.stage === 'completed' ? 100 : percent}%`;
         el.customGamesProgressCancel.hidden = terminal;
         el.customGamesProgressMinimize.hidden = terminal;
         el.customGamesProgressClose.hidden = !terminal;
         el.customGamesDownloadWidget.hidden = false;
-        el.customGamesWidgetTitle.textContent = title;
-        el.customGamesWidgetName.textContent = name;
-        el.customGamesWidgetDetail.textContent = detail;
-        el.customGamesWidgetRate.textContent = rate;
+        setText(el.customGamesWidgetTitle, title);
+        setText(el.customGamesWidgetName, name);
+        setText(el.customGamesWidgetDetail, detail);
+        setText(el.customGamesWidgetRate, rate);
+        el.customGamesWidgetDetail.title = detail;
+        el.customGamesWidgetRate.title = rate;
         el.customGamesWidgetBar.style.width = `${extracting ? percent : state.stage === 'completed' ? 100 : percent}%`;
         el.customGamesWidgetClose.hidden = !terminal;
         el.customGamesWidgetOpen.hidden = false;
         if (!progressModalDismissed) el.customGamesProgressModal.hidden = false;
-        render();
+        if (busyChanged) {
+            if (el.customGamesView.hidden) gridDirty = true;
+            else render();
+        }
     }
 
     function setState(message, spin = false) {
@@ -343,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function render() {
+        gridDirty = false;
         el.customGamesGrid.replaceChildren();
         const query = el.customGamesSearch.value.trim().toLocaleLowerCase();
         const visible = games.filter(game => game.name.toLocaleLowerCase().includes(query));
@@ -431,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function load(force = false) {
-        if (busy && !force) return;
+        if (busy && !force && loaded) return;
         const hasGamesToKeepVisible = games.length > 0;
         el.customGamesRefresh.disabled = true;
         el.customGamesRefresh.classList.toggle('loading', force);
@@ -439,7 +513,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!hasGamesToKeepVisible) setState(tr('custom_games_loading'), true);
         try {
             const result = force ? await api.refresh() : await api.list();
-            if (!result.success) throw new Error(result.code);
+            if (!result.success) {
+                if (result.code === 'gold_required') {
+                    hasGoldAccess = false;
+                    el.customGamesBtn.hidden = true;
+                    window.merlinView.set('home');
+                }
+                throw new Error(result.code);
+            }
             games = result.games || [];
             drives = result.drives || [];
             offline = Boolean(result.offline);
@@ -531,7 +612,21 @@ document.addEventListener('DOMContentLoaded', () => {
         el.customGamesInstallModal.hidden = false;
     }
 
-    function onProgress(state) { renderProgress(state); }
+    function onProgress(state) {
+        if (!state?.id) return;
+        if (['completed', 'failed', 'cancelled'].includes(state.stage)) {
+            renderProgress(state);
+            return;
+        }
+        pendingProgress = state;
+        if (progressFrame !== null) return;
+        progressFrame = window.requestAnimationFrame(() => {
+            progressFrame = null;
+            const latest = pendingProgress;
+            pendingProgress = null;
+            if (latest) renderProgress(latest);
+        });
+    }
 
     async function startInstall(item, drive) {
         selected = item;
@@ -600,29 +695,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     el.customGamesInstallCancel.addEventListener('click', () => { el.customGamesInstallModal.hidden = true; selected = null; });
     el.customGamesInfoClose.addEventListener('click', () => { el.customGamesInfoModal.hidden = true; });
-    el.customGamesUninstallCancel.addEventListener('click', () => { el.customGamesUninstallModal.hidden = true; uninstallTarget = null; });
+    el.customGamesUninstallCancel.addEventListener('click', () => {
+        if (uninstallPending) return;
+        el.customGamesUninstallModal.hidden = true;
+        uninstallTarget = null;
+        el.customGamesUninstallConfirm.disabled = false;
+    });
     el.customGamesUninstallConfirm.addEventListener('click', async () => {
-        if (!uninstallTarget) return;
+        if (!uninstallTarget || uninstallPending) return;
         const item = uninstallTarget;
+        uninstallPending = true;
         el.customGamesUninstallConfirm.disabled = true;
+        el.customGamesUninstallCancel.disabled = true;
         try {
             const result = await api.uninstall(item.id);
             notify(result.success ? tr('custom_games_uninstall_success') : errorText(result.code), result.success ? 'success' : 'error');
-            if (result.success) { el.customGamesUninstallModal.hidden = true; uninstallTarget = null; await load(); }
-        } finally { el.customGamesUninstallConfirm.disabled = false; }
+            if (result.success) {
+                el.customGamesUninstallModal.hidden = true;
+                uninstallTarget = null;
+                // Unlock the dialog before refreshing the catalog; list refreshes
+                // can take longer than the filesystem operation itself.
+                el.customGamesUninstallConfirm.disabled = false;
+                el.customGamesUninstallCancel.disabled = false;
+                void load();
+            }
+        } finally {
+            uninstallPending = false;
+            el.customGamesUninstallConfirm.disabled = false;
+            el.customGamesUninstallCancel.disabled = false;
+        }
     });
-    el.customGamesBtn.addEventListener('click', () => window.merlinView.set('custom-games'));
+    el.customGamesBtn.hidden = true;
+    el.customGamesBtn.addEventListener('click', () => {
+        if (hasGoldAccess) window.merlinView.set('custom-games');
+    });
     el.customGamesRefresh.addEventListener('click', () => load(true));
     el.customGamesSearch.addEventListener('input', render);
     window.addEventListener('merlin-view-changed', event => {
-        const current = event.detail?.view === 'custom-games';
+        const requested = event.detail?.view === 'custom-games';
+        if (requested && !hasGoldAccess) {
+            window.merlinView.set('home');
+            return;
+        }
+        const current = requested && hasGoldAccess;
         el.customGamesView.hidden = !current;
         el.customGamesBtn.classList.toggle('active', current);
         el.customGamesBtn.setAttribute('aria-pressed', String(current));
         if (current && !loaded) void load();
+        else if (current && gridDirty) render();
     });
+    window.addEventListener('merlin-entitlement-changed', event => updateGoldAccess(event.detail));
     window.addEventListener('merlin-language-changed', () => {
-        render();
+        if (el.customGamesView.hidden) gridDirty = true;
+        else render();
+        if (progressSnapshot) renderProgress(progressSnapshot);
         if (!el.customGamesInstallModal.hidden) renderDriveList();
     });
     api.onProgress(onProgress);

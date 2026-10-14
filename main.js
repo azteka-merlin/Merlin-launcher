@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, clipboard, Menu, safeStorage, session, shell, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, clipboard, Menu, safeStorage, session, shell, Tray, utilityProcess } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -49,6 +49,7 @@ const { parseSteamGameLink } = require('./src/main/games/steam-link-parser');
 const { registerCorrectionsIpc } = require('./src/main/ipc/register-corrections-ipc');
 const { registerCustomGamesIpc } = require('./src/main/ipc/register-custom-games-ipc');
 const { createCustomGamesService } = require('./src/main/custom-games/custom-games-service');
+const { createCustomGamesInstallRunner } = require('./src/main/custom-games/install-process');
 const { registerExistingIpc } = require('./src/main/ipc/register-existing-ipc');
 const { registerAuthIpc } = require('./src/main/ipc/register-auth-ipc');
 const { registerAnnouncementsIpc } = require('./src/main/ipc/register-announcements-ipc');
@@ -317,7 +318,9 @@ const authSession = createAuthSession({
     baseUrl: apiBaseUrl,
     onAuthRequired: code => mainWindow?.webContents.send('auth:required', { code })
 });
-const customGamesService = createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell });
+const customGamesInstallRunner = createCustomGamesInstallRunner({ utilityProcess, app, authSession, apiBaseUrl });
+const customGamesService = createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell,
+    installRunner: customGamesInstallRunner });
 const cloudSyncService = createCloudSyncService({
     axios,
     authSession,
@@ -847,7 +850,14 @@ app.on('window-all-closed', () => {
     if (!configStore.get().steamPlugin?.enabled && !configStore.get().cloudSync?.enabled && process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+let customGamesShutdown = null;
+app.on('before-quit', event => {
+    if (customGamesInstallRunner.isRunning() && !customGamesShutdown) {
+        event.preventDefault();
+        // Stop the isolated installer before exiting, preserving partial files.
+        // Explicit "Cancel download" still removes them instead.
+        customGamesShutdown = customGamesInstallRunner.dispose().finally(() => app.quit());
+    } else if (customGamesInstallRunner.isRunning()) event.preventDefault();
     shutdownRuntime('before-quit');
 });
 

@@ -3,6 +3,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const { extractSafeZip, safeEntryPath } = require('./safe-zip');
+const { createTransferMeter, createTaskLimiter } = require('./transfer-progress');
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
@@ -19,6 +20,11 @@ const MARKER = '.merlin-install.json';
 
 function validFolderManifestFileCount(files) {
     return Array.isArray(files) && files.length > 0 && files.length <= MAX_FOLDER_MANIFEST_FILES;
+}
+
+function validArchiveSize(value) {
+    const size = Number(value);
+    return Number.isSafeInteger(size) && size > 0 && size <= 100 * 1024 ** 3;
 }
 
 function requiredFreeBytes(archiveSize, partialSize = 0, packageType = 'zip') {
@@ -59,14 +65,15 @@ function moveWithWindowsShellToRecycleBin(targetPath) {
 }
 
 function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, testDriveRoot = null,
-    windowsRecycleBinMove = moveWithWindowsShellToRecycleBin, downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS }) {
+    windowsRecycleBinMove = moveWithWindowsShellToRecycleBin, downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS,
+    initialCatalog = null, installRunner = null, extractionConcurrency = 2 }) {
     const dataRoot = app.getPath('userData');
     const source = new URL(apiBaseUrl).hostname.replace(/[^a-z0-9.-]/gi, '_');
     const registryFile = path.join(dataRoot, `custom-games-installs-${source}.json`);
     const cacheFile = path.join(dataRoot, `custom-games-catalog-${source}.json`);
     let active = null;
     const progressListeners = new Set();
-    let catalog = loadJson(cacheFile, []);
+    let catalog = initialCatalog || loadJson(cacheFile, []);
     let registry = loadJson(registryFile, {});
 
     function loadJson(file, fallback) {
@@ -163,7 +170,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             if (match) {
                 registry[item.id] = { drive: letter, installName: item.installName, name: item.name,
                     executablePath: match.marker.executablePath || null };
-                void saveJson(registryFile, registry);
+                if (!active?.external) void saveJson(registryFile, registry);
                 return { drive: letter, path: match.path };
             }
         }
@@ -171,17 +178,22 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     }
 
     async function refresh() {
-        const token = await authSession.getAccessToken();
-        const response = await axios.get(`${apiBaseUrl}/custom-games`, {
-            headers: { Authorization: `Bearer ${token}` }, timeout: 30000,
-        });
-        if (!Array.isArray(response.data?.games)) throw new Error('catalog_unavailable');
-        catalog = response.data.games.map(game => ({
-            ...game,
-            imageUrl: game.imageUrl ? new URL(game.imageUrl, apiBaseUrl).href : null,
-        }));
-        await saveJson(cacheFile, catalog);
-        return listCached(false);
+        try {
+            const token = await authSession.getAccessToken();
+            const response = await axios.get(`${apiBaseUrl}/custom-games`, {
+                headers: { Authorization: `Bearer ${token}` }, timeout: 30000,
+            });
+            if (!Array.isArray(response.data?.games)) throw new Error('catalog_unavailable');
+            catalog = response.data.games.map(game => ({
+                ...game,
+                imageUrl: game.imageUrl ? new URL(game.imageUrl, apiBaseUrl).href : null,
+            }));
+            await saveJson(cacheFile, catalog);
+            return listCached(false);
+        } catch (error) {
+            if (Number(error?.response?.status) === 403) return { success: false, code: 'gold_required' };
+            throw error;
+        }
     }
 
     function listCached(offline) {
@@ -207,6 +219,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     async function list() {
         try { return await refresh(); }
         catch (error) {
+            if (Number(error?.response?.status) === 403) return { success: false, code: 'gold_required' };
             if (!catalog.length && !Object.keys(registry).length) return { success: false, code: 'catalog_unavailable' };
             return listCached(true);
         }
@@ -218,14 +231,13 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const progressValue = stage === 'downloading' ? Number(extra.received) : Number(extra.bytes);
         const progressTotal = stage === 'downloading' ? Number(extra.total) : Number(extra.totalBytes);
         const terminal = ['completed', 'failed', 'cancelled'].includes(stage);
-        const stageChanged = stage !== operation.rateStage;
         operation.rateStage = stage;
         operation.rateStats ||= Object.create(null);
         const rate = operation.rateStats[stage] ||= { samples: [], last: null };
 
         // Extraction can report once per decompressed stream chunk. Keep the same
         // bounded IPC cadence for every stage and do rate math only when publishing.
-        const shouldPublish = force || terminal || stageChanged || now - (operation.lastEmit || 0) >= 400;
+        const shouldPublish = force || terminal || !operation.lastEmit || now - operation.lastEmit >= 400;
         if (shouldPublish && Number.isFinite(progressValue) && Number.isFinite(progressTotal)) {
             const previous = rate.last;
             if (previous && (now - previous.at > RATE_WINDOW_MS || progressValue < previous.value)) {
@@ -247,6 +259,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 ? Math.max(0, Math.ceil((progressTotal - progressValue) / speedBytesPerSecond)) : null;
         }
         operation.snapshot = {
+            ...operation.snapshot,
             id: operation.item.id, name: operation.item.name, drive: operation.drive,
             stage, ...extra, speedBytesPerSecond, etaSeconds,
             retryAttempt: operation.retrying?.size ? Math.max(...operation.retrying.values()) : null,
@@ -338,7 +351,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const stateFile = path.join(downloads, `${item.id}.json`);
         operation.files = { partial, stateFile };
         const total = Number(item.archiveSize);
-        if (!Number.isSafeInteger(total) || total < 1 || total > 30 * 1024 ** 3) throw new Error('invalid_archive_size');
+        if (!validArchiveSize(total)) throw new Error('invalid_archive_size');
         const statfs = await fs.promises.statfs(gamesRoot);
         const available = Number(statfs.bavail) * Number(statfs.bsize);
         const partialSize = fs.existsSync(partial) ? fs.statSync(partial).size : 0;
@@ -447,7 +460,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const finalFileCount = (Array.isArray(files) ? files.length : 0) +
             (Array.isArray(bundles) ? bundles.reduce((sum, bundle) => sum + (Array.isArray(bundle.files) ? bundle.files.length : 0), 0) : 0);
         if (manifest?.gameId !== item.id || !Array.isArray(files) || !Array.isArray(bundles) ||
-            finalFileCount < 1 || finalFileCount > 20000 || bundles.length > MAX_FOLDER_BUNDLES ||
+            finalFileCount < 1 || finalFileCount > MAX_FOLDER_MANIFEST_FILES || bundles.length > MAX_FOLDER_BUNDLES ||
             !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
@@ -549,19 +562,50 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             assertRealDirectory(staging);
         }
 
-        const localSizes = new Map();
-        for (const file of normalizedFiles) {
-            const parent = path.dirname(file.target);
-            const parentRelative = path.relative(staging, parent);
+        const checkedParents = new Set([staging.toLowerCase()]);
+        const ensureSafeParent = async target => {
+            const parent = path.dirname(target);
             let current = staging;
-            for (const segment of parentRelative.split(path.sep).filter(Boolean)) {
+            for (const segment of path.relative(staging, parent).split(path.sep).filter(Boolean)) {
                 current = path.join(current, segment);
+                if (checkedParents.has(current.toLowerCase())) continue;
                 await fs.promises.mkdir(current).catch(error => { if (error.code !== 'EEXIST') throw error; });
                 const stat = await fs.promises.lstat(current);
-                if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('unsafe_install_path');
                 const real = await fs.promises.realpath(current);
-                if (real.toLowerCase() !== current.toLowerCase()) throw new Error('unsafe_install_path');
+                if (!stat.isDirectory() || stat.isSymbolicLink() || real.toLowerCase() !== current.toLowerCase()) {
+                    throw new Error('unsafe_install_path');
+                }
+                checkedParents.add(current.toLowerCase());
             }
+        };
+        // A completed bundle is checkpointed before deleting its ZIP. On resume,
+        // trust neither the checkpoint nor the extracted files without validation.
+        const extractedBundles = new Set();
+        for (const bundle of normalizedBundles) {
+            if (!Array.isArray(state.extractedBundles) || !state.extractedBundles.includes(bundle.id)) continue;
+            let valid = true;
+            for (const member of bundle.members) {
+                await ensureSafeParent(member.target);
+                const stat = await fs.promises.lstat(member.target).catch(() => null);
+                if (stat && (!stat.isFile() || stat.isSymbolicLink())) throw new Error('unsafe_install_path');
+                if (!stat || stat.size !== member.sizeBytes ||
+                    await sha256File(member.target, () => {}, operation.controller.signal) !== member.sha256) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) {
+                extractedBundles.add(bundle.id);
+                const zipStat = await fs.promises.lstat(bundle.target).catch(() => null);
+                if (zipStat && (!zipStat.isFile() || zipStat.isSymbolicLink())) throw new Error('unsafe_install_path');
+                if (zipStat) await fs.promises.unlink(bundle.target);
+            }
+        }
+        state.extractedBundles = [...extractedBundles];
+        const localSizes = new Map();
+        for (const file of normalizedFiles) {
+            if (extractedBundles.has(file.id)) { localSizes.set(file.id, file.sizeBytes); continue; }
+            await ensureSafeParent(file.target);
             const existing = await fs.promises.lstat(file.target).catch(() => null);
             if (existing && (!existing.isFile() || existing.isSymbolicLink())) throw new Error('unsafe_install_path');
             if (!existing && file.sizeBytes === 0) await fs.promises.writeFile(file.target, Buffer.alloc(0), { flag: 'wx' });
@@ -571,9 +615,9 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             } else localSizes.set(file.id, existing?.size || 0);
         }
         let verifiedExistingBytes = 0;
-        const resumableFiles = normalizedFiles.filter(file => file.sha256 && localSizes.get(file.id) === file.sizeBytes);
+        const resumableFiles = normalizedFiles.filter(file => file.sha256 && !extractedBundles.has(file.id) && localSizes.get(file.id) === file.sizeBytes);
+        const verifyTotal = resumableFiles.reduce((sum, entry) => sum + entry.sizeBytes, 0);
         for (const file of resumableFiles) {
-            const verifyTotal = resumableFiles.reduce((sum, entry) => sum + entry.sizeBytes, 0);
             const actualHash = await sha256File(file.target, bytes => emit(operation, onProgress, 'verifying', {
                 bytes: verifiedExistingBytes + bytes, totalBytes: verifyTotal,
             }), operation.controller.signal);
@@ -587,21 +631,90 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const transferTotal = normalizedFiles.reduce((sum, file) => sum + file.sizeBytes, 0);
         const statfs = await fs.promises.statfs(gamesRoot);
         const available = Number(statfs.bavail) * Number(statfs.bsize);
-        if (available < total + normalizedBundles.reduce((sum, bundle) => sum + bundle.sizeBytes, 0) -
-            alreadyDownloaded + INSTALL_SAFETY_BYTES) throw new Error('disk_space');
+        const restoredBytes = normalizedBundles.filter(bundle => extractedBundles.has(bundle.id))
+            .reduce((sum, bundle) => sum + bundle.members.reduce((value, member) => value + member.sizeBytes, 0), 0);
+        const restoredTransferBytes = normalizedBundles.filter(bundle => extractedBundles.has(bundle.id))
+            .reduce((sum, bundle) => sum + bundle.sizeBytes, 0);
+        if (available < total + normalizedBundles.filter(bundle => !extractedBundles.has(bundle.id))
+            .reduce((sum, bundle) => sum + bundle.sizeBytes, 0) -
+            (alreadyDownloaded - restoredTransferBytes) - restoredBytes + INSTALL_SAFETY_BYTES) throw new Error('disk_space');
         await saveJson(stateFile, state);
 
         let received = alreadyDownloaded;
         let completedFiles = normalizedFiles.filter(file => localSizes.get(file.id) === file.sizeBytes).length;
+        let installedFiles = normalizedFiles.filter(file => !file.members && localSizes.get(file.id) === file.sizeBytes).length;
+        let extractedFiles = normalizedBundles.filter(bundle => extractedBundles.has(bundle.id))
+            .reduce((sum, bundle) => sum + bundle.members.length, 0);
+        let extractedBytes = restoredBytes;
+        const extractionTotalBytes = normalizedBundles.reduce((sum, bundle) => sum + bundle.members.reduce((value, member) => value + member.sizeBytes, 0), 0);
+        const extractionTotalFiles = normalizedBundles.reduce((sum, bundle) => sum + bundle.members.length, 0);
+        const extracting = new Map();
+        const extractionMeter = createTransferMeter();
+        let extractionRate = { speedBytesPerSecond: 0, etaSeconds: null };
+        let extractionRateAt = 0;
+        let downloadsFinished = false;
+        let stateWrites = Promise.resolve();
         const inFlight = new Map();
         operation.retrying = new Map();
-        const report = (force = false) => emit(operation, onProgress, 'downloading', {
-            received, total: transferTotal, completedFiles, totalFiles: normalizedFiles.length,
-        }, force);
+        const report = (force = false) => {
+            downloadsFinished = normalizedBundles.length > 0 && completedFiles === normalizedFiles.length;
+            const current = [...extracting.values()];
+            const bytes = extractedBytes + current.reduce((sum, entry) => sum + entry.bytes, 0);
+            const files = extractedFiles + current.reduce((sum, entry) => sum + entry.files, 0);
+            const now = Date.now();
+            if ((bytes || files) && (force || now - extractionRateAt >= 400)) {
+                extractionRate = extractionMeter.update(bytes, extractionTotalBytes, files, extractionTotalFiles, now);
+                extractionRateAt = now;
+            }
+            emit(operation, onProgress, downloadsFinished ? 'extracting' : 'downloading', {
+                received: received + [...inFlight.values()].reduce((sum, value) => sum + value, 0), total: transferTotal,
+                completedFiles, totalFiles: normalizedFiles.length,
+                installedFiles: installedFiles + files, totalInstallFiles: finalFileCount,
+                extractedBytes: bytes, extractionTotalBytes,
+                extractionSpeedBytesPerSecond: extractionRate.speedBytesPerSecond,
+                extractionEtaSeconds: extractionRate.etaSeconds,
+                ...(downloadsFinished ? { bytes, totalBytes: extractionTotalBytes, files, totalFiles: extractionTotalFiles } : {}),
+            }, force);
+        };
         report();
+
+        const limitExtraction = createTaskLimiter(Math.max(1, Math.min(2, Number(extractionConcurrency) || 1)));
+        const extractBundle = bundle => limitExtraction(async () => {
+            if (extractedBundles.has(bundle.id)) return;
+            if (operation.controller.signal.aborted) throw new Error('cancelled');
+            for (const member of bundle.members) {
+                await ensureSafeParent(member.target);
+                const existing = await fs.promises.lstat(member.target).catch(() => null);
+                if (existing && (!existing.isFile() || existing.isSymbolicLink())) throw new Error('unsafe_install_path');
+                if (existing) await fs.promises.unlink(member.target);
+            }
+            extracting.set(bundle.id, { files: 0, bytes: 0 });
+            await extractSafeZip(bundle.target, staging, details => {
+                extracting.set(bundle.id, details);
+                report();
+            }, () => operation.controller.signal.aborted,
+            new Map(bundle.members.map(member => [member.path.toLowerCase(), member.sizeBytes])),
+            { expectedHashes: new Map(bundle.members.map(member => [member.path.toLowerCase(), member.sha256])) });
+            extracting.delete(bundle.id);
+            extractedBytes += bundle.members.reduce((sum, member) => sum + member.sizeBytes, 0);
+            extractedFiles += bundle.members.length;
+            extractedBundles.add(bundle.id);
+            state.extractedBundles = [...extractedBundles];
+            stateWrites = stateWrites.then(() => saveJson(stateFile, state));
+            await stateWrites;
+            await fs.promises.unlink(bundle.target);
+            report();
+        });
 
         const downloadFile = async (file, integrityAttempt = 0) => {
             let offset = localSizes.get(file.id) || 0;
+            let hash = file.sha256 ? createHash('sha256') : null;
+            if (hash && offset > 0) {
+                for await (const chunk of fs.createReadStream(file.target, { end: offset - 1, highWaterMark: 1024 * 1024 })) {
+                    if (operation.controller.signal.aborted) throw new Error('cancelled');
+                    hash.update(chunk);
+                }
+            }
             let output;
             try {
                 output = await fs.promises.open(file.target, offset ? 'r+' : 'w+');
@@ -618,6 +731,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                         operation.controller.signal.addEventListener('abort', abortRequest, { once: true });
                         let idleTimer;
                         let stalled = false;
+                        const rangeHash = hash?.copy();
                         const armIdleTimer = () => {
                             clearTimeout(idleTimer);
                             idleTimer = setTimeout(() => {
@@ -654,11 +768,9 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                                     written += result.bytesWritten;
                                 }
                                 position += chunk.length;
+                                rangeHash?.update(chunk);
                                 inFlight.set(file.id, position - start);
-                                emit(operation, onProgress, 'downloading', {
-                                    received: received + [...inFlight.values()].reduce((sum, bytes) => sum + bytes, 0),
-                                    total: transferTotal, completedFiles, totalFiles: normalizedFiles.length,
-                                });
+                                report();
                                 armIdleTimer();
                             }
                             clearTimeout(idleTimer);
@@ -668,6 +780,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                             inFlight.delete(file.id);
                             operation.retrying.delete(file.id);
                             localSizes.set(file.id, offset);
+                            hash = rangeHash;
                             lastError = null;
                             report();
                             break;
@@ -704,9 +817,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 await output.sync();
             } finally { await output?.close().catch(() => {}); }
             if (file.sha256) {
-                const actualHash = await sha256File(file.target, bytes => emit(operation, onProgress, 'verifying', {
-                    bytes, totalBytes: file.sizeBytes,
-                }), operation.controller.signal);
+                const actualHash = hash.digest('hex');
                 if (actualHash !== file.sha256) {
                     await fs.promises.unlink(file.target).catch(() => {});
                     received = Math.max(0, received - file.sizeBytes);
@@ -716,7 +827,9 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 }
             }
             completedFiles += 1;
+            if (!file.members) installedFiles += 1;
             report();
+            if (file.members) await extractBundle(file);
         };
         const orderedFiles = normalizedFiles.filter(file => localSizes.get(file.id) !== file.sizeBytes)
             .sort((a, b) => b.sizeBytes - a.sizeBytes);
@@ -733,38 +846,27 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             const failure = results.find(result => result.status === 'rejected');
             if (failure) throw failure.reason;
         };
-        await runQueue(orderedFiles.filter(file => file.sizeBytes >= SMALL_FILE_LIMIT), DOWNLOAD_WORKERS);
-        await runQueue(orderedFiles.filter(file => file.sizeBytes < SMALL_FILE_LIMIT), SMALL_FILE_WORKERS);
+        // Complete ZIPs from an interrupted run can extract immediately. New ZIPs
+        // extract as soon as their download/hash finishes, not after the whole game.
+        const readyBundles = normalizedBundles.filter(bundle => !extractedBundles.has(bundle.id) && localSizes.get(bundle.id) === bundle.sizeBytes);
+        const transfers = (async () => {
+            await runQueue(orderedFiles.filter(file => file.sizeBytes >= SMALL_FILE_LIMIT), DOWNLOAD_WORKERS);
+            await runQueue(orderedFiles.filter(file => file.sizeBytes < SMALL_FILE_LIMIT), SMALL_FILE_WORKERS);
+        })();
+        const results = await Promise.allSettled([
+            transfers.catch(error => { operation.controller.abort(); throw error; }),
+            ...readyBundles.map(bundle => extractBundle(bundle).catch(error => { operation.controller.abort(); throw error; })),
+        ]);
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure) throw failure.reason;
         if (normalizedFiles.some(file => localSizes.get(file.id) !== file.sizeBytes)) throw new Error('incomplete_download');
-        for (const bundle of normalizedBundles) {
-            const expected = new Map(bundle.members.map(member => [member.path.toLowerCase(), member.sizeBytes]));
-            // A previous run may have stopped halfway through extraction. Keep its ZIP
-            // for resume, but discard only that bundle's incomplete output before retry.
-            for (const member of bundle.members) {
-                const existing = await fs.promises.lstat(member.target).catch(() => null);
-                if (existing && (!existing.isFile() || existing.isSymbolicLink())) throw new Error('unsafe_install_path');
-                if (existing) await fs.promises.unlink(member.target);
-            }
-            emit(operation, onProgress, 'extracting', { files: 0, totalFiles: bundle.members.length,
-                bytes: 0, totalBytes: bundle.members.reduce((sum, member) => sum + member.sizeBytes, 0) });
-            await extractSafeZip(bundle.target, staging,
-                details => emit(operation, onProgress, 'extracting', details),
-                () => operation.controller.signal.aborted, expected);
-            for (const member of bundle.members) {
-                const actual = await sha256File(member.target, bytes => emit(operation, onProgress, 'verifying', {
-                    bytes, totalBytes: member.sizeBytes,
-                }), operation.controller.signal);
-                if (actual !== member.sha256) throw new Error('checksum_mismatch');
-            }
-            await fs.promises.unlink(bundle.target);
-        }
+        report(true);
         await saveJson(stateFile, state);
-        if (!normalizedBundles.length) report(true);
         return { staging, stateFile, gamesRoot, folder: true, gamesRootPath };
     }
 
     async function install(id, letter, onProgress = () => {}) {
-        if (active) return { success: false, code: 'busy' };
+        if (active || installRunner?.pending?.()) return { success: false, code: 'busy' };
         const item = catalog.find(game => game.id === id);
         if (!item || !item.archiveKey) return { success: false, code: 'game_not_found' };
         if (installed(item)) return { success: false, code: 'already_installed' };
@@ -778,6 +880,24 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         let finishOperation;
         operation.finished = new Promise(resolve => { finishOperation = resolve; });
         active = operation;
+        if (installRunner) {
+            operation.external = true;
+            try {
+                const result = await installRunner.run({ id, letter, catalog }, progress => {
+                    operation.snapshot = progress;
+                    try { onProgress(progress); } catch { /* Window reloading. */ }
+                    for (const listener of progressListeners) {
+                        try { listener(progress); } catch { /* Window reloading. */ }
+                    }
+                });
+                registry = loadJson(registryFile, registry);
+                if (!['completed', 'failed', 'cancelled'].includes(operation.snapshot.stage)) {
+                    emit(operation, onProgress, result.success ? 'completed' : 'failed',
+                        { done: true, ...(result.success ? {} : { code: result.code || 'install_process_failed' }) }, true);
+                }
+                return result;
+            } finally { active = null; finishOperation(); }
+        }
         const folderPackage = item.packageType === 'folder';
         const staging = path.join(path.dirname(target), folderPackage
             ? `.merlin-installing-${item.id}` : `.merlin-installing-${item.id}-${require('node:crypto').randomUUID()}`);
@@ -792,6 +912,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 emit(operation, onProgress, 'extracting');
                 await extractSafeZip(files.partial, staging, details => emit(operation, onProgress, 'extracting', details),
                     () => operation.controller.signal.aborted);
+                emit(operation, onProgress, 'extracting', operation.snapshot, true);
             }
             if (operation.controller.signal.aborted) throw new Error('cancelled');
             if (item.executablePath) {
@@ -832,11 +953,19 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
 
     async function cancel() {
         if (!active) return { success: false, code: 'not_running' };
+        if (active.external) return installRunner.cancel();
         const operation = active;
         operation.cancelRequested = true;
         operation.controller.abort();
         await operation.finished;
         return { success: true };
+    }
+
+    async function suspend() {
+        if (!active) return;
+        if (active.external) { await installRunner.dispose(); return; }
+        active.controller.abort();
+        await active.finished;
     }
 
     function requireInstalled(id) {
@@ -913,8 +1042,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         }
     }
 
-    return { list, refresh, install, cancel, openFolder, play, uninstall, listDrives, subscribeProgress };
+    return { list, refresh, install, cancel, suspend, openFolder, play, uninstall, listDrives, subscribeProgress };
 }
 
-module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount,
+module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount, validArchiveSize,
     moveWithWindowsShellToRecycleBin };

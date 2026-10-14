@@ -396,8 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showError(code) {
         entitlementMonitor.stop();
         setApplicationLocked(true);
-        currentSessionData = null;
-        expiredAccessNotice.hidden = true;
+        applyEntitlementStatus(null);
         gate.hidden = false;
         gate.classList.remove('is-authenticated');
         setMode('prompt');
@@ -431,6 +430,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyEntitlementStatus(sessionData = null) {
         currentSessionData = sessionData;
         renderAccessNotice();
+        const license = sessionData?.license;
+        window.dispatchEvent(new CustomEvent('merlin-entitlement-changed', { detail: {
+            authenticated: sessionData?.authenticated === true,
+            expired: isExpiredSession(sessionData),
+            planTier: String(license?.planTier || '').trim().toLowerCase(),
+        } }));
     }
 
     function noticeLocale() {
