@@ -123,9 +123,11 @@ function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, ge
 
     async function checkAndInstall(steamPath, lang = 'en') {
         const message = MESSAGES[lang] || MESSAGES.en;
-        const missing = requiredFiles.filter(file =>
-            !fs.existsSync(path.join(steamPath, file.relativeDestination))
-        );
+        const missing = requiredFiles.filter(file => {
+            const destination = path.join(steamPath, file.relativeDestination);
+            return !fs.existsSync(destination)
+                || (cloudRuntimeNames.has(file.name) && !sameContents(getSourcePath(file), destination));
+        });
 
         if (missing.length === 0) {
             removeLegacyDlls(steamPath);

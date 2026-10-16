@@ -91,10 +91,16 @@ test('cloud sync supports stage and production without inheriting the other envi
         config.cloudSync = { enabled: true, startAtLogin: true };
         fs.writeFileSync(path.join(cloudPath, 'credentials.json'), JSON.stringify(credentials));
         prod.start();
-        assert.equal(config.cloudSync.enabled, false);
-        assert.equal(fs.existsSync(path.join(cloudPath, 'credentials.json')), false);
+        assert.equal(config.cloudSync.enabled, true);
+        assert.equal(config.cloudSync.startAtLogin, true);
+        assert.equal(prod.status().connected, false);
+        assert.equal(prod.status().errorCode, 'environment_mismatch');
+        assert.equal(fs.existsSync(path.join(cloudPath, 'credentials.json')), true);
         assert.equal(JSON.parse(fs.readFileSync(path.join(cloudPath, 'config.json'), 'utf8')).merlin_enabled, false);
-        assert.equal((await prod.enable()).connected, true);
+        assert.equal((await prod.resumeAfterLogin()).connected, false);
+        assert.equal((await prod.retry()).connected, true);
+        assert.equal(calls.filter(call => call.url.endsWith('/credentials')).at(-1).body.accessKeyId, null);
+        assert.equal(config.cloudSync.enabled, true);
         assert.equal(JSON.parse(fs.readFileSync(path.join(cloudPath, 'environment.json'), 'utf8')).origin,
             'https://api-merlin.com');
         assert.equal(JSON.parse(fs.readFileSync(path.join(cloudPath, 'credentials.json'), 'utf8')).endpoint,
@@ -102,9 +108,20 @@ test('cloud sync supports stage and production without inheriting the other envi
         const stageAgain = createCloudSyncService({ axios, authSession, configStore,
             apiBaseUrl: 'https://staging.api-merlin.com/api', localAppData: temporary });
         stageAgain.start();
-        assert.equal(config.cloudSync.enabled, false);
-        assert.equal(fs.existsSync(path.join(cloudPath, 'credentials.json')), false);
+        assert.equal(config.cloudSync.enabled, true);
+        assert.equal(stageAgain.status().errorCode, 'environment_mismatch');
+        assert.equal(fs.existsSync(path.join(cloudPath, 'credentials.json')), true);
+        assert.equal(JSON.parse(fs.readFileSync(path.join(cloudPath, 'config.json'), 'utf8')).merlin_enabled, false);
+        networkDown = true;
+        assert.equal((await stageAgain.retry()).connected, false);
+        assert.equal(config.cloudSync.enabled, true);
+        assert.equal(JSON.parse(fs.readFileSync(path.join(cloudPath, 'config.json'), 'utf8')).merlin_enabled, false);
+        networkDown = false;
+        assert.equal((await stageAgain.retry()).connected, true);
+        assert.equal(calls.filter(call => call.url.endsWith('/credentials')).at(-1).body.accessKeyId, null);
+        assert.equal(config.cloudSync.enabled, true);
         prod.stop();
+        stageAgain.stop();
     } finally {
         fs.rmSync(temporary, { recursive: true, force: true });
     }

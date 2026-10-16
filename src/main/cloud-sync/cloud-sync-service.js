@@ -239,12 +239,27 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     async function resumeAfterLogin() {
-        if (!enabled() || !supportedOrigin()) return status();
+        if (!enabled() || !supportedOrigin() || !matchesLocalEnvironment()) return status();
         if (connecting) await connecting;
         suspended = false;
         if (!status().connected) await renew();
         if (!suspended) startTimer();
         return status();
+    }
+
+    async function retry() {
+        if (!enabled() || !supportedOrigin()) return status();
+        if (connecting) await connecting;
+        if (!matchesLocalEnvironment()) {
+            // Never send a key from the previous environment to this API.
+            // Keep the native bridge paused until fresh credentials arrive.
+            writeDisabledConfig();
+            activeKeyId = null;
+            expiresAt = null;
+        }
+        suspended = false;
+        startTimer();
+        return renew();
     }
 
     async function disable() {
@@ -272,10 +287,14 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
 
     function start() {
         if (!supportedOrigin() || (enabled() && !matchesLocalEnvironment())) {
-            // Stage and production share the Windows profile. Never silently
-            // reuse a cloud opt-in or gateway key from the other environment.
-            if (enabled()) configStore.update({ cloudSync: { enabled: false, startAtLogin: false } });
-            clearLocalConnection();
+            // Stage and production share this Windows profile. Pause the native
+            // connection without erasing the user's opt-in or the other
+            // environment's credentials; only the user may turn the toggle off.
+            if (enabled()) {
+                suspended = true;
+                errorCode = supportedOrigin() ? 'environment_mismatch' : 'unavailable';
+                writeDisabledConfig();
+            } else clearLocalConnection();
             return;
         }
         if (!enabled()) {
@@ -283,6 +302,8 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
             clearLocalConnection();
             return;
         }
+        suspended = false;
+        errorCode = null;
         try {
             restartSteamRequired = !JSON.parse(fs.readFileSync(configPath, 'utf8')).merlin_enabled;
         } catch (_) { restartSteamRequired = true; }
@@ -304,6 +325,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         getGame,
         listGames,
         renew,
+        retry,
         restoreGame,
         resumeAfterLogin,
         start,

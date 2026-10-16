@@ -761,7 +761,7 @@ async function loadConfig() {
         const detectedSteamPath = await window.electronAPI.findSteam();
         if (detectedSteamPath) {
             config.steamPath = detectedSteamPath;
-            await window.electronAPI.saveConfig(config);
+            await window.electronAPI.saveConfig({ steamPath: config.steamPath });
         }
     }
 
@@ -1071,7 +1071,10 @@ const cloudTranslations = {
         cloud_kicker: 'SAVES NA NUVEM', cloud_title: 'Sincronização de saves',
         cloud_description: 'Mantenha seu progresso sincronizado entre computadores nos jogos adicionados pelo Merlin. Seus jogos comprados continuam usando o Steam Cloud normalmente.',
         cloud_state: 'Status', cloud_enable: 'Ativar sincronização', cloud_disable: 'Desativar', cloud_retry: 'Tentar novamente',
-        cloud_off: 'Desativada', cloud_on: 'Ativada', cloud_disconnected: 'Sem conexão', cloud_toggle_aria: 'Ativar ou desativar a sincronização de saves',
+        cloud_off: 'Desativada', cloud_on: 'Ativada', cloud_disconnected: 'Sem conexão', cloud_files_outdated: 'Arquivos da Steam precisam ser atualizados', cloud_toggle_aria: 'Ativar ou desativar a sincronização de saves',
+        cloud_files_before_enable: 'Os arquivos da Steam serão instalados ou atualizados ao ativar a nuvem.',
+        cloud_files_after_enable: 'A nuvem continua ativada, mas os arquivos da Steam precisam ser atualizados. Use Reparar em Manutenção.',
+        cloud_environment_notice: 'Você alternou entre teste e produção. A conexão foi pausada para não usar a nuvem errada. Clique em Tentar novamente para conectar a este ambiente; sua escolha de ativação foi mantida.',
         cloud_enable_title: 'Ativar saves na nuvem?',
         cloud_enable_running: 'A Steam será fechada para atualizar os arquivos do Merlin. Depois, você poderá abri-la novamente. O Merlin também iniciará com o Windows para manter a sincronização disponível.',
         cloud_enable_closed: 'O Merlin instalará os arquivos necessários. Abra a Steam depois da ativação. O Merlin também iniciará com o Windows para manter a sincronização disponível.',
@@ -1096,7 +1099,10 @@ const cloudTranslations = {
         cloud_kicker: 'CLOUD SAVES', cloud_title: 'Save synchronization',
         cloud_description: 'Keep your progress synced across computers for Merlin-added games. Purchased games continue using Steam Cloud normally.',
         cloud_state: 'Status', cloud_enable: 'Enable synchronization', cloud_disable: 'Disable', cloud_retry: 'Try again',
-        cloud_off: 'Disabled', cloud_on: 'Enabled', cloud_disconnected: 'Offline', cloud_toggle_aria: 'Enable or disable save synchronization',
+        cloud_off: 'Disabled', cloud_on: 'Enabled', cloud_disconnected: 'Offline', cloud_files_outdated: 'Steam files need updating', cloud_toggle_aria: 'Enable or disable save synchronization',
+        cloud_files_before_enable: 'Steam files will be installed or updated when you enable cloud saves.',
+        cloud_files_after_enable: 'Cloud saves remain enabled, but the Steam files need updating. Use Repair under Maintenance.',
+        cloud_environment_notice: 'You switched between staging and production. The connection was paused to avoid using the wrong cloud. Select Try again to connect to this environment; your enabled setting was preserved.',
         cloud_enable_title: 'Enable cloud saves?',
         cloud_enable_running: 'Steam will close while Merlin updates its files. You can reopen it afterward. Merlin will also start with Windows to keep synchronization available.',
         cloud_enable_closed: 'Merlin will install the required files. Open Steam after activation. Merlin will also start with Windows to keep synchronization available.',
@@ -1121,7 +1127,10 @@ const cloudTranslations = {
         cloud_kicker: 'PARTIDAS EN LA NUBE', cloud_title: 'Sincronización de partidas',
         cloud_description: 'Mantén tu progreso sincronizado entre ordenadores en los juegos añadidos por Merlin. Los juegos comprados siguen usando Steam Cloud normalmente.',
         cloud_state: 'Estado', cloud_enable: 'Activar sincronización', cloud_disable: 'Desactivar', cloud_retry: 'Reintentar',
-        cloud_off: 'Desactivada', cloud_on: 'Activada', cloud_disconnected: 'Sin conexión', cloud_toggle_aria: 'Activar o desactivar la sincronización de partidas',
+        cloud_off: 'Desactivada', cloud_on: 'Activada', cloud_disconnected: 'Sin conexión', cloud_files_outdated: 'Hay que actualizar los archivos de Steam', cloud_toggle_aria: 'Activar o desactivar la sincronización de partidas',
+        cloud_files_before_enable: 'Los archivos de Steam se instalarán o actualizarán al activar las partidas en la nube.',
+        cloud_files_after_enable: 'Las partidas en la nube siguen activadas, pero hay que actualizar los archivos de Steam. Usa Reparar en Mantenimiento.',
+        cloud_environment_notice: 'Cambiaste entre pruebas y producción. La conexión se pausó para no usar la nube equivocada. Pulsa Reintentar para conectar con este entorno; tu elección de activación se conservó.',
         cloud_enable_title: '¿Activar partidas en la nube?',
         cloud_enable_running: 'Steam se cerrará mientras Merlin actualiza sus archivos. Podrás abrirlo después. Merlin también se iniciará con Windows para mantener la sincronización disponible.',
         cloud_enable_closed: 'Merlin instalará los archivos necesarios. Abre Steam después de activar. Merlin también se iniciará con Windows.',
@@ -1146,7 +1155,10 @@ const cloudTranslations = {
         cloud_kicker: 'SAUVEGARDES CLOUD', cloud_title: 'Synchronisation des sauvegardes',
         cloud_description: 'Gardez votre progression synchronisée entre ordinateurs pour les jeux ajoutés par Merlin. Les jeux achetés continuent d’utiliser Steam Cloud normalement.',
         cloud_state: 'État', cloud_enable: 'Activer la synchronisation', cloud_disable: 'Désactiver', cloud_retry: 'Réessayer',
-        cloud_off: 'Désactivée', cloud_on: 'Activée', cloud_disconnected: 'Hors ligne', cloud_toggle_aria: 'Activer ou désactiver la synchronisation des sauvegardes',
+        cloud_off: 'Désactivée', cloud_on: 'Activée', cloud_disconnected: 'Hors ligne', cloud_files_outdated: 'Les fichiers Steam doivent être mis à jour', cloud_toggle_aria: 'Activer ou désactiver la synchronisation des sauvegardes',
+        cloud_files_before_enable: 'Les fichiers Steam seront installés ou mis à jour lors de l’activation des sauvegardes cloud.',
+        cloud_files_after_enable: 'Les sauvegardes cloud restent activées, mais les fichiers Steam doivent être mis à jour. Utilisez Réparer dans Maintenance.',
+        cloud_environment_notice: 'Vous êtes passé du test à la production, ou inversement. La connexion a été suspendue pour éviter la mauvaise version du cloud. Cliquez sur Réessayer pour vous connecter à cet environnement ; votre choix d’activation a été conservé.',
         cloud_enable_title: 'Activer les sauvegardes cloud ?',
         cloud_enable_running: 'Steam sera fermé pendant la mise à jour des fichiers Merlin. Vous pourrez le rouvrir ensuite. Merlin démarrera aussi avec Windows pour garder la synchronisation disponible.',
         cloud_enable_closed: 'Merlin installera les fichiers nécessaires. Ouvrez Steam après activation. Merlin démarrera aussi avec Windows.',
@@ -1171,7 +1183,10 @@ const cloudTranslations = {
         cloud_kicker: 'CLOUD-SPIELSTÄNDE', cloud_title: 'Spielstände synchronisieren',
         cloud_description: 'Halte deinen Fortschritt auf Merlin-Spielen zwischen Computern synchron. Gekaufte Spiele verwenden weiterhin Steam Cloud.',
         cloud_state: 'Status', cloud_enable: 'Synchronisierung aktivieren', cloud_disable: 'Deaktivieren', cloud_retry: 'Erneut versuchen',
-        cloud_off: 'Deaktiviert', cloud_on: 'Aktiviert', cloud_disconnected: 'Keine Verbindung', cloud_toggle_aria: 'Synchronisierung der Spielstände aktivieren oder deaktivieren',
+        cloud_off: 'Deaktiviert', cloud_on: 'Aktiviert', cloud_disconnected: 'Keine Verbindung', cloud_files_outdated: 'Steam-Dateien müssen aktualisiert werden', cloud_toggle_aria: 'Synchronisierung der Spielstände aktivieren oder deaktivieren',
+        cloud_files_before_enable: 'Die Steam-Dateien werden beim Aktivieren der Cloud-Speicherung installiert oder aktualisiert.',
+        cloud_files_after_enable: 'Die Cloud-Speicherung bleibt aktiviert, aber die Steam-Dateien müssen aktualisiert werden. Verwende Reparieren unter Wartung.',
+        cloud_environment_notice: 'Du hast zwischen Test- und Produktionsumgebung gewechselt. Die Verbindung wurde pausiert, damit nicht die falsche Cloud verwendet wird. Klicke auf Erneut versuchen, um diese Umgebung zu verbinden; deine Aktivierung bleibt erhalten.',
         cloud_enable_title: 'Cloud-Spielstände aktivieren?',
         cloud_enable_running: 'Steam wird geschlossen, während Merlin seine Dateien aktualisiert. Danach kannst du es erneut öffnen. Merlin startet auch mit Windows, damit die Synchronisierung verfügbar bleibt.',
         cloud_enable_closed: 'Merlin installiert die benötigten Dateien. Öffne Steam nach der Aktivierung. Merlin startet auch mit Windows.',
@@ -1484,21 +1499,33 @@ function setupEventListeners() {
         const retryButton = document.getElementById('retryCloudSyncBtn');
         const openGamesButton = document.getElementById('openCloudSavesBtn');
         const openGamesWrap = document.getElementById('openCloudSavesWrap');
+        const filesNotice = document.getElementById('cloudFilesNotice');
+        const environmentNotice = document.getElementById('cloudEnvironmentNotice');
         try {
             const state = await window.electronAPI.cloudSync.status();
             if (requestId !== cloudCardRequestId) return;
             if (section) section.hidden = !state.available;
             if (!state.available) {
                 if (openGamesWrap) openGamesWrap.hidden = true;
+                if (filesNotice) filesNotice.hidden = true;
+                if (environmentNotice) environmentNotice.hidden = true;
                 return;
             }
-            const ready = state.enabled && state.filesReady;
+            if (filesNotice) {
+                filesNotice.hidden = state.filesReady !== false;
+                filesNotice.textContent = t(state.enabled ? 'cloud_files_after_enable' : 'cloud_files_before_enable');
+            }
+            if (environmentNotice) {
+                environmentNotice.hidden = state.errorCode !== 'environment_mismatch';
+                environmentNotice.textContent = t('cloud_environment_notice');
+            }
             if (label) label.textContent = cloudTogglePending ? t(cloudToggleWorking
                 ? (cloudToggle?.checked ? 'cloud_busy_enable' : 'cloud_busy_disable')
                 : (cloudToggle?.checked ? 'cloud_on' : 'cloud_off'))
-                : !ready ? t('cloud_off') : state.connected ? t('cloud_on') : t('cloud_disconnected');
+                : !state.enabled ? t('cloud_off') : !state.filesReady ? t('cloud_files_outdated')
+                    : state.connected ? t('cloud_on') : t('cloud_disconnected');
             if (cloudToggle) {
-                if (!cloudTogglePending) cloudToggle.checked = ready;
+                if (!cloudTogglePending) cloudToggle.checked = state.enabled === true;
                 // The control must remain usable when disabled so the user can
                 // opt in again. Connection failures are handled by the action
                 // itself and must not lock the setting in either direction.
@@ -1703,7 +1730,7 @@ function setupEventListeners() {
             if (result) {
             config.steamPath = result.steamPath;
 
-            await window.electronAPI.saveConfig(config);
+            await window.electronAPI.saveConfig({ steamPath: config.steamPath });
 
             updateSteamPathDisplay();
             await refreshStatusIndicators();
@@ -1730,7 +1757,8 @@ function setupEventListeners() {
 
         try {
             const filesStatus = await window.electronAPI.checkFilesStatus();
-            if (filesStatus?.ok) {
+            const cloudStatus = await window.electronAPI.cloudSync.status().catch(() => null);
+            if (filesStatus?.ok && cloudStatus?.filesReady !== false) {
                 await refreshStatusIndicators();
                 showNotification(t('files_already_ok'));
                 return;
@@ -1796,7 +1824,7 @@ function setupEventListeners() {
         const steamPath = await window.electronAPI.selectSteamPath();
         if (steamPath) {
             config.steamPath = steamPath;
-            await window.electronAPI.saveConfig(config);
+            await window.electronAPI.saveConfig({ steamPath: config.steamPath });
             updateSteamPathDisplay();
             await refreshStatusIndicators();
             showNotification(t('config_saved'));

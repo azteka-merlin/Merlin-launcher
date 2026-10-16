@@ -67,7 +67,7 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         } finally { busy = false; }
     });
     ipcMain.handle('cloud-sync:retry', async () => {
-        const result = await cloudSyncService.renew();
+        const result = await cloudSyncService.retry();
         return { ...result, filesReady: dllInstaller.cloudSupportReady(getSteamPath()) };
     });
     ipcMain.handle('cloud-sync:list-games', async () => {

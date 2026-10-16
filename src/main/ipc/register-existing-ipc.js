@@ -17,8 +17,15 @@ function registerExistingIpc({
 
     ipcMain.handle('save-config', async (_event, newConfig) => {
         const previousSteamPath = configStore.get().steamPath;
-        configStore.update(newConfig);
-        if (newConfig.steamPath !== undefined && newConfig.steamPath !== previousSteamPath) {
+        // Generic settings must not overwrite a cloud/plugin choice with a
+        // stale renderer snapshot. Those features have dedicated IPC actions.
+        const allowedFields = ['steamPath', 'language', 'tutorialPromptSeen',
+            'correctionsDisclaimerSeen', 'discordAnnouncementSeen', 'premiumIntroSeen'];
+        const changes = Object.fromEntries(allowedFields
+            .filter(key => Object.prototype.hasOwnProperty.call(newConfig || {}, key))
+            .map(key => [key, newConfig[key]]));
+        if (Object.keys(changes).length) configStore.update(changes);
+        if (changes.steamPath !== undefined && changes.steamPath !== previousSteamPath) {
             libraryService?.invalidate();
         }
         return { success: true };

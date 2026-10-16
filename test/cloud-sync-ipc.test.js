@@ -11,7 +11,7 @@ function fixture({ running = true, connected = true, installError = null, startE
         status: () => ({ available: true, enabled, connected: enabled && connected }),
         async enable() { events.push('connect'); enabled = connected; return this.status(); },
         async disable() { events.push('revoke'); enabled = false; return this.status(); },
-        async renew() { events.push('renew'); return this.status(); },
+        async retry() { events.push('retry'); return this.status(); },
         async restoreGame(account, appId, recoveryId) {
             events.push(['restore', account, appId, recoveryId]);
             return { success: true };
@@ -50,6 +50,14 @@ test('activation connects, stops Steam and installs required files without Repai
     assert.equal(result.filesReady, true);
     assert.equal(result.steamWasRunning, true);
     assert.deepEqual(events, ['connect', 'stopSteam', 'install', 'stateChanged']);
+});
+
+test('retry reconnects without toggling cloud sync off or restarting Steam', async () => {
+    const { invoke, events } = fixture({ startEnabled: true });
+    const result = await invoke('cloud-sync:retry');
+    assert.equal(result.enabled, true);
+    assert.equal(result.connected, true);
+    assert.deepEqual(events, ['retry']);
 });
 
 test('activation does not touch Steam if connection fails', async () => {

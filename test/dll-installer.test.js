@@ -36,6 +36,35 @@ test('cloud activation updates its two native DLLs and installs missing support 
     }
 });
 
+test('Repair replaces an existing CloudRedirect DLL with a different hash', async () => {
+    const root = nativeFs.mkdtempSync(nativePath.join(os.tmpdir(), 'merlin-cloud-repair-'));
+    try {
+        const bundle = nativePath.join(root, 'bundle');
+        const steam = nativePath.join(root, 'steam');
+        nativeFs.mkdirSync(bundle);
+        nativeFs.mkdirSync(steam);
+        nativeFs.writeFileSync(nativePath.join(steam, 'steam.exe'), 'steam');
+        nativeFs.writeFileSync(nativePath.join(bundle, 'merlin_cloud_redirect.dll'), 'new release');
+        nativeFs.writeFileSync(nativePath.join(steam, 'merlin_cloud_redirect.dll'), 'previous release');
+        const installer = createDllInstaller({
+            fs: nativeFs, path: nativePath,
+            dialog: { async showMessageBox() { return { response: 0 }; } },
+            requiredFiles: [{ name: 'merlin_cloud_redirect.dll', relativeDestination: 'merlin_cloud_redirect.dll' }],
+            getSourcePath: file => nativePath.join(bundle, file.name),
+            getMainWindow: () => null,
+        });
+
+        assert.equal(installer.cloudSupportReady(steam), false);
+        assert.deepEqual(await installer.checkAndInstall(steam), {
+            installed: true, alreadyInstalled: false, cancelled: false,
+        });
+        assert.equal(installer.cloudSupportReady(steam), true);
+        assert.equal(nativeFs.readFileSync(nativePath.join(steam, 'merlin_cloud_redirect.dll'), 'utf8'), 'new release');
+    } finally {
+        nativeFs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 function createFixture({ existing = [], dialogResponse = 0 } = {}) {
     const existingPaths = new Set(existing.map(item => path.normalize(item)));
     const copied = [];
@@ -44,6 +73,10 @@ function createFixture({ existing = [], dialogResponse = 0 } = {}) {
     const fs = {
         existsSync(filePath) {
             return existingPaths.has(path.normalize(filePath));
+        },
+        readFileSync(filePath) {
+            if (!existingPaths.has(path.normalize(filePath))) throw new Error('missing file');
+            return Buffer.from('same contents');
         },
         copyFileSync(srcPath, destPath) {
             copied.push({
@@ -93,6 +126,10 @@ test('removes legacy LumaCore.dll when the new DLLs are already present', async 
     const steamRoot = path.normalize('C:\\Steam');
     const fixture = createFixture({
         existing: [
+            path.join('C:\\bundle', 'OpenSteamTool.dll'),
+            path.join('C:\\bundle', 'dwmapi.dll'),
+            path.join('C:\\bundle', 'xinput1_4.dll'),
+            path.join('C:\\bundle', 'merlin-helper.dll'),
             path.join(steamRoot, 'OpenSteamTool.dll'),
             path.join(steamRoot, 'dwmapi.dll'),
             path.join(steamRoot, 'xinput1_4.dll'),
