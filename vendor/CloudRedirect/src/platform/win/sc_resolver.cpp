@@ -93,6 +93,109 @@ static uintptr_t ResolveServiceTransportVtable() {
     return SigScanner::ResolveVtableByRtti(".?AVCClientUnifiedServiceTransport@@");
 }
 
+static uintptr_t ReadPointerSafely(uintptr_t address) {
+    if (!address) return 0;
+    __try {
+        return *reinterpret_cast<const uintptr_t*>(address);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+
+static bool IsReadableProcessAddress(uintptr_t address, size_t size) {
+    if (!address || size == 0) return false;
+    MEMORY_BASIC_INFORMATION mbi = {};
+    if (!VirtualQuery(reinterpret_cast<const void*>(address), &mbi, sizeof(mbi)) ||
+        mbi.State != MEM_COMMIT || (mbi.Protect & PAGE_GUARD)) return false;
+    const DWORD protection = mbi.Protect & 0xFF;
+    const bool readable = protection == PAGE_READONLY || protection == PAGE_READWRITE ||
+        protection == PAGE_WRITECOPY || protection == PAGE_EXECUTE_READ ||
+        protection == PAGE_EXECUTE_READWRITE || protection == PAGE_EXECUTE_WRITECOPY;
+    const uintptr_t regionStart = reinterpret_cast<uintptr_t>(mbi.BaseAddress);
+    const uintptr_t regionEnd = regionStart + mbi.RegionSize;
+    return readable && address >= regionStart && address <= regionEnd &&
+        size <= regionEnd - address;
+}
+
+// Steam moved CSteamEngine's singleton reference in the October client update,
+// and its former CAppInfoCache xref no longer contains a nearby global load.
+// Find the live object by its RTTI vtable, then rank data-section references to
+// that object by direct RIP-relative MOV xrefs. No build-specific RVA is used.
+static uintptr_t ResolveGlobalEngineByRtti(uintptr_t scBase) {
+    const uintptr_t engineVtable =
+        SigScanner::ResolveVtableByRtti(".?AVCSteamEngine@@");
+    const uintptr_t dataBase = SigScanner::GetDataBase();
+    const size_t dataSize = SigScanner::GetDataSize();
+    if (!engineVtable || !dataBase || dataSize < sizeof(uintptr_t)) {
+        LOG("[Resolver] GlobalEngine RTTI fallback: engine vtable/data unavailable");
+        return 0;
+    }
+
+    uintptr_t engineObject = 0;
+    for (size_t i = 0; i + sizeof(uintptr_t) <= dataSize; i += sizeof(uintptr_t)) {
+        const uintptr_t candidate = *reinterpret_cast<const uintptr_t*>(dataBase + i);
+        if (!IsReadableProcessAddress(candidate, sizeof(uintptr_t)) ||
+            ReadPointerSafely(candidate) != engineVtable) continue;
+        if (!engineObject) {
+            engineObject = candidate;
+        } else if (candidate != engineObject) {
+            LOG("[Resolver] GlobalEngine RTTI fallback: multiple live CSteamEngine objects; refusing ambiguous result");
+            return 0;
+        }
+    }
+    if (!engineObject) {
+        LOG("[Resolver] GlobalEngine RTTI fallback: no live CSteamEngine object reference found");
+        return 0;
+    }
+
+    // Keep a bounded list of slots that hold the verified object pointer. The
+    // actual singleton global is the one with the strongest code reference;
+    // other slots can be internal back-pointers or secondary aliases.
+    constexpr size_t kMaxEngineSlots = 128;
+    uintptr_t slots[kMaxEngineSlots] = {};
+    uint32_t references[kMaxEngineSlots] = {};
+    size_t slotCount = 0;
+    for (size_t i = 0; i + sizeof(uintptr_t) <= dataSize; i += sizeof(uintptr_t)) {
+        if (*reinterpret_cast<const uintptr_t*>(dataBase + i) != engineObject) continue;
+        if (slotCount == kMaxEngineSlots) {
+            LOG("[Resolver] GlobalEngine RTTI fallback: too many aliases; refusing ambiguous result");
+            return 0;
+        }
+        slots[slotCount++] = dataBase + i;
+    }
+    if (slotCount == 0) return 0;
+
+    const auto* text = reinterpret_cast<const uint8_t*>(SigScanner::GetTextBase());
+    const size_t textSize = SigScanner::GetTextSize();
+    __try {
+        for (size_t i = 0; i + 7 <= textSize; ++i) {
+            const uint8_t rex = text[i];
+            if (rex < 0x48 || rex > 0x4F || text[i + 1] != 0x8B ||
+                (text[i + 2] & 0xC7) != 0x05) continue;
+
+            int32_t displacement = *reinterpret_cast<const int32_t*>(text + i + 3);
+            const uintptr_t instruction = SigScanner::GetTextBase() + i;
+            const uintptr_t target = static_cast<uintptr_t>(
+                static_cast<intptr_t>(instruction + 7) + displacement);
+            for (size_t j = 0; j < slotCount; ++j) {
+                if (target == slots[j] && references[j] != UINT32_MAX)
+                    ++references[j];
+            }
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        LOG("[Resolver] GlobalEngine RTTI fallback: code-reference scan faulted");
+        return 0;
+    }
+
+    size_t best = 0;
+    for (size_t i = 1; i < slotCount; ++i) {
+        if (references[i] > references[best]) best = i;
+    }
+    LOG("[Resolver] GlobalEngine @ %p (RVA 0x%llX) via CSteamEngine RTTI (%zu aliases, %u code refs)",
+        (void*)slots[best], (uint64_t)(slots[best] - scBase), slotCount, references[best]);
+    return slots[best];
+}
+
 // ── Global engine pointer ─────────────────────────────────────────────
 // Approach: FlushAppMinutesPlayed at +0x09 loads g_pCSteamEngine via
 // `mov rax, cs:[rip+disp]`. We can also scan for `lea rcx/rbx, [reg+0xE68]`
@@ -142,6 +245,9 @@ static uintptr_t ResolveGlobalEngine(uintptr_t scBase) {
             }
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+    uintptr_t byRtti = ResolveGlobalEngineByRtti(scBase);
+    if (byRtti) return byRtti;
 
     LOG("[Resolver] GlobalEngine: all strategies failed");
     return 0;
@@ -531,6 +637,56 @@ static uintptr_t ResolveReadConfigU64(uintptr_t getAppInfoAddr) {
     else
         LOG("[Resolver] ReadConfigU64: not found near GetAppInfo");
     return result;
+}
+
+// Recover the CAppInfoCache member from Steam's own calls to ReadConfigU64.
+// The October 2026 client moved it from CSteamEngine+0xE68 to +0x1208; a
+// hardcoded offset can hand GetAppInfo an uninitialized cache and crash Steam.
+static uint32_t ResolveAppInfoCacheOffset(uintptr_t readConfigU64) {
+    const uintptr_t textBase = SigScanner::GetTextBase();
+    const size_t textSize = SigScanner::GetTextSize();
+    if (!readConfigU64 || !textBase || textSize < 32) return 0;
+
+    uint32_t resolvedOffset = 0;
+    uint32_t references = 0;
+    bool ambiguous = false;
+    __try {
+        const auto* text = reinterpret_cast<const uint8_t*>(textBase);
+        for (size_t i = 24; i + 5 <= textSize; ++i) {
+            if (text[i] != 0xE8) continue;
+            int32_t displacement = 0;
+            memcpy(&displacement, text + i + 1, sizeof(displacement));
+            const uintptr_t target = static_cast<uintptr_t>(
+                static_cast<intptr_t>(textBase + i + 5) + displacement);
+            if (target != readConfigU64) continue;
+
+            // The caller passes &engine->appInfoCache via LEA RCX,[RBX+disp32].
+            // Require it immediately before the call, not an unrelated LEA.
+            for (size_t j = i - 24; j + 7 <= i; ++j) {
+                if (text[j] != 0x48 || text[j + 1] != 0x8D || text[j + 2] != 0x8B)
+                    continue;
+                uint32_t offset = 0;
+                memcpy(&offset, text + j + 3, sizeof(offset));
+                if (offset < 0x100 || offset > 0x10000 || (offset & 7)) continue;
+                if (resolvedOffset && resolvedOffset != offset) ambiguous = true;
+                resolvedOffset = offset;
+                ++references;
+                break;
+            }
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        LOG("[Resolver] AppInfoCache offset scan faulted");
+        return 0;
+    }
+
+    if (ambiguous || references < 2) {
+        LOG("[Resolver] AppInfoCache offset unresolved (candidate=0x%X refs=%u ambiguous=%d)",
+            resolvedOffset, references, ambiguous ? 1 : 0);
+        return 0;
+    }
+    LOG("[Resolver] AppInfoCache offset = 0x%X from %u Steam call sites",
+        resolvedOffset, references);
+    return resolvedOffset;
 }
 
 // ── RefCountGlobal ────────────────────────────────────────────────────
@@ -1013,7 +1169,7 @@ ResolvedAddrs Resolve(uintptr_t steamClientBase) {
     r.engineOffUserMap      = 0;
     r.ccmOffConnContext     = 0;
     r.userOffCcmInterface   = 0;
-    r.engineOffAppInfoCache = 0xE68;
+    r.engineOffAppInfoCache = ResolveAppInfoCacheOffset(r.readConfigU64);
 
     LOG("[Resolver] === Auto-resolution complete ===");
     return r;

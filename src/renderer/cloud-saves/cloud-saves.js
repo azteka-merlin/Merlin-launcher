@@ -126,7 +126,16 @@
         function syncVisibility() {
             const active = window.merlinView?.get?.() === 'cloud-saves';
             elements.view.hidden = !active;
-            if (active && !wasActive) void loadGames();
+            if (active && !wasActive) {
+                state.detailRequestId += 1;
+                state.selected = null;
+                elements.search.value = '';
+                elements.detailsState.hidden = true;
+                elements.detailsLoading.hidden = true;
+                elements.listState.hidden = false;
+                renderBreadcrumb();
+                void loadGames();
+            }
             wasActive = active;
         }
 

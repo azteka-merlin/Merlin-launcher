@@ -62,6 +62,7 @@
             sidePlan: document.getElementById('sidePlanLabel')
         };
         let loaded = false;
+        let loading = false;
         let accessState = null;
 
         function setArtwork(path) {
@@ -113,10 +114,16 @@
             elements.manage.textContent = canManageSubscription ? tr('access_manage_subscription') : tr('access_manage');
         }
 
-        async function loadAccess() {
-            if (loaded) return;
-            elements.loading.hidden = false; elements.error.hidden = true; elements.details.hidden = true;
-            showArtworkSkeleton();
+        async function loadAccess(forceRefresh = false) {
+            if (loading || (loaded && !forceRefresh)) return;
+            loading = true;
+            const preserveCurrentView = loaded && Boolean(accessState);
+            elements.error.hidden = true;
+            if (!preserveCurrentView) {
+                elements.loading.hidden = false;
+                elements.details.hidden = true;
+                showArtworkSkeleton();
+            }
             try {
                 const [session, catalog] = await Promise.all([window.electronAPI.auth.status(), window.electronAPI.premium.list()]);
                 if (!session?.authenticated) throw new Error('missing_session');
@@ -136,14 +143,22 @@
                 setArtwork(!isFree && !isTest ? tierArtwork[tier] : '');
                 loaded = true; elements.details.hidden = false;
             } catch (_) {
-                elements.error.hidden = false;
-                setArtwork('');
-            } finally { elements.loading.hidden = true; }
+                if (!preserveCurrentView) {
+                    elements.error.hidden = false;
+                    setArtwork('');
+                }
+            } finally {
+                loading = false;
+                if (!preserveCurrentView) elements.loading.hidden = true;
+            }
         }
 
         elements.manage.addEventListener('click', () => window.electronAPI.auth.openAccess());
         elements.plans.addEventListener('click', () => window.electronAPI.auth.openPlans());
-        window.addEventListener('merlin-view-changed', event => { if (event.detail?.view === 'access') loadAccess(); });
+        window.addEventListener('merlin-view-changed', event => { if (event.detail?.view === 'access') void loadAccess(true); });
+        window.addEventListener('focus', () => {
+            if (!elements.view.hidden) void loadAccess(true);
+        });
         window.addEventListener('merlin-authenticated', () => {
             loaded = false;
             // Warm the access view as soon as the session is established so

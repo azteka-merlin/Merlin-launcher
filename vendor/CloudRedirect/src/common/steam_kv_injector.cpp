@@ -66,9 +66,28 @@ static constexpr uint32_t kSectionUfs = 10;
 
 static void* GetCachePtr() {
     if (!g_r.globalEnginePtrPtr) return nullptr;
-    void* engine = *g_r.globalEnginePtrPtr;
-    if (!engine) return nullptr;
-    return reinterpret_cast<uint8_t*>(engine) + g_r.appInfoCacheOffset;
+    __try {
+        void* engine = *g_r.globalEnginePtrPtr;
+        if (!engine) return nullptr;
+        auto* cache = reinterpret_cast<uint8_t*>(engine) + g_r.appInfoCacheOffset;
+        // GetAppInfo indexes the table at cache+0x80 when cache+0x68 is not
+        // -1. With an obsolete engine member offset this table was null and
+        // Steam crashed on a read at 0x50. Do not call any Steam KV method in
+        // that state, even if the signature resolver found the functions.
+        const uint32_t index = *reinterpret_cast<const uint32_t*>(cache + 0x68);
+        const uintptr_t table = *reinterpret_cast<const uintptr_t*>(cache + 0x80);
+        if (index != UINT32_MAX) {
+            if (table < 0x10000 || index > 0x100000) return nullptr;
+            // Match the first table read in the current GetAppInfo function.
+            // The SEH boundary also catches a stale non-null table pointer.
+            volatile uint32_t entry = *reinterpret_cast<const uint32_t*>(
+                table + static_cast<uintptr_t>(index) * 32 + 0x10);
+            (void)entry;
+        }
+        return cache;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
 }
 
 void Configure(const ResolvedKvAddrs& addrs) {
@@ -130,7 +149,7 @@ bool Init() {
 }
 
 bool IsReady() {
-    return g_ready.load(std::memory_order_acquire);
+    return g_ready.load(std::memory_order_acquire) && GetCachePtr() != nullptr;
 }
 
 bool ReadAppQuota(uint32_t appId, uint64_t& outQuotaBytes, uint32_t& outMaxNumFiles) {
