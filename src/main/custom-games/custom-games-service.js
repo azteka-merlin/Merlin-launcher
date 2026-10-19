@@ -994,13 +994,14 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             if (!executable.startsWith(`${current.path}${path.sep}`)) throw new Error('invalid_executable');
             const real = await fs.promises.realpath(executable);
             if (!real.toLowerCase().startsWith(`${current.path.toLowerCase()}${path.sep}`)) throw new Error('invalid_executable');
-            await new Promise((resolve, reject) => {
-                const child = spawn(executable, [], { cwd: path.dirname(executable), detached: true, stdio: 'ignore' });
-                child.once('error', reject);
-                child.once('spawn', () => { child.unref(); resolve(); });
-            });
-            return { success: true };
-        } catch (error) { return { success: false, code: error.message || 'play_failed' }; }
+            try {
+                // Use the desktop shell so Windows can request UAC elevation when required.
+                const error = await shell.openPath(executable);
+                return error ? { success: false, code: 'play_failed' } : { success: true };
+            } catch { return { success: false, code: 'play_failed' }; }
+        } catch (error) {
+            return { success: false, code: error.code === 'ENOENT' ? 'executable_missing' : error.message || 'play_failed' };
+        }
     }
 
     async function uninstall(id) {

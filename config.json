@@ -11,8 +11,8 @@
     "startAtLogin": false
   },
   "cloudSync": {
-    "enabled": false,
-    "startAtLogin": false
+    "enabled": true,
+    "startAtLogin": true
   },
   "premiumIntroSeen": true
 }
