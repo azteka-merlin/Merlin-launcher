@@ -5,6 +5,7 @@ const zlib = require('node:zlib');
 const { Transform } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const yauzl = require('yauzl');
+const { decodeDeflate64 } = require('./deflate64');
 
 const MAX_FILES = 100000;
 const MAX_UNCOMPRESSED = 200 * 1024 ** 3;
@@ -47,7 +48,12 @@ function openZip(filename) {
 
 function openEntryStream(zipfile, entry) {
     return new Promise((resolve, reject) => zipfile.openReadStream(entry,
-        (error, stream) => error ? reject(error) : resolve(stream)));
+        entry.compressionMethod === 9 ? { decodeFileData: false } : {},
+        (error, stream) => {
+            if (error) return reject(error);
+            try { resolve(entry.compressionMethod === 9 ? decodeDeflate64(stream) : stream); }
+            catch (failure) { reject(failure); }
+        }));
 }
 
 async function inspectArchive(zipPath, destination, isCancelled, expectedEntries = null, expectedHashes = null) {
@@ -86,6 +92,7 @@ async function inspectArchive(zipPath, destination, isCancelled, expectedEntries
                     expectedEntries.get(relative) !== entry.uncompressedSize)) throw new Error('archive_manifest_mismatch');
                 const unixMode = entry.externalFileAttributes >>> 16;
                 if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
+                if (entry.isEncrypted() || ![0, 8, 9].includes(entry.compressionMethod)) throw new Error('unsupported_archive_compression');
                 if (++entries > MAX_FILES) throw new Error('archive_file_limit');
                 if (!normalized.endsWith('/')) {
                     files += 1;

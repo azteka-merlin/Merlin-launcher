@@ -1,6 +1,6 @@
 {
   "name": "merlin",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Merlin game launcher",
   "main": "main.js",
   "scripts": {
@@ -37,7 +37,8 @@
     "lucide-static": "^1.45.0",
     "node-unrar-js": "^2.0.2",
     "ws": "^8.21.3",
-    "yauzl": "^3.3.0"
+    "yauzl": "^3.4.0",
+    "zlib-streams": "1.4.0"
   },
   "build": {
     "appId": "com.merlin.app",

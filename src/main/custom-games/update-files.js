@@ -5,6 +5,7 @@ const { createInflateRaw } = require('node:zlib');
 const { Transform } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { safeEntryPath, extractSafeZip } = require('./safe-zip');
+const { decodeDeflate64 } = require('./deflate64');
 
 const MARKER = '.merlin-install.json';
 const RANGE_BYTES = 64 * 1024 ** 2;
@@ -191,7 +192,8 @@ async function decodeZipMember(source, target, file, signal) {
         hash.update(chunk);
         callback(null, chunk);
     } });
-    const streams = [fs.createReadStream(source)];
+    const input = fs.createReadStream(source);
+    const streams = [file.zip.method === 9 ? decodeDeflate64(input) : input];
     if (file.zip.method === 8) streams.push(createInflateRaw());
     streams.push(verify, fs.createWriteStream(target, { flags: 'wx' }));
     await pipeline(...streams, { signal });
@@ -240,7 +242,7 @@ async function stageUpdate({ staging, item, manifest, folderManifest, plan, requ
         if (covered.size !== declared.size) throw new Error('invalid_folder_manifest');
     } else {
         for (const file of plan.replace) {
-            if (!file.zip || ![0, 8].includes(file.zip.method) || !Number.isSafeInteger(file.zip.compressedSize) ||
+            if (!file.zip || ![0, 8, 9].includes(file.zip.method) || !Number.isSafeInteger(file.zip.compressedSize) ||
                 file.zip.compressedSize < 0 || file.zip.compressedSize > 100 * 1024 ** 3) throw new Error('integrity_index_unavailable');
             downloads.push({ ...file, sizeBytes: file.zip.compressedSize, kind: 'zip-entry' });
         }

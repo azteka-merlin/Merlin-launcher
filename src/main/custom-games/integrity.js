@@ -28,7 +28,7 @@ function normalizeIntegrityManifest(value, gameId, archiveKey, root) {
         total += file.sizeBytes;
         let zip;
         if (file.zip != null) {
-            if (![0, 8].includes(file.zip.method) || !Number.isSafeInteger(file.zip.compressedSize) ||
+            if (![0, 8, 9].includes(file.zip.method) || !Number.isSafeInteger(file.zip.compressedSize) ||
                 file.zip.compressedSize < 0 || file.zip.compressedSize > 100 * 1024 ** 3) throw new Error('invalid_integrity_manifest');
             zip = { method: file.zip.method, compressedSize: file.zip.compressedSize };
         }
