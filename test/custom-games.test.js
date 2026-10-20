@@ -408,6 +408,9 @@ test('folder package retries an interrupted range without double-counting progre
 
 test('folder package abandons an idle range and retries without losing downloaded bytes', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-folder-idle-'));
+    // The fake stream owns no socket handle; keep the loop alive for the
+    // unreferenced production idle deadline on Node 22 as a real socket would.
+    const socketHandle = setInterval(() => {}, 1000);
     try {
         const disk = path.join(root, 'disk');
         fs.mkdirSync(disk);
@@ -445,11 +448,12 @@ test('folder package abandons an idle range and retries without losing downloade
         assert.deepEqual(fs.readFileSync(path.join(result.path, 'data.bin')), data);
         assert.ok(progress.some(state => state.retryAttempt === 2));
         assert.equal(Math.max(...progress.filter(state => state.stage === 'downloading').map(state => state.received)), data.length);
-    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    } finally { clearInterval(socketHandle); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('exhausted idle retries preserve folder bytes for a later resume', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-folder-idle-resume-'));
+    const socketHandle = setInterval(() => {}, 1000);
     try {
         const disk = path.join(root, 'disk');
         fs.mkdirSync(disk);
@@ -495,7 +499,7 @@ test('exhausted idle retries preserve folder bytes for a later resume', async ()
         assert.equal(resumed.success, true);
         assert.equal(ranges.at(-1), `bytes=8-${data.length - 1}`);
         assert.deepEqual(fs.readFileSync(path.join(resumed.path, 'data.bin')), data);
-    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    } finally { clearInterval(socketHandle); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('folder package detects a corrupt file and retries only that file before atomic install', async () => {
