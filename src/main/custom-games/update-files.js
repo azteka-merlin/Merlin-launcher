@@ -77,9 +77,13 @@ async function removeEmptyDirectories(root, relative) {
     for (const name of directories.reverse()) await fs.promises.rmdir(safeEntryPath(root, name));
 }
 
-function protectedFile(relative, origin, protectedPaths) {
+function protectedFile(relative, origin, protectedPaths, packageHasGame = false) {
     const name = key(relative);
-    const explicit = [...(Array.isArray(protectedPaths) ? protectedPaths : []), ...(origin === 'port' ? ['game'] : [])];
+    // Older port metadata may still contain the formerly mandatory `game` entry.
+    // For ports, the new package decides whether that directory is replaced.
+    const explicit = (Array.isArray(protectedPaths) ? protectedPaths : []).filter(value =>
+        !(origin === 'port' && typeof value === 'string' && key(value).replace(/\/$/, '') === 'game'));
+    if (origin === 'port' && !packageHasGame) explicit.push('game');
     if (explicit.some(value => typeof value === 'string' && (name === key(value).replace(/\/$/, '') ||
         name.startsWith(`${key(value).replace(/\/$/, '')}/`)))) return true;
     const parts = name.split('/');
@@ -88,15 +92,16 @@ function protectedFile(relative, origin, protectedPaths) {
 }
 
 async function createUpdatePlan(root, previous, next, options = {}, signal = null) {
+    const packageHasGame = options.origin === 'port' && next.files.some(file => key(file.path).startsWith('game/'));
     const before = new Map((previous?.files || []).map(file => [key(file.path), file]));
     const after = new Set(next.files.map(file => key(file.path)));
     const removable = new Set((previous?.files || []).filter(file => !after.has(key(file.path)) &&
-        !protectedFile(file.path, options.origin, options.protectedPaths)).map(file => key(file.path)));
+        !protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)).map(file => key(file.path)));
     const plan = { replace: [], remove: [], unchangedFiles: 0, protectedFiles: 0 };
     for (let index = 0; index < next.files.length; index++) {
         checkCancelled(signal);
         const file = next.files[index];
-        if (protectedFile(file.path, options.origin, options.protectedPaths)) {
+        if (protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) {
             const target = safeEntryPath(root, file.path);
             const existing = await fs.promises.lstat(target).catch(error => {
                 if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return null;
@@ -108,7 +113,7 @@ async function createUpdatePlan(root, previous, next, options = {}, signal = nul
         }
         const local = await localFile(root, file.path, { allowDirectory: true, replaceableParents: removable });
         const old = before.get(key(file.path));
-        if (local && protectedFile(file.path, options.origin, options.protectedPaths)) { plan.protectedFiles++; continue; }
+        if (local && protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) { plan.protectedFiles++; continue; }
         if (local?.isDirectory()) await directoryEntries(root, file.path, removable);
         if (old?.sha256 === file.sha256 && old?.sizeBytes === file.sizeBytes && local?.isFile() && local.size === file.sizeBytes) {
             plan.unchangedFiles++;
@@ -116,7 +121,7 @@ async function createUpdatePlan(root, previous, next, options = {}, signal = nul
     }
     for (const file of previous?.files || []) {
         checkCancelled(signal);
-        if (after.has(key(file.path)) || protectedFile(file.path, options.origin, options.protectedPaths)) continue;
+        if (after.has(key(file.path)) || protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) continue;
         if (await localFile(root, file.path)) plan.remove.push(file);
     }
     return plan;

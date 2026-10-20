@@ -8,12 +8,12 @@ const { deflateRawSync } = require('node:zlib');
 const { Readable } = require('node:stream');
 const AdmZip = require('adm-zip');
 const { createCustomGamesService } = require('../src/main/custom-games/custom-games-service');
-const { createUpdatePlan } = require('../src/main/custom-games/update-files');
+const { createUpdatePlan, protectedFile } = require('../src/main/custom-games/update-files');
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const GAME_ID = '00000000-0000-4000-8000-000000000001';
 const LEASE = '00000000-0000-4000-8000-000000000099';
-function fixture(packageType = 'zip') {
+function fixture(packageType = 'zip', { gameInNext = true, nextGameContent = 'disc' } = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-update-'));
     const disk = path.join(root, 'disk');
     const item = { id: GAME_ID, name: 'Update Game', installName: 'Update Game', packageType,
@@ -23,7 +23,7 @@ function fixture(packageType = 'zip') {
     const before = new Map([['unchanged.dat', 'same'], ['changed.pak', 'old file'], ['obsolete.dll', 'gone'],
         ['game/disc.iso', 'disc'], ['settings.ini', 'default']]);
     const after = new Map([['unchanged.dat', 'same'], ['changed.pak', 'new file'], ['added.bin', 'added'],
-        ['settings.ini', 'new defaults'], ['game/disc.iso', 'disc']]);
+        ['settings.ini', 'new defaults'], ...(gameInNext ? [['game/disc.iso', nextGameContent]] : [])]);
     for (const [name, data] of before) fs.writeFileSync(path.join(target, name), data);
     fs.writeFileSync(path.join(target, 'settings.ini'), 'my personalized settings');
     fs.writeFileSync(path.join(target, 'local-mod.dat'), 'extra');
@@ -48,13 +48,13 @@ function fixture(packageType = 'zip') {
         ['00000000-0000-4000-8000-000000000010', bundle],
         ['00000000-0000-4000-8000-000000000011', Buffer.from('added')],
         ['00000000-0000-4000-8000-000000000012', Buffer.from('new defaults')],
-        ['00000000-0000-4000-8000-000000000013', Buffer.from('disc')],
+        ['00000000-0000-4000-8000-000000000013', Buffer.from(nextGameContent)],
     ]);
     const folderManifest = { gameId: GAME_ID, totalSizeBytes: next.totalSizeBytes,
         files: [
             { ...next.files[2], id: '00000000-0000-4000-8000-000000000011' },
             { ...next.files[3], id: '00000000-0000-4000-8000-000000000012' },
-            { ...next.files[4], id: '00000000-0000-4000-8000-000000000013' },
+            ...(gameInNext ? [{ ...next.files[4], id: '00000000-0000-4000-8000-000000000013' }] : []),
         ], bundles: [{ id: '00000000-0000-4000-8000-000000000010', sizeBytes: bundle.length, sha256: sha(bundle),
             files: [next.files[0], next.files[1]] }] };
     const requests = [];
@@ -91,7 +91,7 @@ function fixture(packageType = 'zip') {
         intercept: value => { intercept = value; }, cleanup: () => fs.rmSync(root, { recursive: true, force: true }) };
 }
 
-for (const packageType of ['zip', 'folder']) test(`${packageType} updates only changed files, preserves game/config/extras and removes only tracked obsolete files`, async () => {
+for (const packageType of ['zip', 'folder']) test(`${packageType} updates only changed files, preserves unchanged game/config/extras and removes only tracked obsolete files`, async () => {
     const f = fixture(packageType);
     const originalReader = fs.createReadStream;
     try {
@@ -123,6 +123,47 @@ for (const packageType of ['zip', 'folder']) test(`${packageType} updates only c
         assert.ok(f.requests.some(request => request.url.endsWith(`/${LEASE}/complete`)));
         assert.equal((await service.list()).games[0].updateAvailable, false);
     } finally { fs.createReadStream = originalReader; f.cleanup(); }
+});
+
+for (const packageType of ['zip', 'folder']) {
+    test(`${packageType} replaces changed game files when the port package contains game`, async () => {
+        const f = fixture(packageType, { nextGameContent: 'updated disc' });
+        try {
+            const result = await f.create().update(GAME_ID);
+            assert.equal(result.success, true, JSON.stringify(result));
+            assert.equal(result.updatedFiles, 3);
+            assert.equal(fs.readFileSync(path.join(f.target, 'game/disc.iso'), 'utf8'), 'updated disc');
+            assert.equal(fs.readFileSync(path.join(f.target, 'settings.ini'), 'utf8'), 'my personalized settings');
+        } finally { f.cleanup(); }
+    });
+
+    test(`${packageType} leaves installed game untouched when the next port package omits it`, async () => {
+        const f = fixture(packageType, { gameInNext: false });
+        try {
+            const result = await f.create().update(GAME_ID);
+            assert.equal(result.success, true, JSON.stringify(result));
+            assert.equal(result.updatedFiles, 2);
+            assert.equal(result.removedFiles, 1);
+            assert.equal(fs.readFileSync(path.join(f.target, 'game/disc.iso'), 'utf8'), 'disc');
+        } finally { f.cleanup(); }
+    });
+}
+
+test('port replacement removes only tracked obsolete game files and honors nested save protection', async () => {
+    const f = fixture();
+    try {
+        fs.writeFileSync(path.join(f.target, 'game/old.bin'), 'obsolete');
+        fs.writeFileSync(path.join(f.target, 'game/local-extra.dat'), 'personal');
+        f.previous.files.push({ path: 'game/old.bin', sizeBytes: 8, sha256: sha('obsolete') });
+        f.previous.totalSizeBytes += 8;
+        const plan = await createUpdatePlan(f.target, f.previous, f.next, {
+            origin: 'port', protectedPaths: ['game', 'game/user/saves'],
+        });
+        assert.ok(plan.remove.some(file => file.path === 'game/old.bin'));
+        assert.ok(!plan.remove.some(file => file.path === 'game/local-extra.dat'));
+        assert.ok(!plan.replace.some(file => file.path === 'game/disc.iso'));
+        assert.equal(protectedFile('game/user/saves/slot.sav', 'port', ['game', 'game/user/saves'], true), true);
+    } finally { f.cleanup(); }
 });
 
 test('a missing old index allows replacing new files but never guesses which installed files should be deleted', async () => {
@@ -193,7 +234,7 @@ test('a same-hash installed file with the wrong size is downloaded again without
         fs.writeFileSync(path.join(f.target, 'unchanged.dat'), 'truncated');
         const plan = await createUpdatePlan(f.target, f.previous, f.next, f.item);
         assert.ok(plan.replace.some(file => file.path === 'unchanged.dat'));
-        assert.equal(plan.unchangedFiles, 0);
+        assert.equal(plan.unchangedFiles, 1); // The unchanged game file remains eligible for reuse.
     } finally { f.cleanup(); }
 });
 
@@ -331,7 +372,7 @@ test('legacy folder transport manifests without hashes use the indexed integrity
     } finally { f.cleanup(); }
 });
 
-test('a complete port package restores a missing game file while preserving game files already present', async () => {
+test('a port package restores a missing game file', async () => {
     const f = fixture();
     try {
         fs.unlinkSync(path.join(f.target, 'game/disc.iso'));
@@ -342,5 +383,20 @@ test('a complete port package restores a missing game file while preserving game
         const entries = f.requests.filter(request => /\/entries\//.test(request.url));
         assert.equal(entries.length, 3);
         assert.ok(entries.some(request => request.url.endsWith('/entries/4')));
+    } finally { f.cleanup(); }
+});
+
+test('a port game file reported as corrupt can be repaired from the installed package', async () => {
+    const f = fixture();
+    try {
+        fs.writeFileSync(path.join(f.target, 'game/disc.iso'), 'bad!');
+        const service = f.create();
+        const verification = await service.verify(GAME_ID);
+        assert.equal(verification.corruptFiles, 2); // The personalized settings.ini is also divergent.
+        const result = await service.repair(GAME_ID);
+        assert.equal(result.success, true, JSON.stringify(result));
+        assert.equal(result.updatedFiles, 1);
+        assert.equal(fs.readFileSync(path.join(f.target, 'game/disc.iso'), 'utf8'), 'disc');
+        assert.equal(fs.readFileSync(path.join(f.target, 'settings.ini'), 'utf8'), 'my personalized settings');
     } finally { f.cleanup(); }
 });

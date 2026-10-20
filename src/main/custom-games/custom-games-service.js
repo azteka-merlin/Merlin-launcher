@@ -1225,8 +1225,10 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             const plan = await createUpdatePlan(current.path, previous, next, item, operation.controller.signal);
             if (repairing) {
                 const wanted = new Set(options.repairPaths.map(relative => String(relative).toLowerCase()));
+                const packageHasGame = item.origin === 'port' && next.files.some(file =>
+                    file.path.replace(/\\/g, '/').toLowerCase().startsWith('game/'));
                 plan.replace = next.files.map((file, entryIndex) => ({ ...file, entryIndex })).filter(file =>
-                    wanted.has(file.path.toLowerCase()) && !(protectedFile(file.path, item.origin, item.protectedPaths) &&
+                    wanted.has(file.path.toLowerCase()) && !(protectedFile(file.path, item.origin, item.protectedPaths, packageHasGame) &&
                         fs.existsSync(safeEntryPath(current.path, file.path))));
                 plan.remove = [];
                 plan.protectedFiles = wanted.size - plan.replace.length;

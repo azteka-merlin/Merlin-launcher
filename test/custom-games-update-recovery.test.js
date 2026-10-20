@@ -31,7 +31,7 @@ function fixture() {
         cleanup() { fs.rmSync(base, { recursive: true, force: true }); } };
 }
 
-test('planning only reads metadata, preserves game/configs/saves and leaves untracked files alone', async () => {
+test('planning only reads metadata, replaces packaged game files and preserves configs/saves/extras', async () => {
     const f = fixture();
     try {
         const oldFiles = [entry('same.pak', 'good'), entry('Game/game.iso', 'old ISO'), entry('saves/slot.dat', 'old save'), entry('settings.ini', 'old settings'), entry('obsolete.dll', 'old')];
@@ -40,8 +40,8 @@ test('planning only reads metadata, preserves game/configs/saves and leaves untr
         const nextFiles = [entry('same.pak', 'good'), entry('Game/game.iso', 'new ISO'), entry('new.dll', 'new')];
         const plan = await createUpdatePlan(f.root, { files: oldFiles }, { files: nextFiles }, { origin: 'port' });
         assert.equal(plan.unchangedFiles, 1, 'same-sized files with the same manifest hash are reused without hashing local contents');
-        assert.equal(plan.protectedFiles, 1);
-        assert.deepEqual(plan.replace.map(file => file.path), ['new.dll']);
+        assert.equal(plan.protectedFiles, 0);
+        assert.deepEqual(plan.replace.map(file => file.path), ['Game/game.iso', 'new.dll']);
         assert.deepEqual(plan.remove.map(file => file.path), ['obsolete.dll']);
         assert.equal(f.read('extra-user-file.txt'), 'leave this');
         assert.equal(f.read('same.pak'), 'xxxx', 'integrity repair remains an explicit operation');
@@ -224,7 +224,7 @@ test('selective ZIP transfer verifies decompressed bytes before apply and refuse
     }
 });
 
-test('protected game and saves can remain on another drive through junctions without blocking updates', async () => {
+test('an omitted game and protected saves can remain on another drive through junctions', async () => {
     const f = fixture();
     try {
         const outside = path.join(f.base, 'Outside');
@@ -234,12 +234,12 @@ test('protected game and saves can remain on another drive through junctions wit
             fs.symlinkSync(outside, path.join(f.root, directory), process.platform === 'win32' ? 'junction' : 'dir');
         }
         const files = [entry('Game/keep.dat', 'release'), entry('saves/keep.dat', 'release')];
-        const plan = await createUpdatePlan(f.root, { files }, { files }, { origin: 'port' });
+        const plan = await createUpdatePlan(f.root, { files }, { files: [files[1]] }, { origin: 'port' });
         assert.equal(plan.replace.length, 0);
         assert.equal(plan.remove.length, 0);
-        assert.equal(plan.protectedFiles, 2);
+        assert.equal(plan.protectedFiles, 1);
         assert.equal(fs.readFileSync(path.join(outside, 'keep.dat'), 'utf8'), 'personal data');
-        // Missing files behind a junction are still blocked from writes outside the installation.
+        // A package that includes game must never follow a junction outside the installation.
         await assert.rejects(createUpdatePlan(f.root, { files }, { files: [entry('Game/missing.dat', 'new')] },
             { origin: 'port' }), /unsafe_install_path/);
     } finally { f.cleanup(); }

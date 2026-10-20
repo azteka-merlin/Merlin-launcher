@@ -2,7 +2,7 @@
 
 O catálogo de `/custom-games` usa o header `x-merlin-custom-games-protocol: 2`. Uma instalação mantém a chave imutável do pacote em `.merlin-install.json`. Quando a chave do catálogo muda, o cartão mostra **Atualizar jogo**. Versões nativas são publicadas manualmente; os campos `origin`, `versionLabel` e `protectedPaths` vêm do Admin/API.
 
-Cada publicação contém o pacote completo do jogo; nos ports, inclui a pasta `game`. Novas instalações recebem esse pacote inteiro. Quem já instalou baixa somente os arquivos necessários, preservando a pasta `game` que já existe.
+Cada publicação contém um pacote ZIP ou pasta. Em ports, `game` pode constar do novo pacote: nesse caso, os arquivos catalogados nessa pasta são atualizados; se não constar, a pasta `game` instalada permanece intacta. O Launcher baixa somente os arquivos necessários.
 
 ## Integridade
 
@@ -23,7 +23,7 @@ Quando encontra problemas, o resultado oferece **Reparar arquivos**, por ação 
 - Em pacotes por pasta, baixa somente arquivos diretos necessários e bundles ZIP que contêm algum arquivo necessário. O hash de referência de pastas legadas pode vir do índice separado, mesmo se o manifesto de transporte não tiver hashes.
 - Em ZIPs indexados, baixa somente o payload comprimido dos membros necessários usando `/custom-games/:id/entries/:fileIndex`, com ranges relativos ao payload. Arquivos stored são copiados, deflate é descomprimido em streaming, e o SHA-256 final é conferido. ZIPs sem índice ainda podem ser instalados pelo fluxo anterior; a atualização aguarda a indexação.
 - Remove somente arquivos declarados no manifesto instalado que desapareceram na nova versão. Sem índice anterior confiável, não infere remoções.
-- Preserva arquivos extras. `protectedPaths` é respeitado; `game` é sempre protegido para ports. Configurações existentes `.ini`, `.cfg`, `.sav`, `settings.json` e arquivos dentro de pastas `save`, `saves`, `savegames`, `savedata`, `user` e `userdata` também são preservados. Arquivos novos ainda ausentes nesses caminhos podem ser instalados.
+- Preserva arquivos extras. `protectedPaths` é respeitado, exceto a proteção antiga da raiz `game` em ports: a presença de `game` no pacote novo determina se seus arquivos catalogados são atualizados; sua ausência preserva a pasta instalada. Configurações existentes `.ini`, `.cfg`, `.sav`, `settings.json` e arquivos dentro de pastas `save`, `saves`, `savegames`, `savedata`, `user` e `userdata` também são preservados. Arquivos novos ainda ausentes nesses caminhos podem ser instalados.
 
 Todo download termina e valida antes de alterar a instalação. Substituições e remoções têm backup e journal de operações em formato append-only, com custo linear, para rollback em erro/cancelamento e recuperação após interrupção. A chave instalada só muda ao concluir. Antes de atualizar e aplicar, o launcher verifica processos executáveis dentro da instalação; o botão Jogar daquele jogo fica bloqueado durante a atualização. A atualização suporta transições de arquivos para pastas e de pastas para arquivos; conteúdo local desconhecido que conflita com a nova estrutura bloqueia a troca e é preservado.
 
