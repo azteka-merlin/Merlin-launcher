@@ -224,6 +224,36 @@ test('selective ZIP transfer verifies decompressed bytes before apply and refuse
     }
 });
 
+test('folder repair resumes an interrupted object range and verifies it before staging', async () => {
+    const f = fixture();
+    try {
+        const data = Buffer.alloc(100, 0x61);
+        const file = { path: 'missing.bin', sizeBytes: data.length, sha256: hash(data) };
+        const objectId = '00000000-0000-4000-8000-000000000011';
+        const staging = path.join(f.base, 'Staging');
+        let broken = true;
+        const ranges = [];
+        const options = { staging, item: { id, archiveKey: 'folder-v1', packageType: 'folder' },
+            manifest: { files: [file] }, folderManifest: { files: [{ ...file, id: objectId }] },
+            plan: { replace: [file], remove: [], unchangedFiles: 0, protectedFiles: 0 },
+            request: async (_relative, requestOptions) => {
+                const [, from, to] = /^bytes=(\d+)-(\d+)$/.exec(requestOptions.headers.Range);
+                ranges.push([Number(from), Number(to)]);
+                const body = broken ? Readable.from((async function* () {
+                    yield data.subarray(0, 30);
+                    throw new Error('connection_lost');
+                })()) : Readable.from([data.subarray(Number(from), Number(to) + 1)]);
+                return { status: 206, headers: { 'content-range': `bytes ${from}-${to}/${data.length}` }, data: body };
+            }, onProgress() {} };
+        await assert.rejects(stageUpdate(options), /connection_lost/);
+        assert.equal(fs.statSync(path.join(staging, 'objects', `file-${objectId}`)).size, 30);
+        broken = false;
+        const staged = await stageUpdate(options);
+        assert.deepEqual(ranges.at(-1), [30, 99]);
+        assert.deepEqual(fs.readFileSync(path.join(staged.payload, file.path)), data);
+    } finally { f.cleanup(); }
+});
+
 test('an omitted game and protected saves can remain on another drive through junctions', async () => {
     const f = fixture();
     try {

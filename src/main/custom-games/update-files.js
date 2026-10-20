@@ -6,6 +6,7 @@ const { Transform } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { safeEntryPath, extractSafeZip } = require('./safe-zip');
 const { decodeDeflate64 } = require('./deflate64');
+const { createTransferMeter, createTaskLimiter } = require('./transfer-progress');
 
 const MARKER = '.merlin-install.json';
 const RANGE_BYTES = 64 * 1024 ** 2;
@@ -127,12 +128,45 @@ async function createUpdatePlan(root, previous, next, options = {}, signal = nul
     return plan;
 }
 
-async function downloadObject({ url, sizeBytes, expectedHash, etag, destination, request, signal, onBytes }) {
+async function fileHash(file, signal) {
+    const hash = createHash('sha256');
+    for await (const chunk of fs.createReadStream(file, { highWaterMark: 4 * 1024 * 1024, signal })) {
+        checkCancelled(signal);
+        hash.update(chunk);
+    }
+    return hash.digest('hex');
+}
+
+async function stagedFileMatches(root, file, signal) {
+    const target = safeEntryPath(root, file.path);
+    const stat = await localFile(root, file.path);
+    return Boolean(stat?.isFile() && stat.size === file.sizeBytes &&
+        await fileHash(target, signal) === file.sha256);
+}
+
+async function downloadObject({ url, sizeBytes, expectedHash, etag, destination, request, signal, onBytes, resume = false }) {
     await safeParents(path.dirname(destination), destination, true);
-    const output = await fs.promises.open(destination, 'wx');
+    let existing = resume ? await fs.promises.lstat(destination).catch(error => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
+    }) : null;
+    if (existing && (!existing.isFile() || existing.isSymbolicLink())) throw new Error('unsafe_install_path');
+    if (existing && existing.size > sizeBytes) {
+        await fs.promises.unlink(destination);
+        existing = null;
+    }
     let hash = createHash('sha256');
+    if (existing) {
+        for await (const chunk of fs.createReadStream(destination, { highWaterMark: 4 * 1024 * 1024, signal })) {
+            checkCancelled(signal);
+            hash.update(chunk);
+        }
+        onBytes(existing.size);
+    }
+    const output = await fs.promises.open(destination, existing ? 'r+' : 'wx');
+    let checksumMismatch = false;
     try {
-        for (let start = 0; start < sizeBytes; start += RANGE_BYTES) {
+        for (let start = existing?.size || 0; start < sizeBytes; start += RANGE_BYTES) {
             const end = Math.min(sizeBytes - 1, start + RANGE_BYTES - 1);
             let failure;
             for (let attempt = 0; attempt < 4; attempt++) {
@@ -184,8 +218,14 @@ async function downloadObject({ url, sizeBytes, expectedHash, etag, destination,
             }
             if (failure) throw failure;
         }
-        if (expectedHash && hash.digest('hex') !== expectedHash) throw new Error('checksum_mismatch');
+        checksumMismatch = Boolean(expectedHash && hash.digest('hex') !== expectedHash);
     } finally { await output.close(); }
+    if (checksumMismatch) {
+        if (!existing) throw new Error('checksum_mismatch');
+        onBytes(-sizeBytes);
+        await fs.promises.unlink(destination);
+        return downloadObject({ url, sizeBytes, expectedHash, etag, destination, request, signal, onBytes });
+    }
 }
 
 async function decodeZipMember(source, target, file, signal) {
@@ -206,16 +246,12 @@ async function decodeZipMember(source, target, file, signal) {
 }
 
 async function stageUpdate({ staging, item, manifest, folderManifest, plan, request, signal, onProgress }) {
-    await fs.promises.mkdir(staging, { recursive: false });
-    await assertDirectory(staging);
     const payload = path.join(staging, 'payload');
     const objects = path.join(staging, 'objects');
-    await fs.promises.mkdir(payload);
-    await fs.promises.mkdir(objects);
     const downloads = [];
+    const needed = new Set(plan.replace.map(file => key(file.path)));
     if (item.packageType === 'folder') {
         const declared = new Map(manifest.files.map(file => [key(file.path), file]));
-        const needed = new Set(plan.replace.map(file => key(file.path)));
         const covered = new Set();
         const seenIds = new Set();
         for (const file of folderManifest?.files || []) {
@@ -253,29 +289,105 @@ async function stageUpdate({ staging, item, manifest, folderManifest, plan, requ
         }
     }
     const transferTotal = downloads.reduce((sum, entry) => sum + entry.sizeBytes, 0);
-    const installedBytes = plan.replace.reduce((sum, file) => sum + file.sizeBytes, 0);
-    const available = await fs.promises.statfs(staging);
-    if (Number(available.bavail) * Number(available.bsize) < transferTotal + installedBytes + 512 * 1024 ** 2) throw new Error('disk_space');
+    const resumeMarker = path.join(staging, '.merlin-transfer.json');
+    const fingerprint = item.packageType === 'folder' ? createHash('sha256').update(JSON.stringify({
+        id: item.id, archiveKey: item.archiveKey,
+        replace: plan.replace.map(file => [file.path, file.sizeBytes, file.sha256]),
+        downloads: downloads.map(entry => [entry.kind, entry.id, entry.sizeBytes, entry.sha256, entry.etag]),
+    })).digest('hex') : null;
+    let resumed = false;
+    const oldStage = await fs.promises.lstat(staging).catch(error => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
+    });
+    if (oldStage) {
+        await assertDirectory(staging);
+        let saved;
+        try { saved = JSON.parse(await fs.promises.readFile(resumeMarker, 'utf8')); } catch { /* No valid checkpoint. */ }
+        if (fingerprint && saved?.fingerprint === fingerprint) {
+            const directories = await Promise.all([payload, objects].map(directory =>
+                fs.promises.lstat(directory).catch(error => {
+                    if (error.code === 'ENOENT') return null;
+                    throw error;
+                })));
+            resumed = directories.every(Boolean);
+        }
+        if (!resumed) await removeWorkspace(staging, path.dirname(staging));
+    }
+    if (!resumed) await fs.promises.mkdir(staging, { recursive: false });
+    await assertDirectory(staging);
+    for (const directory of [payload, objects]) {
+        if (!resumed) await fs.promises.mkdir(directory);
+        await assertDirectory(directory);
+    }
+    if (fingerprint && !resumed) await atomicJson(resumeMarker, { fingerprint });
     let received = 0;
     let completedFiles = 0;
-    const report = () => onProgress({ received, total: transferTotal, completedFiles, totalFiles: downloads.length,
-        unchangedFiles: plan.unchangedFiles, protectedFiles: plan.protectedFiles });
+    const meter = fingerprint ? createTransferMeter({ windowMs: 60_000, minimumSampleMs: 20_000 }) : null;
+    let lastMeterAt = 0;
+    let rate = null;
+    const report = () => {
+        const now = Date.now();
+        if (meter && (now - lastMeterAt >= 400 || completedFiles === downloads.length)) {
+            rate = meter.update(received, transferTotal, completedFiles, downloads.length, now);
+            lastMeterAt = now;
+        }
+        onProgress({ received, total: transferTotal, completedFiles, totalFiles: downloads.length,
+            unchangedFiles: plan.unchangedFiles, protectedFiles: plan.protectedFiles,
+            ...(rate ? { speedBytesPerSecond: rate.speedBytesPerSecond,
+                etaSeconds: downloads.length <= 2 || completedFiles >= 3 ? rate.etaSeconds : null } : {}) });
+    };
+    const pending = [];
+    for (const entry of downloads) {
+        const required = entry.kind === 'bundle' ? entry.files.filter(file =>
+            needed.has(key(file.path))) : [entry];
+        let cached = resumed && required.length > 0;
+        if (cached) for (const file of required) {
+            if (!await stagedFileMatches(payload, file, signal)) { cached = false; break; }
+        }
+        if (cached) {
+            received += entry.sizeBytes;
+            completedFiles++;
+        } else pending.push(entry);
+    }
+    const remainingObjectBytes = pending.reduce((sum, entry) => {
+        const object = path.join(objects, `${entry.kind}-${entry.id || entry.entryIndex}`);
+        const stat = resumed ? fs.lstatSync(object, { throwIfNoEntry: false }) : null;
+        if (stat && (!stat.isFile() || stat.isSymbolicLink())) throw new Error('unsafe_install_path');
+        return sum + (stat && stat.size <= entry.sizeBytes ? entry.sizeBytes - stat.size : entry.sizeBytes);
+    }, 0);
+    const pendingPayloadBytes = pending.reduce((sum, entry) => sum + (entry.kind === 'bundle'
+        ? entry.files.reduce((total, file) => total + file.sizeBytes, 0)
+        : entry.kind === 'zip-entry' ? plan.replace.find(file => file.entryIndex === entry.entryIndex).sizeBytes
+            : 0), 0);
+    const available = await fs.promises.statfs(staging);
+    if (Number(available.bavail) * Number(available.bsize) <
+        remainingObjectBytes + pendingPayloadBytes + 512 * 1024 ** 2) throw new Error('disk_space');
     report();
     let cursor = 0;
+    const limitExtraction = createTaskLimiter(2);
     const download = async entry => {
         checkCancelled(signal);
         const object = path.join(objects, `${entry.kind}-${entry.id || entry.entryIndex}`);
         const url = entry.kind === 'zip-entry' ? `entries/${entry.entryIndex}` : `files/${entry.id}`;
         await downloadObject({ url, sizeBytes: entry.sizeBytes,
             expectedHash: entry.kind === 'zip-entry' ? null : entry.sha256, etag: entry.etag,
-            destination: object, request, signal, onBytes: value => { received += value; report(); } });
+            destination: object, request, signal, resume: resumed,
+            onBytes: value => { received += value; report(); } });
         if (entry.kind === 'bundle') {
-            await extractSafeZip(object, payload, () => {}, () => signal?.aborted,
-                new Map(entry.files.map(file => [key(file.path), file.sizeBytes])),
-                { expectedHashes: new Map(entry.files.map(file => [key(file.path), file.sha256])) });
+            await limitExtraction(async () => {
+                if (resumed) for (const file of entry.files) {
+                    const target = safeEntryPath(payload, file.path);
+                    if (await localFile(payload, file.path)) await fs.promises.unlink(target);
+                }
+                await extractSafeZip(object, payload, () => {}, () => signal?.aborted,
+                    new Map(entry.files.map(file => [key(file.path), file.sizeBytes])),
+                    { expectedHashes: new Map(entry.files.map(file => [key(file.path), file.sha256])) });
+            });
         } else {
             const target = safeEntryPath(payload, entry.path);
             await safeParents(payload, target, true);
+            if (resumed && await localFile(payload, entry.path)) await fs.promises.unlink(target);
             if (entry.kind === 'zip-entry') {
                 const expected = plan.replace.find(file => file.entryIndex === entry.entryIndex);
                 await decodeZipMember(object, target, expected, signal);
@@ -285,12 +397,18 @@ async function stageUpdate({ staging, item, manifest, folderManifest, plan, requ
         completedFiles++;
         report();
     };
-    // A bounded pool keeps many small files fast without saturating the disk.
-    const results = await Promise.allSettled(Array.from({ length: Math.min(4, downloads.length) }, async () => {
-        while (cursor < downloads.length) await download(downloads[cursor++]);
-    }));
-    const failure = results.find(result => result.status === 'rejected');
-    if (failure) throw failure.reason;
+    const runQueue = async (queue, workers) => {
+        cursor = 0;
+        const results = await Promise.allSettled(Array.from({ length: Math.min(workers, queue.length) }, async () => {
+            while (cursor < queue.length) await download(queue[cursor++]);
+        }));
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure) throw failure.reason;
+    };
+    if (fingerprint) {
+        await runQueue(pending.filter(entry => entry.sizeBytes >= 64 * 1024 ** 2).sort((a, b) => b.sizeBytes - a.sizeBytes), 4);
+        await runQueue(pending.filter(entry => entry.sizeBytes < 64 * 1024 ** 2).sort((a, b) => b.sizeBytes - a.sizeBytes), 12);
+    } else await runQueue(pending, 4);
     return { payload, transferTotal };
 }
 

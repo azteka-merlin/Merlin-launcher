@@ -352,7 +352,21 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         for (const item of items.values()) {
             if (!/^[a-f0-9-]{36}$/i.test(item.id)) continue;
             const current = installed(item);
-            if (current) await recoverUpdate(current.path, item.id);
+            if (current) {
+                await recoverUpdate(current.path, item.id);
+                // Failed folder transfers are resumable, but abandoned checkpoints
+                // must not retain disk space indefinitely.
+                const staging = path.join(path.dirname(current.path), `.merlin-updating-${item.id}`);
+                try {
+                    const checkpoint = await fs.promises.lstat(path.join(staging, '.merlin-transfer.json'));
+                    if (checkpoint.isFile() && !checkpoint.isSymbolicLink() &&
+                        Date.now() - checkpoint.mtimeMs > 7 * 24 * 60 * 60 * 1000) {
+                        await removeWorkspace(staging, path.dirname(current.path));
+                    }
+                } catch (error) {
+                    if (error.code !== 'ENOENT') console.warn('[CustomGames] Stale repair cleanup failed', error.code || error.message);
+                }
+            }
         }
     }
 
@@ -388,6 +402,13 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             speedBytesPerSecond = elapsedMs > 0 ? sampleBytes * 1000 / elapsedMs : 0;
             etaSeconds = elapsedMs >= 8_000 && speedBytesPerSecond > 0 && Number.isFinite(progressValue) && Number.isFinite(progressTotal)
                 ? Math.max(0, Math.ceil((progressTotal - progressValue) / speedBytesPerSecond)) : null;
+            // Folder repair/update knows both the selected object bytes and object count.
+            // Its longer-window estimate is more representative than a byte-only burst.
+            if (stage === 'downloading' && ['repair', 'update'].includes(operation.kind) &&
+                operation.item.packageType === 'folder' && Object.hasOwn(extra, 'etaSeconds')) {
+                speedBytesPerSecond = extra.speedBytesPerSecond;
+                etaSeconds = extra.etaSeconds;
+            }
         }
         operation.snapshot = {
             ...operation.snapshot,
@@ -1208,7 +1229,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 return result;
             } finally { active = null; finishOperation(); }
         }
-        const staging = path.join(path.dirname(current.path), `.merlin-updating-${id}-${require('node:crypto').randomUUID()}`);
+        const staging = path.join(path.dirname(current.path), item.packageType === 'folder'
+            ? `.merlin-updating-${id}` : `.merlin-updating-${id}-${randomUUID()}`);
         try {
             emit(operation, onProgress, 'preparing', { kind }, true);
             await recoverUpdate(current.path, id);
@@ -1271,7 +1293,9 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             emit(operation, onProgress, code === 'cancelled' ? 'cancelled' : 'failed', { code, done: true }, true);
             return { success: false, code };
         } finally {
-            await removeWorkspace(staging, path.dirname(current.path)).catch(() => {});
+            if (item.packageType !== 'folder' || ['completed', 'cancelled'].includes(operation.stage)) {
+                await removeWorkspace(staging, path.dirname(current.path)).catch(() => {});
+            }
             await closeDownloadSession(operation);
             if (active === operation) active = null;
             finishOperation();

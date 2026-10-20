@@ -180,6 +180,15 @@ test('extraction meter considers the tail of small files and does not reset betw
     assert.equal(meter.update(1000, 1000, 100, 100, 22000).etaSeconds, 0);
 });
 
+test('folder repair meter waits for a longer sample and accounts for objects still pending', () => {
+    const meter = createTransferMeter({ windowMs: 60_000, minimumSampleMs: 20_000 });
+    assert.equal(meter.update(0, 1000, 0, 10, 1000).etaSeconds, null);
+    assert.equal(meter.update(500, 1000, 1, 10, 11000).etaSeconds, null);
+    const estimate = meter.update(700, 1000, 3, 10, 25000);
+    assert.ok(estimate.etaSeconds > 0);
+    assert.ok(estimate.etaSeconds >= Math.ceil(7 / (3 / 24)) - 1);
+});
+
 test('extraction limiter never runs more than two jobs and drains failures safely', async () => {
     const limit = createTaskLimiter(2); let running = 0; let maximum = 0;
     const jobs = Array.from({ length: 8 }, (_, i) => limit(async () => {

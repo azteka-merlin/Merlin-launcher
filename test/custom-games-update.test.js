@@ -228,6 +228,54 @@ test('cancelled update downloads leave the installed version intact and release 
     } finally { f.cleanup(); }
 });
 
+test('folder update retries reuse validated staged bundles and clear the checkpoint after success', async () => {
+    const f = fixture('folder');
+    try {
+        let failAddedFile = true;
+        f.intercept(async url => {
+            if (failAddedFile && url.endsWith('/files/00000000-0000-4000-8000-000000000011')) {
+                throw new Error('temporary_network_failure');
+            }
+        });
+        const service = f.create();
+        const first = await service.update(GAME_ID);
+        assert.equal(first.success, false);
+        const staging = path.join(path.dirname(f.target), `.merlin-updating-${GAME_ID}`);
+        assert.equal(fs.existsSync(staging), true);
+        assert.equal(fs.readFileSync(path.join(f.target, 'changed.pak'), 'utf8'), 'old file');
+        const bundleId = '00000000-0000-4000-8000-000000000010';
+        const bundleRequestsBefore = f.requests.filter(request => request.url.endsWith(`/files/${bundleId}`)).length;
+        assert.equal(bundleRequestsBefore, 1);
+
+        failAddedFile = false;
+        const second = await f.create().update(GAME_ID);
+        assert.equal(second.success, true, JSON.stringify(second));
+        assert.equal(f.requests.filter(request => request.url.endsWith(`/files/${bundleId}`)).length,
+            bundleRequestsBefore, 'validated bundle members should not be downloaded twice');
+        assert.equal(fs.readFileSync(path.join(f.target, 'changed.pak'), 'utf8'), 'new file');
+        assert.equal(fs.existsSync(staging), false);
+    } finally { f.cleanup(); }
+});
+
+test('cancelled folder update clears its resumable staging without changing installed files', async () => {
+    const f = fixture('folder');
+    try {
+        const service = f.create();
+        let cancellation;
+        f.intercept(async url => {
+            if (!cancellation && /\/files\//.test(url)) {
+                cancellation = service.cancel();
+                throw new Error('cancelled');
+            }
+        });
+        const result = await service.update(GAME_ID);
+        assert.deepEqual(result, { success: false, code: 'cancelled' });
+        assert.deepEqual(await cancellation, { success: true });
+        assert.equal(fs.existsSync(path.join(path.dirname(f.target), `.merlin-updating-${GAME_ID}`)), false);
+        assert.equal(fs.readFileSync(path.join(f.target, 'changed.pak'), 'utf8'), 'old file');
+    } finally { f.cleanup(); }
+});
+
 test('a same-hash installed file with the wrong size is downloaded again without scanning other game contents', async () => {
     const f = fixture();
     try {
