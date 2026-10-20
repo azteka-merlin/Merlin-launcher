@@ -64,7 +64,17 @@ jobs:
 
       - name: Run regression tests
         if: steps.tag_check.outputs.exists != 'true'
-        run: npm test
+        shell: pwsh
+        run: |
+          # Windows runners can expose TEMP through an 8.3 alias. Fixtures
+          # need canonical roots to satisfy the launcher's path safety checks.
+          $canonicalTemp = node -p "require('fs').realpathSync.native(require('os').tmpdir())"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not resolve the test temporary directory"
+          }
+          $env:TEMP = $canonicalTemp
+          $env:TMP = $canonicalTemp
+          npm test
 
       - name: Build Merlin
         if: steps.tag_check.outputs.exists != 'true'
