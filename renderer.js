@@ -1353,6 +1353,10 @@ function setupEventListeners() {
     const manageSubscriptionBtn = document.getElementById('manageSubscriptionBtn');
     manageSubscriptionBtn?.addEventListener('click', openBillingPortal);
     window.addEventListener('merlin-authenticated', refreshBillingPortalCard);
+    window.addEventListener('merlin-session-updated', event => {
+        renderBillingPortalCard(event.detail);
+        renderAccountIdentity(event.detail);
+    });
 
     const updateSteamPluginCard = async () => {
         const statusLabel = document.getElementById('steamPluginStatus');

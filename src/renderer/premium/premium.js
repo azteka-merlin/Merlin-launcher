@@ -1799,6 +1799,9 @@ document.addEventListener('DOMContentLoaded', () => {
             void loadPremium(true);
         }
     });
+    window.addEventListener('merlin-session-updated', () => {
+        loaded = false;
+    });
     window.addEventListener('merlin-language-changed', () => {
         updateIntroHelpLabel();
         render();

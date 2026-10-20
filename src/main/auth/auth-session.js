@@ -188,14 +188,16 @@ function createAuthSession({
         };
     }
 
-    async function refreshAccessNotice() {
+    async function refreshAccessNotice(forceRefresh = false) {
         const stored = loadStoredSession();
         const billing = stored?.license?.billing;
         const rawExpiry = billing?.entitlementExpiresAt || billing?.currentPeriodEnd || stored?.license?.expiresAt;
         const expiry = new Date(rawExpiry || '').getTime();
-        if (!stored?.accessToken || !Number.isFinite(expiry) || expiry - Date.now() > 7 * 24 * 60 * 60 * 1000) {
+        if (!stored?.accessToken || (!forceRefresh &&
+            (!Number.isFinite(expiry) || expiry - Date.now() > 7 * 24 * 60 * 60 * 1000))) {
             return publicSession();
         }
+        const requestGeneration = sessionGeneration;
         try {
             const response = await axios.get(`${baseUrl}/launcher/access-notice`, {
                 timeout: 5_000,
@@ -206,17 +208,27 @@ function createAuthSession({
                     'User-Agent': 'Merlin/2.0'
                 }
             });
+            if (requestGeneration !== sessionGeneration || session !== stored) {
+                return session ? publicSession() : { authenticated: false, code: 'missing' };
+            }
             if (response.data?.license?.billing) {
                 session.license = {
                     ...session.license,
                     expiresAt: response.data.license.expiresAt,
                     status: response.data.license.status,
-                    planTier: response.data.license.planTier || session.license.planTier,
+                    planTier: Object.hasOwn(response.data.license, 'planTier')
+                        ? response.data.license.planTier || null : session.license.planTier,
                     billing: normalizeBilling(response.data.license.billing)
                 };
                 persistSession();
+            } else if (forceRefresh) {
+                throw new AuthError('invalid_response', 'The Merlin API returned invalid access details.');
             }
-        } catch (_) {
+        } catch (error) {
+            if (requestGeneration !== sessionGeneration || session !== stored) {
+                return session ? publicSession() : { authenticated: false, code: 'missing' };
+            }
+            if (forceRefresh) throw error instanceof AuthError ? error : errorFromResponse(error);
             // Keep the last confirmed entitlement when the notice check fails.
         }
         return publicSession();
@@ -299,7 +311,8 @@ function createAuthSession({
         return Boolean(loadStoredSession());
     }
 
-    async function status() {
+    async function status(options = {}) {
+        const forceRefresh = options?.forceRefresh === true;
         const stored = loadStoredSession();
         if (!stored) return { authenticated: false, code: 'missing' };
 
@@ -307,14 +320,13 @@ function createAuthSession({
         // when this Merlin process starts, then serve the cached session until
         // the token actually needs renewal. This avoids recording a new
         // /auth/login activity every five minutes while the launcher is open.
-        if (statusValidatedThisProcess && stored.accessTokenExpiresAt > Date.now() + TOKEN_REFRESH_MARGIN_MS) {
-            return refreshAccessNotice();
-        }
-
         try {
+            if (statusValidatedThisProcess && stored.accessTokenExpiresAt > Date.now() + TOKEN_REFRESH_MARGIN_MS) {
+                return await refreshAccessNotice(forceRefresh);
+            }
             const result = await refresh();
             statusValidatedThisProcess = result?.authenticated === true;
-            return refreshAccessNotice();
+            return await refreshAccessNotice(forceRefresh);
         } catch (error) {
             if (error.code === 'expired') {
                 return preserveExpiredSession() || { authenticated: false, code: 'expired' };

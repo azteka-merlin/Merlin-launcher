@@ -116,6 +116,79 @@ test('auth status validates once per Merlin process and reuses a valid session a
     assert.equal(loginAttempts, 2);
 });
 
+function accessRefreshFixture() {
+    const expiresAt = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString();
+    const state = { tier: 'prata', logins: 0, checks: 0, request: null };
+    const license = () => ({ name: 'Test account', expiresAt, status: 'active', planTier: state.tier,
+        billing: { accessType: 'monthly_subscription', entitlementExpiresAt: expiresAt } });
+    const memoryFs = createMemoryFs();
+    const session = createAuthSession({
+        app: { getPath: () => 'memory-access-test' }, safeStorage: createSafeStorage(), fs: memoryFs, path,
+        axios: {
+            post: async () => {
+                state.logins++;
+                return { data: { accessToken: `access-token-${state.logins}`, expiresIn: 3600, license: license() } };
+            },
+            get: async (url, options) => {
+                state.checks++;
+                assert.equal(url, 'https://example.invalid/api/launcher/access-notice');
+                assert.ok(options.headers.Authorization.startsWith('Bearer access-token-'));
+                return state.request ? state.request() : { data: { license: license() } };
+            }
+        },
+        httpsAgent: {}, machineIdentity: { getHwid: async () => 'test-hwid' }, baseUrl: 'https://example.invalid/api'
+    });
+    return { session, state, memoryFs };
+}
+
+test('opening account access refreshes distant upgrades and downgrades without another login', async () => {
+    const { session, state } = accessRefreshFixture();
+    await session.login('MERLIN-ABCD-EFGH-JKLM');
+    state.tier = 'ouro';
+    assert.equal((await session.status()).license.planTier, 'prata');
+    assert.equal(state.checks, 0);
+    assert.equal((await session.status({ forceRefresh: true })).license.planTier, 'ouro');
+    state.tier = 'prata';
+    assert.equal((await session.status({ forceRefresh: true })).license.planTier, 'prata');
+    state.tier = null;
+    assert.equal((await session.status({ forceRefresh: true })).license.planTier, null);
+    assert.equal(state.checks, 3);
+    assert.equal(state.logins, 1);
+    assert.equal(await session.getAccessToken(), 'access-token-1');
+});
+
+test('a failed explicit access refresh reports failure and preserves the authenticated session', async () => {
+    const { session, state } = accessRefreshFixture();
+    await session.login('MERLIN-ABCD-EFGH-JKLM');
+    state.request = async () => { throw new Error('Connection unavailable'); };
+    assert.deepEqual(await session.status({ forceRefresh: true }), { authenticated: false, code: 'unavailable' });
+    assert.equal((await session.status()).license.planTier, 'prata');
+    assert.equal(await session.getAccessToken(), 'access-token-1');
+    assert.equal(state.logins, 1);
+});
+
+test('an invalid explicit access refresh is not presented as a successful update', async () => {
+    const { session, state } = accessRefreshFixture();
+    await session.login('MERLIN-ABCD-EFGH-JKLM');
+    state.request = async () => ({ data: { license: {} } });
+    assert.deepEqual(await session.status({ forceRefresh: true }), { authenticated: false, code: 'invalid_response' });
+    assert.equal((await session.status()).license.planTier, 'prata');
+});
+
+test('an access response cannot restore the old account after logout and a new login', async () => {
+    const { session, state } = accessRefreshFixture();
+    await session.login('MERLIN-ABCD-EFGH-JKLM');
+    let finishRequest;
+    state.request = () => new Promise(resolve => { finishRequest = resolve; });
+    const pending = session.status({ forceRefresh: true });
+    session.logout();
+    state.tier = 'ouro';
+    await session.login('MERLIN-JKLM-NPQR-STUV');
+    finishRequest({ data: { license: { status: 'active', planTier: 'prata', billing: {} } } });
+    assert.equal((await pending).license.planTier, 'ouro');
+    assert.equal((await session.status()).license.planTier, 'ouro');
+});
+
 test('confirmed Pix renewal removes the notice when the launcher checks billing', async () => {
     const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
     let renewalScheduled = false;

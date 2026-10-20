@@ -27,8 +27,8 @@ function registerAuthIpc({ ipcMain, authSession, shell, apiBaseUrl, onLogout, on
     ipcMain.handle('auth:has-session', () => authSession.hasStoredSession());
     ipcMain.handle('auth:remembered-key', () => authSession.getRememberedKey());
     ipcMain.handle('auth:forget-remembered-key', () => authSession.forgetRememberedKey());
-    ipcMain.handle('auth:status', async () => {
-        const result = await authSession.status();
+    ipcMain.handle('auth:status', async (_event, options) => {
+        const result = await authSession.status({ forceRefresh: options?.forceRefresh === true });
         return resumeAfterAuthentication(result);
     });
     ipcMain.handle('auth:login', async (_event, licenseKey, rememberKey) => {

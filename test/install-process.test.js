@@ -207,3 +207,33 @@ test('progress sanitizer only accepts fixed serializable fields and bounded valu
     assert.equal(value.received, undefined); assert.equal(value.total, undefined); assert.equal(value.name.length, 240);
     assert.equal(value.auth, undefined); assert.equal(value.etaSeconds, null);
 });
+
+test('repair jobs pass their pinned version and verified paths through the isolated worker without secrets', async () => {
+    const h = harness();
+    const pending = h.runner.run({ ...request, mode: 'repair', archiveKey: 'archives/installed.zip', repairPaths: ['data/bad.pak'] });
+    const child = await h.child(); child.ready();
+    const start = child.messages.find(message => message.type === 'start');
+    assert.equal(start.mode, 'repair');
+    assert.equal(start.archiveKey, 'archives/installed.zip');
+    assert.deepEqual(start.repairPaths, ['data/bad.pak']);
+    assert.equal(start.token, undefined);
+    child.send('result', { result: { success: true, updatedFiles: 1, removedFiles: 0, protectedFiles: 2, secret: 'hidden' } });
+    assert.deepEqual(await pending, { success: true, updatedFiles: 1, removedFiles: 0, protectedFiles: 2 });
+});
+
+test('worker repair dispatch uses the shared update engine with the exact installed version and forced paths', async () => {
+    const port = new EventEmitter(); const sent = []; port.postMessage = message => sent.push(message);
+    let received;
+    const protocol = startInstallProcess({ parentPort: port, exit() {}, createService: () => ({
+        update: async (...args) => { received = args; return { success: true, updatedFiles: 1, protectedFiles: 0 }; },
+    }) });
+    try {
+        port.emit('message', { data: { type: 'start', jobId: 'repair-job', id: item.id, letter: 'C', catalog: [item],
+            userData: 'C:\\MerlinData', apiBaseUrl: 'https://example.test/api', mode: 'repair',
+            archiveKey: 'archives/installed.zip', repairPaths: ['data/bad.pak'] } });
+        await tick();
+        assert.equal(received[0], item.id);
+        assert.deepEqual(received[2], { repair: true, archiveKey: 'archives/installed.zip', repairPaths: ['data/bad.pak'] });
+        assert.equal(sent.find(message => message.type === 'result').result.updatedFiles, 1);
+    } finally { protocol.stop(); }
+});

@@ -48,6 +48,9 @@ function renderer(options = {}) {
                 { id: 'two', name: 'Game Two', archiveSize: 100, imageUrl: 'image-2.png' },
             ], drives: [] }; },
             async uninstall(id) { return options.uninstall ? options.uninstall(id) : { success: true }; },
+            async verify(id) { return options.verify ? options.verify(id) : { success: true, healthy: true, totalFiles: 3 }; },
+            async update(id) { return options.update ? options.update(id) : { success: true }; },
+            async repair(id) { return options.repair ? options.repair(id) : { success: true, updatedFiles: 1, protectedFiles: 0 }; },
         } },
         merlinI18n: { t: key => translations[language][key], current: () => language },
         merlinView: { set(view) { viewCalls.push(view); } },
@@ -203,4 +206,58 @@ test('successful uninstall unlocks its dialog before a slow catalog refresh comp
     assert.equal(ui.get('customGamesUninstallConfirm').disabled, false);
     assert.equal(ui.get('customGamesUninstallCancel').disabled, false);
     finishRefresh({ success: true, games: [], drives: [] });
+});
+
+test('integrity actions show a verification result and safe paths without installation success messaging', async () => {
+    let verified;
+    const ui = renderer({ list: async () => ({ success: true, games: [
+        { id: 'installed', name: 'Installed Game', installed: true },
+    ], drives: [] }), verify: async id => {
+        verified = id;
+        return { success: true, healthy: false, totalFiles: 3, missingFiles: 1, corruptFiles: 1, unreadableFiles: 0,
+            issues: [{ path: '<script>.exe', reason: 'missing' }] };
+    } });
+    await ui.open();
+    const verify = ui.get('customGamesGrid').children[0].children[3].children[2];
+    assert.equal(verify.textContent, 'Verificar integridade');
+    await verify.click();
+    assert.equal(verified, 'installed');
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Verificação concluída');
+    assert.match(ui.get('customGamesProgressDetail').textContent, /1 ausentes · 1 alterados · 0 sem acesso/);
+    assert.match(ui.get('customGamesProgressDetail').textContent, /<script>\.exe/);
+    assert.equal(ui.get('customGamesProgressDetail').style.whiteSpace, 'pre-line');
+    assert.equal(ui.get('customGamesProgressCancel').hidden, true);
+});
+
+test('new versions expose Update and show update progress distinct from installation', async () => {
+    let updated;
+    const ui = renderer({ list: async () => ({ success: true, games: [
+        { id: 'installed', name: 'Installed Game', installed: true, updateAvailable: true },
+    ], drives: [] }), update: async id => { updated = id; return { success: true }; } });
+    await ui.open();
+    const update = ui.get('customGamesGrid').children[0].children[3].children[3];
+    assert.equal(update.textContent, 'Atualizar jogo');
+    await update.click();
+    assert.equal(updated, 'installed');
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Jogo atualizado');
+    ui.progress({ id: 'installed', name: 'Installed Game', kind: 'update', stage: 'applying', files: 2, totalFiles: 4 });
+    ui.flush();
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Aplicando atualização');
+    assert.equal(ui.get('customGamesProgressBar').style.width, '50%');
+});
+
+test('integrity problems expose explicit Repair only after verification and keep repair feedback separate', async () => {
+    let repairs = 0;
+    const ui = renderer({ list: async () => ({ success: true, games: [
+        { id: 'installed', name: 'Installed Game', installed: true },
+    ], drives: [] }), repair: async () => { repairs++; return { success: true, updatedFiles: 2, protectedFiles: 1 }; } });
+    await ui.open();
+    ui.progress({ id: 'installed', kind: 'integrity', stage: 'completed', healthy: false, corruptFiles: 2, totalFiles: 3 });
+    assert.equal(repairs, 0);
+    assert.equal(ui.get('customGamesProgressRepair').hidden, false);
+    await ui.get('customGamesProgressRepair').click();
+    assert.equal(repairs, 1);
+    assert.equal(ui.get('customGamesProgressRepair').hidden, true);
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Reparo concluído');
+    assert.match(ui.get('customGamesProgressDetail').textContent, /2 arquivos restaurados · 1 arquivos protegidos preservados/);
 });

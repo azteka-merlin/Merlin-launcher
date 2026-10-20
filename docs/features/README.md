@@ -8,6 +8,7 @@ Mapa de referencia para manter comportamento durante a reconstrucao do front-end
 | Jogos e Steam | [games-and-steam.md](games-and-steam.md) | busca, fila, manifests, Lua, auto-update, DLLs e readiness |
 | Plugin da Loja Steam | [steam-plugin.md](steam-plugin.md) | integracao opcional por CDP, bandeja, botoes injetados e contrato pagina-bridge |
 | Biblioteca | [library.md](library.md) | jogos gerenciados, cache, remocao segura e pastas Steam |
+| Baixe e Jogue | [custom-games.md](custom-games.md) | versões, downloads por arquivo, integridade, preservação de saves e atualização com rollback |
 | Corrections e Premium | [content-activation.md](content-activation.md) | catalogos, votos, downloads, ativacoes, cancelamento e seguranca de arquivos |
 | Correcao com token de licenca | [special-license-correction.md](special-license-correction.md) | fluxo isolado do AppID `4407750`, arquivo `.dlf`, templates e bloqueio de versao |
 | Experiencia do app | [app-experience.md](app-experience.md) | navegacao, modais, avisos, enquetes, anuncios, update e links externos |

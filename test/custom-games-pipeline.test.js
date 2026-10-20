@@ -64,6 +64,16 @@ const completed = f => {
     try { return JSON.parse(fs.readFileSync(f.stateFile, 'utf8')).extractedBundles || []; } catch { return []; }
 };
 
+async function waitForCheckpoint(f, pending, count) {
+    let terminal;
+    pending.then(result => { terminal = result; });
+    await waitUntil(() => {
+        const reached = completed(f).length >= count;
+        if (!reached && terminal) throw new Error(`installation_ended_before_checkpoint: ${JSON.stringify(terminal)}`);
+        return reached;
+    });
+}
+
 test('bundle extraction overlaps remaining downloads and counters span all bundles', async () => {
     const f = fixture();
     try {
@@ -100,7 +110,7 @@ test('suspending keeps validated extracted bundles and resume does not redownloa
         });
         const service = f.create();
         const pending = service.install(f.item.id, 'X');
-        await waitUntil(() => completed(f).length === 2);
+        await waitForCheckpoint(f, pending, 2);
         await service.suspend();
         assert.equal((await pending).success, false);
         assert.equal(fs.existsSync(f.staging), true);
@@ -120,7 +130,7 @@ test('resume revalidates extracted output and redownloads only the damaged bundl
             await new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new Error('cancelled')), { once: true }));
         });
         const service = f.create(); const pending = service.install(f.item.id, 'X');
-        await waitUntil(() => completed(f).length === 2);
+        await waitForCheckpoint(f, pending, 2);
         await service.suspend(); await pending;
         const damaged = f.manifest.bundles[0];
         fs.writeFileSync(path.join(f.staging, damaged.files[0].path), Buffer.alloc(damaged.files[0].sizeBytes, 255));
@@ -139,7 +149,7 @@ test('explicit cancellation clears pipelined extraction and resume state', async
             await new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new Error('cancelled')), { once: true }));
         });
         const service = f.create(); const pending = service.install(f.item.id, 'X');
-        await waitUntil(() => completed(f).length > 0);
+        await waitForCheckpoint(f, pending, 1);
         assert.deepEqual(await service.cancel(), { success: true }); await pending;
         assert.equal(fs.existsSync(f.staging), false);
         assert.equal(fs.existsSync(f.stateFile), false);

@@ -39,7 +39,11 @@ function startInstallProcess({ parentPort = process.parentPort, createService,
             if (activeJob || stopping) return;
             if (typeof message.jobId !== 'string' || typeof message.id !== 'string' ||
                 !/^[C-Z]$/i.test(String(message.letter || '')) || typeof message.userData !== 'string' ||
-                !message.userData || !Array.isArray(message.catalog)) {
+                !message.userData || !Array.isArray(message.catalog) ||
+                (message.mode != null && !['install', 'update', 'repair'].includes(message.mode)) ||
+                message.mode === 'repair' && (typeof message.archiveKey !== 'string' || !message.archiveKey ||
+                    !Array.isArray(message.repairPaths) || !message.repairPaths.length || message.repairPaths.length > 100000 ||
+                    message.repairPaths.some(relative => typeof relative !== 'string' || relative.length > 32767))) {
                 return finish(message.jobId, { success: false, code: 'invalid_install_request' });
             }
             let api;
@@ -63,10 +67,14 @@ function startInstallProcess({ parentPort = process.parentPort, createService,
                     trashItem: async () => { throw new Error('unsupported_install_operation'); },
                 } });
                 const jobId = activeJob;
-                const result = await service.install(message.id, message.letter, value => {
+                const progress = value => {
                     const progress = sanitizeInstallProgress(value);
                     if (progress) post({ type: 'progress', jobId, progress });
-                });
+                };
+                const result = ['update', 'repair'].includes(message.mode)
+                    ? await service.update(message.id, progress, message.mode === 'repair'
+                        ? { repair: true, archiveKey: message.archiveKey, repairPaths: message.repairPaths } : {})
+                    : await service.install(message.id, message.letter, progress);
                 finish(jobId, result);
             } catch { finish(message.jobId, { success: false, code: 'install_process_failed' }); }
         } else if (message.jobId === activeJob && message.type === 'access-token-response') {

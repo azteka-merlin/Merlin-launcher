@@ -35,7 +35,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         hasSession: () => ipcRenderer.invoke('auth:has-session'),
         rememberedKey: () => ipcRenderer.invoke('auth:remembered-key'),
         forgetRememberedKey: () => ipcRenderer.invoke('auth:forget-remembered-key'),
-        status: () => ipcRenderer.invoke('auth:status'),
+        status: (options) => options?.forceRefresh === true
+            ? ipcRenderer.invoke('auth:status', { forceRefresh: true })
+            : ipcRenderer.invoke('auth:status'),
         login: (licenseKey, rememberKey) => ipcRenderer.invoke('auth:login', licenseKey, rememberKey),
         resetHwid: (licenseKey) => ipcRenderer.invoke('auth:reset-hwid', licenseKey),
         logout: () => ipcRenderer.invoke('auth:logout'),
@@ -160,6 +162,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         refresh: () => ipcRenderer.invoke('custom-games:refresh'),
         drives: id => ipcRenderer.invoke('custom-games:drives', id),
         install: (id, drive) => ipcRenderer.invoke('custom-games:install', { id, drive }),
+        verify: id => ipcRenderer.invoke('custom-games:verify', id),
+        update: id => ipcRenderer.invoke('custom-games:update', id),
+        repair: id => ipcRenderer.invoke('custom-games:repair', id),
         cancel: () => ipcRenderer.invoke('custom-games:cancel'),
         play: id => ipcRenderer.invoke('custom-games:play', id),
         openFolder: id => ipcRenderer.invoke('custom-games:open-folder', id),

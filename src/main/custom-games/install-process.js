@@ -4,8 +4,9 @@ const { randomUUID } = require('node:crypto');
 const FAILURE = Object.freeze({ success: false, code: 'install_process_failed', error: 'install_process_failed' });
 const PROGRESS_NUMBERS = ['received', 'total', 'completedFiles', 'totalFiles', 'files', 'bytes', 'totalBytes',
     'installedFiles', 'totalInstallFiles', 'extractedBytes', 'extractionTotalBytes',
-    'speedBytesPerSecond', 'etaSeconds', 'extractionSpeedBytesPerSecond', 'extractionEtaSeconds', 'retryAttempt', 'maxAttempts'];
-const PROGRESS_STRINGS = ['id', 'name', 'drive', 'stage', 'code'];
+    'speedBytesPerSecond', 'etaSeconds', 'extractionSpeedBytesPerSecond', 'extractionEtaSeconds', 'retryAttempt', 'maxAttempts',
+    'updatedFiles', 'removedFiles', 'unchangedFiles', 'protectedFiles'];
+const PROGRESS_STRINGS = ['id', 'name', 'drive', 'stage', 'code', 'kind'];
 
 function sanitizeInstallProgress(value) {
     if (!value || typeof value !== 'object') return null;
@@ -24,7 +25,13 @@ function sanitizeInstallProgress(value) {
 
 function sanitizeInstallResult(value) {
     if (!value || typeof value !== 'object' || typeof value.success !== 'boolean') return { ...FAILURE };
-    if (value.success) return { success: true, ...(typeof value.path === 'string' ? { path: value.path.slice(0, 32768) } : {}) };
+    if (value.success) {
+        const result = { success: true, ...(typeof value.path === 'string' ? { path: value.path.slice(0, 32768) } : {}) };
+        for (const field of ['updatedFiles', 'removedFiles', 'protectedFiles']) {
+            if (Number.isSafeInteger(value[field]) && value[field] >= 0 && value[field] <= 100000) result[field] = value[field];
+        }
+        return result;
+    }
     const code = typeof value.code === 'string' && /^[a-zA-Z0-9_-]{1,120}$/.test(value.code)
         ? value.code : 'install_process_failed';
     return { success: false, code, ...(code === 'install_process_failed' ? { error: code } : {}) };
@@ -57,10 +64,13 @@ function createCustomGamesInstallRunner({ utilityProcess, app, authSession, apiB
         job.resolve(sanitizeInstallResult(result));
     }
 
-    function run({ id, letter, catalog } = {}, onProgress = () => {}) {
+    function run({ id, letter, catalog, mode = 'install', archiveKey, repairPaths } = {}, onProgress = () => {}) {
         if (disposed) return Promise.resolve({ ...FAILURE });
         if (active || terminatingChildren.size) return Promise.resolve({ success: false, code: 'busy' });
-        if (typeof id !== 'string' || !id || id.length > 120 || !/^[C-Z]$/i.test(String(letter || '')) || !Array.isArray(catalog)) {
+        if (typeof id !== 'string' || !id || id.length > 120 || !/^[C-Z]$/i.test(String(letter || '')) || !Array.isArray(catalog) ||
+            !['install', 'update', 'repair'].includes(mode) || mode === 'repair' &&
+                (typeof archiveKey !== 'string' || !archiveKey || !Array.isArray(repairPaths) || !repairPaths.length ||
+                    repairPaths.length > 100000 || repairPaths.some(relative => typeof relative !== 'string' || relative.length > 32767))) {
             return Promise.resolve({ success: false, code: 'invalid_install_request' });
         }
         const job = { jobId: randomUUID(), id, letter: letter.toUpperCase(), child: null, settled: false,
@@ -73,7 +83,8 @@ function createCustomGamesInstallRunner({ utilityProcess, app, authSession, apiB
                 clearTimeout(job.startupTimer);
                 if (disposed || job.cancelRequested) return settle(job, { success: false, code: 'cancelled' });
                 job.started = true;
-                post(job, { type: 'start', id, letter: job.letter, catalog,
+                post(job, { type: 'start', id, letter: job.letter, catalog, mode,
+                    ...(mode === 'repair' ? { archiveKey, repairPaths } : {}),
                     userData: app.getPath('userData'), apiBaseUrl });
                 return;
             }

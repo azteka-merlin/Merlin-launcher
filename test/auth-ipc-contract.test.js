@@ -51,6 +51,20 @@ test('passes the remember-key choice to authentication and exposes only the save
     assert.deepEqual(calls, ['forgot', { key: 'MERLIN-ABCD-EFGH-JKLM', remember: true }]);
 });
 
+test('auth status accepts only an explicit boolean request for current access details', async () => {
+    const handlers = new Map();
+    const calls = [];
+    registerAuthIpc({
+        ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+        authSession: { status: async options => { calls.push(options); return { authenticated: true }; } },
+        shell: {}, apiBaseUrl: 'https://example.invalid/api'
+    });
+    await handlers.get('auth:status')(null);
+    await handlers.get('auth:status')(null, { forceRefresh: true, ignored: 'value' });
+    await handlers.get('auth:status')(null, { forceRefresh: 'true' });
+    assert.deepEqual(calls, [{ forceRefresh: false }, { forceRefresh: true }, { forceRefresh: false }]);
+});
+
 test('opens the public access page', () => {
     assert.equal(
         getAccessUrl('https://staging.api-merlin.com/api'),

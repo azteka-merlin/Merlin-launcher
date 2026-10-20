@@ -635,6 +635,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.visibilityState === 'visible') entitlementMonitor.check();
     });
     window.addEventListener('focus', () => entitlementMonitor.check());
+    window.addEventListener('merlin-session-updated', event => {
+        if (event.detail?.authenticated) applyEntitlementStatus(event.detail);
+    });
 
     setApplicationLocked(true);
     (async () => {

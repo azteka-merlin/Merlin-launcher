@@ -14,6 +14,26 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Não foi possível verificar o espaço livre deste disco.',
         custom_games_install: 'Baixar e instalar', custom_games_cancel: 'Cancelar',
         custom_games_downloading: 'Baixando jogo', custom_games_extracting: 'Descompactando jogo',
+        custom_games_repair: 'Reparar arquivos', custom_games_repairing: 'Reparando jogo',
+        custom_games_repair_done: 'Reparo concluído', custom_games_repair_failed: 'Não foi possível reparar o jogo',
+        custom_games_repair_cancelled: 'Reparo cancelado', custom_games_repair_result: '{files} arquivos restaurados · {protected} arquivos protegidos preservados',
+        custom_games_repair_verify: 'Verifique a integridade novamente antes de reparar.',
+        custom_games_repair_unavailable: 'Esta versão não está mais disponível para reparo. Use Atualizar jogo para instalar a versão atual.',
+        custom_games_update: 'Atualizar jogo', custom_games_update_preparing: 'Preparando atualização',
+        custom_games_update_downloading: 'Baixando atualização', custom_games_update_applying: 'Aplicando atualização',
+        custom_games_update_apply_progress: '{files} de {total} arquivos aplicados',
+        custom_games_update_done: 'Jogo atualizado', custom_games_update_failed: 'Não foi possível atualizar o jogo',
+        custom_games_update_cancelled: 'Atualização cancelada', custom_games_game_running: 'Feche o jogo antes de atualizar.',
+        custom_games_update_recovery: 'Não foi possível restaurar todos os arquivos. Feche o jogo e tente atualizar novamente.',
+        custom_games_no_update: 'Este jogo já está atualizado.',
+        custom_games_verify: 'Verificar integridade', custom_games_integrity_done: 'Verificação concluída',
+        custom_games_integrity_success: 'Todos os {total} arquivos estão íntegros.',
+        custom_games_integrity_issues: '{missing} ausentes · {changed} alterados · {unreadable} sem acesso',
+        custom_games_integrity_files: '{checked} de {total} arquivos verificados',
+        custom_games_integrity_pending: 'A indexação deste pacote ainda está pendente. Tente novamente depois.',
+        custom_games_integrity_unavailable: 'O índice desta instalação ainda não está disponível. Conecte-se e tente novamente ou aguarde a indexação pelo administrador.',
+        custom_games_integrity_version_changed: 'Esta instalação é de uma versão anterior e não possui índice local para verificação.',
+        custom_games_integrity_cancelled: 'Verificação cancelada', custom_games_integrity_failed: 'Não foi possível verificar a integridade',
         custom_games_verifying: 'Verificando integridade', custom_games_verify_progress: '{received} de {total} verificados · {percent}%',
         custom_games_progress: '{received} de {total} · {percent}%', custom_games_extract_progress: '{files} arquivos extraídos',
         custom_games_speed_eta: '{speed}/s · Restante: {time}', custom_games_eta_calculating: 'Calculando tempo restante…',
@@ -61,6 +81,26 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Could not check free space on this drive.',
         custom_games_install: 'Download and install', custom_games_cancel: 'Cancel',
         custom_games_downloading: 'Downloading game', custom_games_extracting: 'Extracting game',
+        custom_games_repair: 'Repair files', custom_games_repairing: 'Repairing game',
+        custom_games_repair_done: 'Repair completed', custom_games_repair_failed: 'Could not repair the game',
+        custom_games_repair_cancelled: 'Repair cancelled', custom_games_repair_result: '{files} files restored · {protected} protected files preserved',
+        custom_games_repair_verify: 'Verify integrity again before repairing.',
+        custom_games_repair_unavailable: 'This version is no longer available for repair. Use Update game to install the current version.',
+        custom_games_update: 'Update game', custom_games_update_preparing: 'Preparing update',
+        custom_games_update_downloading: 'Downloading update', custom_games_update_applying: 'Applying update',
+        custom_games_update_apply_progress: '{files} of {total} files applied',
+        custom_games_update_done: 'Game updated', custom_games_update_failed: 'Could not update the game',
+        custom_games_update_cancelled: 'Update cancelled', custom_games_game_running: 'Close the game before updating.',
+        custom_games_update_recovery: 'Some files could not be restored. Close the game and try updating again.',
+        custom_games_no_update: 'This game is already up to date.',
+        custom_games_verify: 'Verify integrity', custom_games_integrity_done: 'Verification completed',
+        custom_games_integrity_success: 'All {total} files passed verification.',
+        custom_games_integrity_issues: '{missing} missing · {changed} changed · {unreadable} unreadable',
+        custom_games_integrity_files: '{checked} of {total} files verified',
+        custom_games_integrity_pending: 'This package is still waiting to be indexed. Try again later.',
+        custom_games_integrity_unavailable: 'The index for this installation is not available yet. Connect and try again, or wait for the administrator to index it.',
+        custom_games_integrity_version_changed: 'This installation is an older version and has no local verification index.',
+        custom_games_integrity_cancelled: 'Verification cancelled', custom_games_integrity_failed: 'Could not verify integrity',
         custom_games_verifying: 'Verifying integrity', custom_games_verify_progress: '{received} of {total} verified · {percent}%',
         custom_games_progress: '{received} of {total} · {percent}%', custom_games_extract_progress: '{files} files extracted',
         custom_games_speed_eta: '{speed}/s · Remaining: {time}', custom_games_eta_calculating: 'Calculating time remaining…',
@@ -108,6 +148,26 @@ const customGameTranslations = {
         custom_games_unknown_space: 'No se pudo comprobar el espacio libre de esta unidad.',
         custom_games_install: 'Descargar e instalar', custom_games_cancel: 'Cancelar',
         custom_games_downloading: 'Descargando juego', custom_games_extracting: 'Extrayendo juego',
+        custom_games_repair: 'Reparar archivos', custom_games_repairing: 'Reparando juego',
+        custom_games_repair_done: 'Reparación completada', custom_games_repair_failed: 'No se pudo reparar el juego',
+        custom_games_repair_cancelled: 'Reparación cancelada', custom_games_repair_result: '{files} archivos restaurados · {protected} archivos protegidos conservados',
+        custom_games_repair_verify: 'Verifica de nuevo la integridad antes de reparar.',
+        custom_games_repair_unavailable: 'Esta versión ya no está disponible para reparación. Usa Actualizar juego para instalar la versión actual.',
+        custom_games_update: 'Actualizar juego', custom_games_update_preparing: 'Preparando actualización',
+        custom_games_update_downloading: 'Descargando actualización', custom_games_update_applying: 'Aplicando actualización',
+        custom_games_update_apply_progress: '{files} de {total} archivos aplicados',
+        custom_games_update_done: 'Juego actualizado', custom_games_update_failed: 'No se pudo actualizar el juego',
+        custom_games_update_cancelled: 'Actualización cancelada', custom_games_game_running: 'Cierra el juego antes de actualizar.',
+        custom_games_update_recovery: 'No se pudieron restaurar algunos archivos. Cierra el juego e intenta actualizarlo de nuevo.',
+        custom_games_no_update: 'Este juego ya está actualizado.',
+        custom_games_verify: 'Verificar integridad', custom_games_integrity_done: 'Verificación completada',
+        custom_games_integrity_success: 'Los {total} archivos están íntegros.',
+        custom_games_integrity_issues: '{missing} ausentes · {changed} modificados · {unreadable} sin acceso',
+        custom_games_integrity_files: '{checked} de {total} archivos verificados',
+        custom_games_integrity_pending: 'La indexación de este paquete está pendiente. Inténtalo más tarde.',
+        custom_games_integrity_unavailable: 'El índice de esta instalación aún no está disponible. Conéctate e inténtalo de nuevo o espera la indexación del administrador.',
+        custom_games_integrity_version_changed: 'Esta instalación es de una versión anterior y no tiene un índice local de verificación.',
+        custom_games_integrity_cancelled: 'Verificación cancelada', custom_games_integrity_failed: 'No se pudo verificar la integridad',
         custom_games_verifying: 'Verificando integridad', custom_games_verify_progress: '{received} de {total} verificados · {percent}%',
         custom_games_progress: '{received} de {total} · {percent}%', custom_games_extract_progress: '{files} archivos extraídos',
         custom_games_speed_eta: '{speed}/s · Restante: {time}', custom_games_eta_calculating: 'Calculando el tiempo restante…',
@@ -155,6 +215,26 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Impossible de vérifier l’espace libre de ce disque.',
         custom_games_install: 'Télécharger et installer', custom_games_cancel: 'Annuler',
         custom_games_downloading: 'Téléchargement du jeu', custom_games_extracting: 'Extraction du jeu',
+        custom_games_repair: 'Réparer les fichiers', custom_games_repairing: 'Réparation du jeu',
+        custom_games_repair_done: 'Réparation terminée', custom_games_repair_failed: 'Impossible de réparer le jeu',
+        custom_games_repair_cancelled: 'Réparation annulée', custom_games_repair_result: '{files} fichiers restaurés · {protected} fichiers protégés conservés',
+        custom_games_repair_verify: 'Vérifiez à nouveau l’intégrité avant de réparer.',
+        custom_games_repair_unavailable: 'Cette version n’est plus disponible pour réparation. Mettez le jeu à jour pour installer la version actuelle.',
+        custom_games_update: 'Mettre à jour', custom_games_update_preparing: 'Préparation de la mise à jour',
+        custom_games_update_downloading: 'Téléchargement de la mise à jour', custom_games_update_applying: 'Application de la mise à jour',
+        custom_games_update_apply_progress: '{files} sur {total} fichiers appliqués',
+        custom_games_update_done: 'Jeu mis à jour', custom_games_update_failed: 'Impossible de mettre à jour le jeu',
+        custom_games_update_cancelled: 'Mise à jour annulée', custom_games_game_running: 'Fermez le jeu avant de le mettre à jour.',
+        custom_games_update_recovery: 'Certains fichiers n’ont pas pu être restaurés. Fermez le jeu et réessayez la mise à jour.',
+        custom_games_no_update: 'Ce jeu est déjà à jour.',
+        custom_games_verify: 'Vérifier l’intégrité', custom_games_integrity_done: 'Vérification terminée',
+        custom_games_integrity_success: 'Les {total} fichiers sont intacts.',
+        custom_games_integrity_issues: '{missing} absents · {changed} modifiés · {unreadable} illisibles',
+        custom_games_integrity_files: '{checked} sur {total} fichiers vérifiés',
+        custom_games_integrity_pending: 'L’indexation de ce paquet est en attente. Réessayez plus tard.',
+        custom_games_integrity_unavailable: 'L’index de cette installation est indisponible. Connectez-vous et réessayez ou attendez l’indexation par l’administrateur.',
+        custom_games_integrity_version_changed: 'Cette installation est une ancienne version sans index local de vérification.',
+        custom_games_integrity_cancelled: 'Vérification annulée', custom_games_integrity_failed: 'Impossible de vérifier l’intégrité',
         custom_games_verifying: 'Vérification de l’intégrité', custom_games_verify_progress: '{received} sur {total} vérifiés · {percent} %',
         custom_games_progress: '{received} sur {total} · {percent} %', custom_games_extract_progress: '{files} fichiers extraits',
         custom_games_speed_eta: '{speed}/s · Restant : {time}', custom_games_eta_calculating: 'Calcul du temps restant…',
@@ -202,6 +282,26 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Freier Speicherplatz auf diesem Laufwerk konnte nicht geprüft werden.',
         custom_games_install: 'Herunterladen und installieren', custom_games_cancel: 'Abbrechen',
         custom_games_downloading: 'Spiel wird heruntergeladen', custom_games_extracting: 'Spiel wird entpackt',
+        custom_games_repair: 'Dateien reparieren', custom_games_repairing: 'Spiel reparieren',
+        custom_games_repair_done: 'Reparatur abgeschlossen', custom_games_repair_failed: 'Spiel konnte nicht repariert werden',
+        custom_games_repair_cancelled: 'Reparatur abgebrochen', custom_games_repair_result: '{files} Dateien wiederhergestellt · {protected} geschützte Dateien beibehalten',
+        custom_games_repair_verify: 'Prüfe die Integrität vor der Reparatur erneut.',
+        custom_games_repair_unavailable: 'Diese Version ist nicht mehr zur Reparatur verfügbar. Aktualisiere das Spiel auf die aktuelle Version.',
+        custom_games_update: 'Spiel aktualisieren', custom_games_update_preparing: 'Update vorbereiten',
+        custom_games_update_downloading: 'Update herunterladen', custom_games_update_applying: 'Update anwenden',
+        custom_games_update_apply_progress: '{files} von {total} Dateien angewendet',
+        custom_games_update_done: 'Spiel aktualisiert', custom_games_update_failed: 'Spiel konnte nicht aktualisiert werden',
+        custom_games_update_cancelled: 'Update abgebrochen', custom_games_game_running: 'Schließe das Spiel vor dem Update.',
+        custom_games_update_recovery: 'Einige Dateien konnten nicht wiederhergestellt werden. Schließe das Spiel und versuche das Update erneut.',
+        custom_games_no_update: 'Dieses Spiel ist bereits aktuell.',
+        custom_games_verify: 'Integrität prüfen', custom_games_integrity_done: 'Prüfung abgeschlossen',
+        custom_games_integrity_success: 'Alle {total} Dateien sind unbeschädigt.',
+        custom_games_integrity_issues: '{missing} fehlen · {changed} geändert · {unreadable} nicht lesbar',
+        custom_games_integrity_files: '{checked} von {total} Dateien geprüft',
+        custom_games_integrity_pending: 'Dieses Paket wartet noch auf die Indexierung. Versuche es später erneut.',
+        custom_games_integrity_unavailable: 'Der Index dieser Installation ist noch nicht verfügbar. Verbinde dich und versuche es erneut oder warte auf die Indexierung durch den Administrator.',
+        custom_games_integrity_version_changed: 'Diese Installation ist eine ältere Version ohne lokalen Prüfindex.',
+        custom_games_integrity_cancelled: 'Prüfung abgebrochen', custom_games_integrity_failed: 'Integrität konnte nicht geprüft werden',
         custom_games_verifying: 'Integrität wird geprüft', custom_games_verify_progress: '{received} von {total} geprüft · {percent} %',
         custom_games_progress: '{received} von {total} · {percent} %', custom_games_extract_progress: '{files} Dateien entpackt',
         custom_games_speed_eta: '{speed}/s · Verbleibend: {time}', custom_games_eta_calculating: 'Verbleibende Zeit wird berechnet…',
@@ -245,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'customGamesInstallSize', 'customGamesInstallNote', 'customGamesDriveList', 'customGamesInstallSpace',
         'customGamesInstallPath', 'customGamesInstallCancel', 'customGamesInstallConfirm',
         'customGamesProgressModal', 'customGamesProgressTitle', 'customGamesProgressName', 'customGamesProgressDetail',
-        'customGamesProgressRate', 'customGamesProgressBar', 'customGamesProgressCancel', 'customGamesProgressMinimize', 'customGamesProgressClose',
+        'customGamesProgressRate', 'customGamesProgressBar', 'customGamesProgressCancel', 'customGamesProgressMinimize', 'customGamesProgressClose', 'customGamesProgressRepair',
         'customGamesDownloadWidget', 'customGamesWidgetTitle', 'customGamesWidgetName', 'customGamesWidgetDetail',
         'customGamesWidgetRate', 'customGamesWidgetBar', 'customGamesWidgetOpen', 'customGamesWidgetClose',
         'customGamesInfoModal', 'customGamesInfoName', 'customGamesInfoText', 'customGamesInfoClose',
@@ -302,6 +402,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const extracting = state.stage === 'extracting';
         const verifying = state.stage === 'verifying';
+        const integrity = state.kind === 'integrity';
+        const repairing = state.kind === 'repair';
+        const updating = state.kind === 'update' || repairing;
+        const applying = updating && state.stage === 'applying';
         const terminal = ['completed', 'failed', 'cancelled'].includes(state.stage);
         if (terminal && progressFrame !== null) {
             window.cancelAnimationFrame(progressFrame);
@@ -311,15 +415,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextBusy = !terminal;
         const busyChanged = busy !== nextBusy;
         busy = nextBusy;
-        const title = tr(extracting ? 'custom_games_extracting' : verifying ? 'custom_games_verifying' : state.stage === 'completed'
+        const title = tr(repairing ? state.stage === 'completed' ? 'custom_games_repair_done'
+            : state.stage === 'cancelled' || state.code === 'cancelled' ? 'custom_games_repair_cancelled'
+                : state.stage === 'failed' ? 'custom_games_repair_failed' : 'custom_games_repairing'
+            : updating ? state.stage === 'completed' ? 'custom_games_update_done'
+            : state.stage === 'cancelled' || state.code === 'cancelled' ? 'custom_games_update_cancelled'
+                : state.stage === 'failed' ? 'custom_games_update_failed' : applying ? 'custom_games_update_applying'
+                    : state.stage === 'preparing' ? 'custom_games_update_preparing' : 'custom_games_update_downloading'
+            : integrity && terminal ? state.stage === 'completed' ? 'custom_games_integrity_done'
+            : state.stage === 'cancelled' || state.code === 'cancelled' ? 'custom_games_integrity_cancelled' : 'custom_games_integrity_failed'
+            : extracting ? 'custom_games_extracting' : verifying ? 'custom_games_verifying' : state.stage === 'completed'
             ? 'custom_games_install_success' : state.stage === 'cancelled' || state.code === 'cancelled'
                 ? 'custom_games_cancelled_title' : state.stage === 'failed'
                     ? 'custom_games_install_failed' : 'custom_games_downloading');
         const name = state.name || selected.name || '';
         const globalExtraction = extracting && Number(state.extractionTotalBytes) > 0;
-        const current = globalExtraction ? Number(state.extractedBytes) || 0
+        const current = applying ? Number(state.files) || 0 : globalExtraction ? Number(state.extractedBytes) || 0
             : extracting || verifying ? Number(state.bytes) || 0 : Number(state.received) || 0;
-        const total = globalExtraction ? Number(state.extractionTotalBytes)
+        const total = applying ? Number(state.totalFiles) || 0 : globalExtraction ? Number(state.extractionTotalBytes)
             : extracting || verifying ? Number(state.totalBytes) || 0 : Number(state.total) || 0;
         const percent = total > 0 ? Math.min(100, Math.floor(current / total * 100)) : 0;
         const totalInstallFiles = Number.isInteger(state.totalInstallFiles) && state.totalInstallFiles > 0
@@ -330,7 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
             files: installedFiles, total: totalInstallFiles, remaining: totalInstallFiles - installedFiles,
         }) : '';
         let detail = '';
-        if (state.stage === 'downloading') {
+        if (state.stage === 'preparing' && updating) {
+            detail = tr(repairing ? 'custom_games_repairing' : 'custom_games_update_preparing');
+        } else if (applying) {
+            detail = tr('custom_games_update_apply_progress', { files: state.files || 0, total: state.totalFiles || 0 });
+        } else if (state.stage === 'downloading') {
             detail = tr('custom_games_progress', { received: size(current), total: size(total), percent });
             if (installationDetail) detail += ` · ${installationDetail}`;
             else if (Number.isInteger(state.totalFiles) && state.totalFiles > 0) {
@@ -341,10 +458,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (total > 0) detail += ` · ${tr('custom_games_progress', { received: size(current), total: size(total), percent })}`;
         } else if (verifying) {
             detail = tr('custom_games_verify_progress', { received: size(current), total: size(total), percent });
+            if (integrity && state.totalFiles) detail += ` · ${tr('custom_games_integrity_files', {
+                checked: state.checkedFiles || 0, total: state.totalFiles,
+            })}`;
         } else if (state.stage === 'completed') {
-            detail = tr('custom_games_install_success');
+            detail = repairing ? tr('custom_games_repair_result', { files: state.updatedFiles || 0, protected: state.protectedFiles || 0 })
+                : updating ? tr('custom_games_update_done') : integrity ? state.healthy ? tr('custom_games_integrity_success', { total: state.totalFiles })
+                : tr('custom_games_integrity_issues', { missing: state.missingFiles || 0,
+                    changed: state.corruptFiles || 0, unreadable: state.unreadableFiles || 0 }) : tr('custom_games_install_success');
+            if (integrity && state.issues?.length) {
+                detail += `\n${state.issues.slice(0, 5).map(issue => String(issue.path).slice(0, 200)).join('\n')}`;
+            }
         } else if (state.stage === 'cancelled' || state.code === 'cancelled') {
-            detail = tr('custom_games_cancelled');
+            detail = tr(repairing ? 'custom_games_repair_cancelled' : updating ? 'custom_games_update_cancelled' : integrity ? 'custom_games_integrity_cancelled' : 'custom_games_cancelled');
         } else if (state.stage === 'failed') {
             detail = errorText(state.code);
         }
@@ -357,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : tr('custom_games_network_calculating');
         // A network estimate does not include pending extraction. Keep both
         // estimates named while the service overlaps the two kinds of work.
-        let rate = terminal || verifying ? '' : extracting
+        let rate = terminal || verifying || applying || state.stage === 'preparing' ? '' : extracting
             ? globalExtraction ? extractionRate : knownEta(state.etaSeconds)
                 ? tr('custom_games_speed_eta', { speed: size(speed), time: formatEta(state.etaSeconds) }) : tr('custom_games_eta_calculating')
             : networkRate;
@@ -370,11 +496,14 @@ document.addEventListener('DOMContentLoaded', () => {
         setText(el.customGamesProgressTitle, title);
         setText(el.customGamesProgressName, name);
         setText(el.customGamesProgressDetail, detail);
+        el.customGamesProgressDetail.style.whiteSpace = integrity ? 'pre-line' : '';
         setText(el.customGamesProgressRate, rate);
         el.customGamesProgressBar.style.width = `${extracting ? percent : state.stage === 'completed' ? 100 : percent}%`;
         el.customGamesProgressCancel.hidden = terminal;
+        setText(el.customGamesProgressCancel, tr(integrity || updating ? 'custom_games_cancel' : 'custom_games_cancel_download'));
         el.customGamesProgressMinimize.hidden = terminal;
         el.customGamesProgressClose.hidden = !terminal;
+        el.customGamesProgressRepair.hidden = !(integrity && state.stage === 'completed' && state.healthy === false);
         el.customGamesDownloadWidget.hidden = false;
         setText(el.customGamesWidgetTitle, title);
         setText(el.customGamesWidgetName, name);
@@ -453,10 +582,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const actions = document.createElement('div');
             actions.className = 'custom-game-actions';
             if (game.installed) {
-                if (game.executablePath) actions.append(action(tr('custom_games_play'), async () => {
+                if (game.executablePath) {
+                    const play = action(tr('custom_games_play'), async () => {
                     const result = await api.play(game.id);
                     if (!result.success) notify(errorText(result.code), 'error');
-                }, 'primary'));
+                    }, 'primary');
+                    play.disabled = busy && ['update', 'repair'].includes(progressSnapshot?.kind) && progressSnapshot.id === game.id;
+                    actions.append(play);
+                }
                 actions.append(action(tr('custom_games_folder'), async () => {
                     const result = await api.openFolder(game.id);
                     if (!result.success) notify(errorText(result.code), 'error');
@@ -466,6 +599,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.customGamesUninstallName.textContent = game.name;
                     el.customGamesUninstallModal.hidden = false;
                 }));
+                const verify = action(tr('custom_games_verify'), () => startVerify(game));
+                verify.disabled = busy;
+                actions.append(verify);
+                if (game.updateAvailable) {
+                    const update = action(tr('custom_games_update'), () => startUpdate(game), 'primary');
+                    update.disabled = busy || offline;
+                    actions.append(update);
+                }
             } else {
                 const download = action(tr('custom_games_download'), () => beginInstall(game), 'primary');
                 download.disabled = offline || busy;
@@ -491,6 +632,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function errorText(code) {
+        if (code === 'integrity_verification_required') return tr('custom_games_repair_verify');
+        if (['game_version_unavailable', 'game_version_not_found'].includes(code)) return tr('custom_games_repair_unavailable');
+        if (code === 'game_running' || code === 'game_running_check_failed') return tr('custom_games_game_running');
+        if (code === 'update_recovery_required') return tr('custom_games_update_recovery');
+        if (code === 'no_update') return tr('custom_games_no_update');
+        if (code === 'integrity_index_pending') return tr('custom_games_integrity_pending');
+        if (code === 'package_changed') return tr('custom_games_integrity_version_changed');
+        if (['integrity_index_unavailable', 'integrity_unavailable', 'invalid_integrity_manifest'].includes(code)) return tr('custom_games_integrity_unavailable');
         if (code === 'busy') return tr('custom_games_busy');
         if (code === 'download_stalled') return tr('custom_games_connection_failed');
         if (code === 'trash_failed') return tr('custom_games_uninstall_failed');
@@ -630,6 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startInstall(item, drive) {
         selected = item;
+        progressSnapshot = null;
         progressModalDismissed = false;
         el.customGamesInstallModal.hidden = true;
         el.customGamesProgressModal.hidden = false;
@@ -661,8 +811,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function startVerify(item) {
+        if (busy) return notify(tr('custom_games_busy'), 'error');
+        selected = item;
+        progressModalDismissed = false;
+        progressSnapshot = null;
+        renderProgress({ id: item.id, name: item.name, kind: 'integrity', stage: 'verifying', bytes: 0, totalBytes: 0 });
+        try {
+            const result = await api.verify(item.id);
+            renderProgress({ ...(progressSnapshot || {}), ...result, id: item.id, name: item.name, kind: 'integrity',
+                stage: result.success ? 'completed' : result.code === 'cancelled' ? 'cancelled' : 'failed', done: true });
+            if (!result.success) notify(errorText(result.code), 'error');
+        } catch {
+            renderProgress({ id: item.id, name: item.name, kind: 'integrity', stage: 'failed', code: 'integrity_unavailable', done: true });
+        } finally {
+            busy = false;
+            if (el.customGamesView.hidden) gridDirty = true;
+            else render();
+        }
+    }
+
+    async function startUpdate(item, repairing = false) {
+        if (busy) return notify(tr('custom_games_busy'), 'error');
+        selected = item;
+        progressModalDismissed = false;
+        progressSnapshot = null;
+        const kind = repairing ? 'repair' : 'update';
+        renderProgress({ id: item.id, name: item.name, kind, stage: 'preparing', received: 0, total: 0 });
+        try {
+            const result = await api[repairing ? 'repair' : 'update'](item.id);
+            renderProgress({ ...(progressSnapshot || {}), ...result, id: item.id, name: item.name, kind,
+                stage: result.success ? 'completed' : result.code === 'cancelled' ? 'cancelled' : 'failed',
+                code: result.code, done: true });
+            if (!result.success) notify(errorText(result.code), 'error');
+            else notify(tr(repairing ? 'custom_games_repair_done' : 'custom_games_update_done'), 'success');
+        } catch {
+            renderProgress({ id: item.id, name: item.name, kind, stage: 'failed', code: 'update_failed', done: true });
+        } finally {
+            busy = false;
+            await load();
+        }
+    }
+
     el.customGamesInstallConfirm.addEventListener('click', () => {
         if (selected && !el.customGamesInstallConfirm.disabled) void startInstall(selected, selectedDrive);
+    });
+    el.customGamesProgressRepair.addEventListener('click', () => {
+        if (selected && progressSnapshot?.kind === 'integrity' && progressSnapshot.healthy === false) return startUpdate(selected, true);
     });
 
     el.customGamesProgressCancel.addEventListener('click', async () => {

@@ -16,6 +16,7 @@
 | Games | resolver/buscar, fila, instalar e restart |
 | Library | listar, refresh, remover, abrir pasta e restart |
 | Corrections/Premium | catalogos, acoes, cancelamento e abrir pasta |
+| Baixe e Jogue | `customGames.list`, `refresh`, `drives`, `install`, `update`, `verify`, `repair`, `cancel`, `play`, `openFolder`, `uninstall`, `onProgress` |
 | Polls/announcements | carregar, votar, registrar visualizacao e dismiss |
 
 Os nomes completos estao em `preload.js`; ao altera-los, atualize testes `*-ipc-contract.test.js`.

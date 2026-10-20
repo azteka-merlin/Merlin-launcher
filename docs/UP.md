@@ -122,6 +122,7 @@ GitHub flow:
 
 - The repo has `.github/workflows/release.yml`.
 - On `master`, changing `package.json` version triggers the release workflow.
+- The workflow runs the regression tests before building a new version.
 - The workflow creates tag `v<version>` and publishes installer + `integrity.json` to GitHub Releases.
 
 ## Post-Build Checks

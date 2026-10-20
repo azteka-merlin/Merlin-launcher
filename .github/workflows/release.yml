@@ -62,6 +62,10 @@ jobs:
         run: |
           Write-Host "Tag ${{ steps.version.outputs.tag }} already exists. Skipping release."
 
+      - name: Run regression tests
+        if: steps.tag_check.outputs.exists != 'true'
+        run: npm test
+
       - name: Build Merlin
         if: steps.tag_check.outputs.exists != 'true'
         run: npm run build

@@ -64,6 +64,8 @@
         let loaded = false;
         let loading = false;
         let accessState = null;
+        let refreshQueued = false;
+        let generation = 0;
 
         function setArtwork(path) {
             const hasArtwork = Boolean(path);
@@ -99,6 +101,7 @@
             const label = isTest ? tr('access_test') : (isFree ? tr('access_free') : tierNames[tier]());
             elements.plan.textContent = label;
             elements.sidePlan.textContent = isFree || isTest ? '' : `· ${tr(`tier_${tier}`)}`;
+            elements.sidePlan.dataset.tier = isFree || isTest ? '' : tier;
             const expiry = formatDate(license.billing?.currentPeriodEnd || license.expiresAt);
             elements.status.textContent = license.status === 'active' ? tr('access_active') : tr('access_status_available');
             elements.expiry.textContent = expiry ? tr('access_valid_until', { date: expiry }) : '';
@@ -115,8 +118,13 @@
         }
 
         async function loadAccess(forceRefresh = false) {
-            if (loading || (loaded && !forceRefresh)) return;
+            if (loading) {
+                if (forceRefresh) refreshQueued = true;
+                return;
+            }
+            if (loaded && !forceRefresh) return;
             loading = true;
+            const requestGeneration = generation;
             const preserveCurrentView = loaded && Boolean(accessState);
             elements.error.hidden = true;
             if (!preserveCurrentView) {
@@ -125,7 +133,11 @@
                 showArtworkSkeleton();
             }
             try {
-                const [session, catalog] = await Promise.all([window.electronAPI.auth.status(), window.electronAPI.premium.list()]);
+                const [session, catalog] = await Promise.all([
+                    window.electronAPI.auth.status(forceRefresh ? { forceRefresh: true } : undefined),
+                    window.electronAPI.premium.list({ force: forceRefresh })
+                ]);
+                if (requestGeneration !== generation) return;
                 if (!session?.authenticated) throw new Error('missing_session');
                 const viewer = catalog?.success ? firstViewer(catalog.items || []) : null;
                 const license = session.license || {};
@@ -142,14 +154,20 @@
                 renderAccessState(accessState);
                 setArtwork(!isFree && !isTest ? tierArtwork[tier] : '');
                 loaded = true; elements.details.hidden = false;
+                window.dispatchEvent(new CustomEvent('merlin-session-updated', { detail: session }));
             } catch (_) {
+                if (requestGeneration !== generation) return;
+                elements.error.hidden = false;
                 if (!preserveCurrentView) {
-                    elements.error.hidden = false;
                     setArtwork('');
                 }
             } finally {
                 loading = false;
-                if (!preserveCurrentView) elements.loading.hidden = true;
+                if (requestGeneration === generation && !preserveCurrentView) elements.loading.hidden = true;
+                if (refreshQueued) {
+                    refreshQueued = false;
+                    void loadAccess(true);
+                }
             }
         }
 
@@ -163,9 +181,11 @@
             loaded = false;
             // Warm the access view as soon as the session is established so
             // opening "Meu acesso" never reveals an empty shell first.
-            void loadAccess();
+            void loadAccess(true);
         });
         window.addEventListener('merlin-logout', () => {
+            generation += 1;
+            refreshQueued = false;
             loaded = false;
             accessState = null;
             elements.sidePlan.textContent = '';

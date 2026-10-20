@@ -1,9 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
-const { createHash } = require('node:crypto');
+const { spawn, execFile } = require('node:child_process');
+const { createHash, randomUUID } = require('node:crypto');
 const { extractSafeZip, safeEntryPath } = require('./safe-zip');
 const { createTransferMeter, createTaskLimiter } = require('./transfer-progress');
+const { normalizeIntegrityManifest, verifyInstalledFiles } = require('./integrity');
+const { createUpdatePlan, stageUpdate, applyUpdate, recoverUpdate, removeWorkspace, protectedFile } = require('./update-files');
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
@@ -17,6 +19,19 @@ const RATE_WINDOW_MS = 30_000;
 const DOWNLOAD_IDLE_TIMEOUT_MS = 45_000;
 const INSTALL_SAFETY_BYTES = 512 * 1024 * 1024;
 const MARKER = '.merlin-install.json';
+const PROTOCOL_HEADERS = { 'x-merlin-custom-games-protocol': '2' };
+
+function hasRunningGameProcess(directory) {
+    if (process.platform !== 'win32') return Promise.resolve(false);
+    const encoded = Buffer.from(`${path.resolve(directory)}${path.sep}`, 'utf8').toString('base64');
+    const command = `$gameRoot = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); ` +
+        "$found = Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($gameRoot, [StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1; if ($found) { Write-Output 'running' }";
+    return new Promise((resolve, reject) => execFile('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command],
+        { windowsHide: true, timeout: 15000, maxBuffer: 8192 }, (error, output) => {
+            if (error) reject(new Error('game_running_check_failed'));
+            else resolve(output.trim() === 'running');
+        }));
+}
 
 function validFolderManifestFileCount(files) {
     return Array.isArray(files) && files.length > 0 && files.length <= MAX_FOLDER_MANIFEST_FILES;
@@ -66,13 +81,15 @@ function moveWithWindowsShellToRecycleBin(targetPath) {
 
 function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, testDriveRoot = null,
     windowsRecycleBinMove = moveWithWindowsShellToRecycleBin, downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS,
-    initialCatalog = null, installRunner = null, extractionConcurrency = 2 }) {
+    initialCatalog = null, installRunner = null, extractionConcurrency = 2, isGameRunning = hasRunningGameProcess }) {
     const dataRoot = app.getPath('userData');
     const source = new URL(apiBaseUrl).hostname.replace(/[^a-z0-9.-]/gi, '_');
     const registryFile = path.join(dataRoot, `custom-games-installs-${source}.json`);
     const cacheFile = path.join(dataRoot, `custom-games-catalog-${source}.json`);
+    const integrityRoot = path.join(dataRoot, `custom-games-integrity-${source}`);
     let active = null;
     const progressListeners = new Set();
+    const integrityProblems = new Map();
     let catalog = initialCatalog || loadJson(cacheFile, []);
     let registry = loadJson(registryFile, {});
 
@@ -95,9 +112,108 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
 
     async function saveJson(file, value) {
         await fs.promises.mkdir(path.dirname(file), { recursive: true });
-        const temp = `${file}.${process.pid}.tmp`;
-        await fs.promises.writeFile(temp, JSON.stringify(value), 'utf8');
-        await fs.promises.rename(temp, file);
+        const temp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+        try {
+            await fs.promises.writeFile(temp, JSON.stringify(value), 'utf8');
+            await fs.promises.rename(temp, file);
+        } finally { await fs.promises.unlink(temp).catch(() => {}); }
+    }
+
+    function integrityFile(id, archiveKey) {
+        return path.join(integrityRoot, `${createHash('sha256').update(`${id}\0${archiveKey}`).digest('hex')}.json`);
+    }
+
+    function transferParams(operation) {
+        return { archiveKey: operation.item.archiveKey,
+            ...(operation.downloadSessionId ? { downloadSessionId: operation.downloadSessionId } : {}) };
+    }
+
+    async function openDownloadSession(operation) {
+        // Small injected HTTP adapters used by offline fixtures can expose GET only.
+        if (typeof axios.post !== 'function') return;
+        const token = await authSession.getAccessToken();
+        const response = await axios.post(`${apiBaseUrl}/custom-games/${operation.item.id}/download-session`,
+            { archiveKey: operation.item.archiveKey }, { headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}` },
+                timeout: 30000, signal: operation.controller.signal });
+        const lease = response.data;
+        if (typeof lease?.leaseId !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(lease.leaseId) ||
+            lease.archiveKey !== operation.item.archiveKey) throw new Error('invalid_download_session');
+        operation.downloadSessionId = lease.leaseId;
+        const snapshot = lease.game || lease.package || lease.snapshot || lease;
+        if (snapshot && snapshot.archiveKey === operation.item.archiveKey) {
+            for (const field of ['packageType', 'archiveSize', 'executablePath', 'versionLabel', 'origin', 'protectedPaths']) {
+                if (snapshot[field] !== undefined) operation.item[field] = snapshot[field];
+            }
+        }
+        operation.heartbeatTimer = setInterval(() => {
+            if (operation.heartbeatPending) return;
+            operation.heartbeatPending = (async () => {
+                const accessToken = await authSession.getAccessToken();
+                await axios.post(`${apiBaseUrl}/custom-games/${operation.item.id}/download-session/${lease.leaseId}/heartbeat`, {},
+                    { headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${accessToken}` }, timeout: 15000 });
+            })().catch(() => { /* The next chunk or heartbeat retries a temporary network failure. */ })
+                .finally(() => { operation.heartbeatPending = null; });
+        }, 60000);
+        operation.heartbeatTimer.unref?.();
+    }
+
+    async function closeDownloadSession(operation) {
+        clearInterval(operation?.heartbeatTimer);
+        if (!operation?.downloadSessionId) return;
+        try {
+            await operation.heartbeatPending;
+            const token = await authSession.getAccessToken();
+            await axios.post(`${apiBaseUrl}/custom-games/${operation.item.id}/download-session/${operation.downloadSessionId}/${operation.stage === 'completed' ? 'complete' : 'cancel'}`,
+                {}, { headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}` }, timeout: 10000 });
+        } catch { /* A lost connection leaves a bounded lease for server-side expiry. */ }
+    }
+
+    function packageSnapshot(item) {
+        return Object.fromEntries(['name', 'installName', 'packageType', 'archiveKey', 'archiveSize', 'executablePath',
+            'versionLabel', 'origin', 'protectedPaths'].filter(field => item[field] !== undefined).map(field => [field, item[field]]));
+    }
+
+    function resumableItem(item, letter) {
+        const gamesRoot = path.join(driveRoot(letter), 'Merlin-games');
+        const downloads = path.join(gamesRoot, '.merlin-downloads');
+        const zip = loadJson(path.join(downloads, `${item.id}.json`), null);
+        if (zip?.id === item.id && typeof zip.archiveKey === 'string' && validArchiveSize(zip.size) &&
+            fs.existsSync(path.join(downloads, `${item.id}.zip.part`))) {
+            return { ...item, ...zip.snapshot, id: item.id, archiveKey: zip.archiveKey, archiveSize: zip.size, packageType: 'zip' };
+        }
+        const folder = loadJson(path.join(downloads, `${item.id}.folder.json`), null);
+        if (folder?.id === item.id && typeof folder.packageKey === 'string' && Number.isSafeInteger(folder.totalBytes) &&
+            folder.totalBytes > 0 && folder.totalBytes <= 200 * 1024 ** 3 &&
+            fs.existsSync(path.join(gamesRoot, `.merlin-installing-${item.id}`))) {
+            return { ...item, ...folder.snapshot, id: item.id, archiveKey: folder.packageKey,
+                archiveSize: folder.totalBytes, packageType: 'folder' };
+        }
+        return { ...item };
+    }
+
+    async function loadIntegrityManifest(id, archiveKey, root, signal, operation = null) {
+        if (typeof archiveKey !== 'string' || !archiveKey) throw new Error('integrity_index_unavailable');
+        const local = loadJson(integrityFile(id, archiveKey), null);
+        if (local) {
+            try { return normalizeIntegrityManifest(local, id, archiveKey, root); }
+            catch { /* A damaged cache is replaced only with the exact server package. */ }
+        }
+        try {
+            const token = await authSession.getAccessToken();
+            const response = await axios.get(`${apiBaseUrl}/custom-games/${encodeURIComponent(id)}/integrity`, {
+                params: { archiveKey, ...(operation?.downloadSessionId ? { downloadSessionId: operation.downloadSessionId } : {}) },
+                headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}` }, timeout: 15000, signal,
+            });
+            const manifest = normalizeIntegrityManifest(response.data, id, archiveKey, root);
+            await saveJson(integrityFile(id, archiveKey), manifest);
+            return manifest;
+        } catch (error) {
+            if (signal?.aborted) throw new Error('cancelled');
+            const code = error.response?.data?.code || error.response?.data?.error;
+            if (['package_changed', 'integrity_index_pending', 'integrity_index_unavailable'].includes(code)) throw new Error(code);
+            if (error.message === 'invalid_integrity_manifest') throw error;
+            throw new Error('integrity_unavailable');
+        }
     }
 
     function driveRoot(letter) {
@@ -170,7 +286,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             if (match) {
                 registry[item.id] = { drive: letter, installName: item.installName, name: item.name,
                     executablePath: match.marker.executablePath || null };
-                if (!active?.external) void saveJson(registryFile, registry);
+                if (!active?.external) void saveJson(registryFile, registry).catch(() => { /* This cache can be rebuilt from markers. */ });
                 return { drive: letter, path: match.path };
             }
         }
@@ -179,9 +295,10 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
 
     async function refresh() {
         try {
+            await recoverKnownUpdates();
             const token = await authSession.getAccessToken();
             const response = await axios.get(`${apiBaseUrl}/custom-games`, {
-                headers: { Authorization: `Bearer ${token}` }, timeout: 30000,
+                headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}` }, timeout: 30000,
             });
             if (!Array.isArray(response.data?.games)) throw new Error('catalog_unavailable');
             catalog = response.data.games.map(game => ({
@@ -207,7 +324,10 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         }
         return { success: true, games: merged.map(item => {
             const found = installed(item, drives);
+            const marker = found && loadJson(path.join(found.path, MARKER), null);
             return { ...item, installed: found,
+                updateAvailable: Boolean(found && marker?.archiveKey && item.archiveKey && marker.archiveKey !== item.archiveKey),
+                installedVersionLabel: marker?.versionLabel || null,
                 requiredFreeBytes: requiredFreeBytes(item.archiveSize, 0, item.packageType),
                 // Admin metadata can be updated after a game was installed. Prefer the catalog value
                 // so an old local registry entry (including null) cannot hide the Play action.
@@ -222,6 +342,17 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             if (Number(error?.response?.status) === 403) return { success: false, code: 'gold_required' };
             if (!catalog.length && !Object.keys(registry).length) return { success: false, code: 'catalog_unavailable' };
             return listCached(true);
+        }
+    }
+
+    async function recoverKnownUpdates() {
+        if (active) return;
+        const items = new Map(catalog.map(item => [item.id, item]));
+        for (const [id, record] of Object.entries(registry)) items.set(id, { ...items.get(id), id, ...record });
+        for (const item of items.values()) {
+            if (!/^[a-f0-9-]{36}$/i.test(item.id)) continue;
+            const current = installed(item);
+            if (current) await recoverUpdate(current.path, item.id);
         }
     }
 
@@ -362,7 +493,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         let state = loadJson(stateFile, null);
         if (!state || state.id !== item.id || state.archiveKey !== item.archiveKey || state.size !== total ||
             !Array.isArray(state.completed) || state.completed.length !== count || !fs.existsSync(partial)) {
-            state = { id: item.id, archiveKey: item.archiveKey, size: total, completed: Array(count).fill(false) };
+            state = { id: item.id, archiveKey: item.archiveKey, size: total, completed: Array(count).fill(false), snapshot: packageSnapshot(item) };
             await saveJson(stateFile, state);
         }
         if (fs.existsSync(partial) && !fs.lstatSync(partial).isFile()) throw new Error('unsafe_install_path');
@@ -385,7 +516,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                     const response = await axios.get(`${apiBaseUrl}/custom-games/${item.id}/archive`, {
                         responseType: 'stream', decompress: false, timeout: 600000,
                         signal: operation.controller.signal,
-                        headers: { Authorization: `Bearer ${token}`, Range: `bytes=${start}-${end}` },
+                        params: transferParams(operation),
+                        headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}`, Range: `bytes=${start}-${end}` },
                     });
                     if (response.status !== 206 || response.headers['content-range'] !== `bytes ${start}-${end}/${total}`) {
                         response.data.destroy();
@@ -450,7 +582,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         assertRealDirectory(downloads);
         const token = await authSession.getAccessToken();
         const response = await axios.get(manifestUrl, {
-            headers: { Authorization: `Bearer ${token}` }, timeout: 60000,
+            headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}` }, timeout: 60000,
+            params: transferParams(operation),
             signal: operation.controller.signal,
         });
         const manifest = response.data;
@@ -529,6 +662,13 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             }
         }
 
+        const integrityFiles = [...normalizedFiles.filter(file => !file.members), ...normalizedBundles.flatMap(bundle => bundle.members)]
+            .map(({ path: relativePath, sizeBytes, sha256 }) => ({ path: relativePath, sizeBytes, sha256 }));
+        if (integrityFiles.every(file => file.sha256)) {
+            operation.integrityManifest = normalizeIntegrityManifest({ version: 1, gameId: item.id,
+                archiveKey: item.archiveKey, totalSizeBytes: total, files: integrityFiles }, item.id, item.archiveKey, staging);
+        }
+
         const gamesRootPath = path.join(gamesRoot, item.installName);
         const existingState = loadJson(stateFile, null);
         let state = existingState;
@@ -548,13 +688,13 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             }
             await fs.promises.mkdir(staging, { recursive: false });
             assertRealDirectory(staging);
-            state = { id: item.id, packageKey: item.archiveKey, totalBytes: total,
+            state = { id: item.id, packageKey: item.archiveKey, totalBytes: total, snapshot: packageSnapshot(item),
                 files: normalizedFiles.map(({ id, path: relativePath, sizeBytes, etag, sha256 }) =>
                     ({ id, path: relativePath, sizeBytes, etag, sha256 })) };
         } else {
             const stageStat = await fs.promises.lstat(staging).catch(() => null);
             if (!stageStat || !stageStat.isDirectory() || stageStat.isSymbolicLink()) {
-                state = { id: item.id, packageKey: item.archiveKey, totalBytes: total,
+                state = { id: item.id, packageKey: item.archiveKey, totalBytes: total, snapshot: packageSnapshot(item),
                     files: normalizedFiles.map(({ id, path: relativePath, sizeBytes, etag, sha256 }) =>
                         ({ id, path: relativePath, sizeBytes, etag, sha256 })) };
                 await fs.promises.mkdir(staging, { recursive: false });
@@ -747,7 +887,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                             rangeResponse = await axios.get(`${apiBaseUrl}/custom-games/${item.id}/files/${file.id}`, {
                                 responseType: 'stream', decompress: false, timeout: 600000,
                                 signal: requestController.signal,
-                                headers: { Authorization: `Bearer ${accessToken}`, Range: `bytes=${start}-${end}` },
+                                params: transferParams(operation),
+                                headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${accessToken}`, Range: `bytes=${start}-${end}` },
                             });
                             if (rangeResponse.status !== 206 || rangeResponse.headers['content-range'] !==
                                 `bytes ${start}-${end}/${file.sizeBytes}` ||
@@ -867,8 +1008,11 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
 
     async function install(id, letter, onProgress = () => {}) {
         if (active || installRunner?.pending?.()) return { success: false, code: 'busy' };
-        const item = catalog.find(game => game.id === id);
-        if (!item || !item.archiveKey) return { success: false, code: 'game_not_found' };
+        const catalogItem = catalog.find(game => game.id === id);
+        if (!catalogItem || !catalogItem.archiveKey) return { success: false, code: 'game_not_found' };
+        let item;
+        try { item = resumableItem(catalogItem, letter); }
+        catch (error) { return { success: false, code: error.message }; }
         if (installed(item)) return { success: false, code: 'already_installed' };
         let target;
         try { target = installPath(letter, item.installName); }
@@ -903,6 +1047,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             ? `.merlin-installing-${item.id}` : `.merlin-installing-${item.id}-${require('node:crypto').randomUUID()}`);
         let folderDownloadComplete = false;
         try {
+            await openDownloadSession(operation);
             const files = folderPackage
                 ? await downloadFolder(item, letter, operation, staging, onProgress)
                 : await download(item, letter, operation, onProgress);
@@ -919,8 +1064,19 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 const executable = path.resolve(staging, ...item.executablePath.split('/'));
                 if (!executable.startsWith(`${staging}${path.sep}`) || !fs.existsSync(executable)) throw new Error('executable_missing');
             }
+            if (!operation.integrityManifest && !folderPackage) {
+                try {
+                    operation.integrityManifest = await loadIntegrityManifest(item.id, item.archiveKey, staging, operation.controller.signal, operation);
+                } catch (error) {
+                    if (operation.controller.signal.aborted) throw error;
+                    // Legacy packages remain installable while their index is queued in the admin.
+                }
+            }
+            if (operation.controller.signal.aborted) throw new Error('cancelled');
+            if (operation.integrityManifest) await saveJson(integrityFile(item.id, item.archiveKey), operation.integrityManifest);
             await fs.promises.writeFile(path.join(staging, MARKER), JSON.stringify({
                 id: item.id, archiveKey: item.archiveKey, executablePath: item.executablePath,
+                versionLabel: item.versionLabel || null,
                 installedAt: new Date().toISOString(),
             }), { flag: 'wx' });
             if (fs.existsSync(target)) throw new Error('folder_exists');
@@ -948,7 +1104,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             active = null;
             emit(operation, onProgress, 'failed', { code, done: true });
             return { success: false, code };
-        } finally { active = null; finishOperation(); }
+        } finally { await closeDownloadSession(operation); active = null; finishOperation(); }
     }
 
     async function cancel() {
@@ -977,6 +1133,149 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         return { item, current };
     }
 
+    async function verify(id, onProgress = () => {}) {
+        if (active || installRunner?.pending?.()) return { success: false, code: 'busy' };
+        let operation;
+        let finishOperation;
+        try {
+            const { item, current } = requireInstalled(id);
+            integrityProblems.delete(id);
+            const marker = loadJson(path.join(current.path, MARKER), null);
+            operation = { item: { ...item, name: item.name || registry[id]?.name || item.installName },
+                drive: current.drive, controller: new AbortController(), kind: 'integrity' };
+            operation.finished = new Promise(resolve => { finishOperation = resolve; });
+            operation.snapshot = { id, name: operation.item.name, kind: 'integrity', stage: 'verifying', bytes: 0, totalBytes: 0 };
+            active = operation;
+            emit(operation, onProgress, 'verifying', { kind: 'integrity', checkedFiles: 0, totalFiles: 0 }, true);
+            const manifest = await loadIntegrityManifest(id, marker?.archiveKey, current.path, operation.controller.signal);
+            emit(operation, onProgress, 'verifying', { bytes: 0, totalBytes: manifest.totalSizeBytes,
+                checkedFiles: 0, totalFiles: manifest.files.length }, true);
+            const paths = [];
+            const result = await verifyInstalledFiles(current.path, manifest,
+                progress => emit(operation, onProgress, 'verifying', progress), operation.controller.signal, relative => paths.push(relative));
+            if (paths.length) integrityProblems.set(id, { archiveKey: manifest.archiveKey, paths });
+            emit(operation, onProgress, 'completed', { ...result, done: true }, true);
+            return { success: true, ...result };
+        } catch (error) {
+            const code = operation?.controller.signal.aborted ? 'cancelled' : error.message || 'integrity_unavailable';
+            if (operation) emit(operation, onProgress, code === 'cancelled' ? 'cancelled' : 'failed', { code, done: true }, true);
+            return { success: false, code };
+        } finally {
+            if (operation && active === operation) active = null;
+            finishOperation?.();
+        }
+    }
+
+    async function repair(id, onProgress = () => {}) {
+        const report = integrityProblems.get(id);
+        if (!report?.paths.length) return { success: false, code: 'integrity_verification_required' };
+        const result = await update(id, onProgress, { repair: true, archiveKey: report.archiveKey, repairPaths: report.paths });
+        if (result.success) integrityProblems.delete(id);
+        return result;
+    }
+
+    async function update(id, onProgress = () => {}, options = {}) {
+        if (active || installRunner?.pending?.()) return { success: false, code: 'busy' };
+        const latest = catalog.find(game => game.id === id);
+        if (!latest?.archiveKey) return { success: false, code: 'game_not_found' };
+        let current;
+        try { ({ current } = requireInstalled(id)); }
+        catch (error) { return { success: false, code: error.message }; }
+        const repairing = options.repair === true;
+        const item = { ...latest, ...(repairing ? { archiveKey: options.archiveKey } : {}) };
+        const kind = repairing ? 'repair' : 'update';
+        const operation = { item, drive: current.drive, kind, controller: new AbortController() };
+        operation.snapshot = { id, name: item.name, drive: current.drive, kind, stage: 'preparing', received: 0, total: 0 };
+        let finishOperation;
+        operation.finished = new Promise(resolve => { finishOperation = resolve; });
+        active = operation;
+        if (installRunner) {
+            operation.external = true;
+            try {
+                const result = await installRunner.run({ id, letter: current.drive, catalog, mode: repairing ? 'repair' : 'update',
+                    ...(repairing ? { archiveKey: options.archiveKey, repairPaths: options.repairPaths } : {}) }, progress => {
+                    operation.snapshot = progress;
+                    try { onProgress(progress); } catch { /* Window reloading. */ }
+                    for (const listener of progressListeners) {
+                        try { listener(progress); } catch { /* Window reloading. */ }
+                    }
+                });
+                registry = loadJson(registryFile, registry);
+                if (!['completed', 'failed', 'cancelled'].includes(operation.snapshot.stage)) {
+                    emit(operation, onProgress, result.success ? 'completed' : result.code === 'cancelled' ? 'cancelled' : 'failed',
+                        { done: true, ...(result.success ? {} : { code: result.code || 'install_process_failed' }) }, true);
+                }
+                return result;
+            } finally { active = null; finishOperation(); }
+        }
+        const staging = path.join(path.dirname(current.path), `.merlin-updating-${id}-${require('node:crypto').randomUUID()}`);
+        try {
+            emit(operation, onProgress, 'preparing', { kind }, true);
+            await recoverUpdate(current.path, id);
+            const marker = loadJson(path.join(current.path, MARKER), null);
+            if (repairing && (marker?.archiveKey !== item.archiveKey || !Array.isArray(options.repairPaths) ||
+                !options.repairPaths.length || options.repairPaths.length > MAX_FOLDER_MANIFEST_FILES)) throw new Error('integrity_verification_required');
+            if (!repairing && marker?.archiveKey === item.archiveKey) throw new Error('no_update');
+            if (await isGameRunning(current.path)) throw new Error('game_running');
+            await openDownloadSession(operation);
+            const next = await loadIntegrityManifest(id, item.archiveKey, current.path, operation.controller.signal, operation);
+            let previous = null;
+            try { previous = await loadIntegrityManifest(id, marker?.archiveKey, current.path, operation.controller.signal); }
+            catch { if (operation.controller.signal.aborted) throw new Error('cancelled'); }
+            const plan = await createUpdatePlan(current.path, previous, next, item, operation.controller.signal);
+            if (repairing) {
+                const wanted = new Set(options.repairPaths.map(relative => String(relative).toLowerCase()));
+                plan.replace = next.files.map((file, entryIndex) => ({ ...file, entryIndex })).filter(file =>
+                    wanted.has(file.path.toLowerCase()) && !(protectedFile(file.path, item.origin, item.protectedPaths) &&
+                        fs.existsSync(safeEntryPath(current.path, file.path))));
+                plan.remove = [];
+                plan.protectedFiles = wanted.size - plan.replace.length;
+            }
+            const request = async (relative, options = {}) => {
+                const token = await authSession.getAccessToken();
+                return axios.get(`${apiBaseUrl}/custom-games/${id}/${relative}`, { ...options,
+                    params: transferParams(operation), signal: operation.controller.signal,
+                    headers: { ...PROTOCOL_HEADERS, ...options.headers, Authorization: `Bearer ${token}` } });
+            };
+            let folderManifest;
+            if (item.packageType === 'folder') {
+                folderManifest = (await request('manifest', { timeout: 60000 })).data;
+                if (folderManifest?.gameId !== id || Number(folderManifest.totalSizeBytes) !== next.totalSizeBytes) {
+                    throw new Error('invalid_folder_manifest');
+                }
+            }
+            const staged = await stageUpdate({ staging, item, manifest: next, folderManifest, plan, request,
+                signal: operation.controller.signal, onProgress: progress => emit(operation, onProgress, 'downloading', progress) });
+            if (await isGameRunning(current.path)) throw new Error('game_running');
+            if (operation.controller.signal.aborted) throw new Error('cancelled');
+            await saveJson(integrityFile(id, item.archiveKey), next);
+            emit(operation, onProgress, 'applying', { files: 0, totalFiles: plan.replace.length + plan.remove.length }, true);
+            await applyUpdate({ root: current.path, id, payload: staged.payload, plan,
+                marker: { ...marker, id, archiveKey: item.archiveKey, executablePath: item.executablePath || marker.executablePath,
+                    versionLabel: item.versionLabel || marker.versionLabel || null,
+                    [repairing ? 'repairedAt' : 'updatedAt']: new Date().toISOString() },
+                signal: operation.controller.signal,
+                onProgress: progress => emit(operation, onProgress, 'applying', progress) });
+            registry[id] = { drive: current.drive, installName: path.basename(current.path), name: item.name,
+                executablePath: item.executablePath || marker.executablePath || null };
+            await saveJson(registryFile, registry).catch(() => { /* The installation marker can rebuild this cache. */ });
+            emit(operation, onProgress, 'completed', { kind, done: true, updatedFiles: plan.replace.length,
+                removedFiles: plan.remove.length, unchangedFiles: plan.unchangedFiles, protectedFiles: plan.protectedFiles }, true);
+            return { success: true, path: current.path, updatedFiles: plan.replace.length, removedFiles: plan.remove.length,
+                protectedFiles: plan.protectedFiles };
+        } catch (error) {
+            const code = operation.controller.signal.aborted ? 'cancelled' : error.code === 'ENOSPC' ? 'disk_space'
+                : error.response?.data?.code || error.response?.data?.error || error.message || 'update_failed';
+            emit(operation, onProgress, code === 'cancelled' ? 'cancelled' : 'failed', { code, done: true }, true);
+            return { success: false, code };
+        } finally {
+            await removeWorkspace(staging, path.dirname(current.path)).catch(() => {});
+            await closeDownloadSession(operation);
+            if (active === operation) active = null;
+            finishOperation();
+        }
+    }
+
     async function openFolder(id) {
         try {
             const { current } = requireInstalled(id);
@@ -988,6 +1287,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     async function play(id) {
         try {
             const { item, current } = requireInstalled(id);
+            if (['update', 'repair'].includes(active?.kind) && active.item.id === id) throw new Error('busy');
+            if (/^[a-f0-9-]{36}$/i.test(id)) await recoverUpdate(current.path, id);
             const relative = item.executablePath || registry[id]?.executablePath;
             if (!relative || !/\.exe$/i.test(relative)) throw new Error('play_unavailable');
             const executable = path.resolve(current.path, ...relative.split('/'));
@@ -1022,6 +1323,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             }
             movedToTrash = true;
             delete registry[id];
+            integrityProblems.delete(id);
             try { await saveJson(registryFile, registry); }
             catch (error) {
                 // The game is already in the Recycle Bin; stale registry data cannot make it appear installed
@@ -1043,7 +1345,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         }
     }
 
-    return { list, refresh, install, cancel, suspend, openFolder, play, uninstall, listDrives, subscribeProgress };
+    return { list, refresh, install, update, verify, repair, cancel, suspend, openFolder, play, uninstall, listDrives, subscribeProgress };
 }
 
 module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount, validArchiveSize,
