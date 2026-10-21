@@ -266,8 +266,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     }
 
     function markerFor(item, letter) {
-        const target = installPath(letter, item.installName);
         try {
+            const target = installPath(letter, item.installName);
             const root = fs.realpathSync.native(target);
             if (root.toLowerCase() !== target.toLowerCase()) return null;
             const marker = loadJson(path.join(target, MARKER), null);

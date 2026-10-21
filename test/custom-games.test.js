@@ -34,6 +34,36 @@ test('a server-side Gold denial never falls back to a cached catalog', async () 
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('a stale install record on a removed drive does not hide the catalog', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-games-removed-drive-'));
+    try {
+        const disk = path.join(root, 'disk');
+        fs.mkdirSync(disk);
+        const item = {
+            id: '14b43f2e-cc74-4b95-b576-e63506062e1c', name: 'Moved drive game',
+            installName: 'Moved drive game', archiveSize: 1024,
+        };
+        fs.writeFileSync(path.join(root, 'custom-games-installs-api-merlin.com.json'), JSON.stringify({
+            [item.id]: { drive: 'E', installName: item.installName, name: item.name },
+        }));
+        const service = createCustomGamesService({
+            app: { getPath: () => root },
+            axios: { get: async () => ({ data: { games: [item] } }) },
+            authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://api-merlin.com/api', shell: { openPath: async () => '' },
+            testDriveRoot: letter => {
+                if (letter === 'E') throw new Error('drive_unavailable');
+                return disk;
+            },
+        });
+        const result = await service.list();
+        assert.equal(result.success, true);
+        assert.equal(result.offline, false);
+        assert.equal(result.games.length, 1);
+        assert.equal(result.games[0].installed, null);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('folder manifest safety ceiling accepts up to 100,000 files', () => {
     assert.equal(validFolderManifestFileCount(new Array(11_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(20_000)), true);
