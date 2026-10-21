@@ -17,7 +17,7 @@ function fixture(packageType = 'zip', { gameInNext = true, nextGameContent = 'di
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-update-'));
     const disk = path.join(root, 'disk');
     const item = { id: GAME_ID, name: 'Update Game', installName: 'Update Game', packageType,
-        archiveKey: 'archives/version-two', archiveSize: 100, origin: 'port', protectedPaths: ['game'], versionLabel: 'v2' };
+        archiveKey: 'archives/version-two', archiveSize: 100, origin: 'port', protectedPaths: ['game'] };
     const target = path.join(disk, 'Merlin-games', item.installName);
     fs.mkdirSync(path.join(target, 'game'), { recursive: true });
     const before = new Map([['unchanged.dat', 'same'], ['changed.pak', 'old file'], ['obsolete.dll', 'gone'],

@@ -1,6 +1,6 @@
 # Baixe e Jogue: integridade e atualizações
 
-O catálogo de `/custom-games` usa o header `x-merlin-custom-games-protocol: 2`. Uma instalação mantém a chave imutável do pacote em `.merlin-install.json`. Quando a chave do catálogo muda, o cartão mostra **Atualizar jogo**. Versões nativas são publicadas manualmente; os campos `origin`, `versionLabel` e `protectedPaths` vêm do Admin/API.
+O catálogo de `/custom-games` usa o header `x-merlin-custom-games-protocol: 2`. Uma instalação mantém a chave imutável do pacote em `.merlin-install.json`. Quando a chave do catálogo muda, o cartão mostra **Atualizar jogo**. Versões nativas são publicadas manualmente; os campos `origin` e `protectedPaths` vêm do Admin/API.
 
 Cada publicação contém um pacote ZIP ou pasta. Em ports, `game` pode constar do novo pacote: nesse caso, os arquivos catalogados nessa pasta são atualizados; se não constar, a pasta `game` instalada permanece intacta. O Launcher baixa somente os arquivos necessários.
 
@@ -31,7 +31,7 @@ Cancelar ou fechar durante atualização/reparo conserva ou restaura a versão i
 
 ## Sessões e versões durante downloads
 
-Instalações e atualizações abrem `POST /custom-games/:id/download-session` com `{archiveKey}`. O retorno inclui `leaseId`, a chave fixada e o snapshot do pacote (`packageType`, `archiveSize`, `executablePath`, `versionLabel`, `origin`, `protectedPaths`). Todas as transferências enviam `archiveKey` e `downloadSessionId` como query e o header de protocolo. O heartbeat autenticado renova a sessão a cada 60 segundos; `complete` ou `cancel` encerra a sessão.
+Instalações e atualizações abrem `POST /custom-games/:id/download-session` com `{archiveKey}`. O retorno inclui `leaseId`, a chave fixada e o snapshot do pacote (`packageType`, `archiveSize`, `executablePath`, `origin`, `protectedPaths`). Todas as transferências enviam `archiveKey` e `downloadSessionId` como query e o header de protocolo. O heartbeat autenticado renova a sessão a cada 60 segundos; `complete` ou `cancel` encerra a sessão.
 
 O estado de download guarda a chave e o snapshot do pacote. Após reiniciar o launcher, ZIPs preservam ranges concluídos e pastas reaproveitam arquivos já validados da versão retida, mesmo que o Admin tenha publicado uma versão nova. Novas publicações não mudam a fonte no meio de uma transferência.
 

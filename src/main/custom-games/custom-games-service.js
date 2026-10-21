@@ -141,7 +141,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         operation.downloadSessionId = lease.leaseId;
         const snapshot = lease.game || lease.package || lease.snapshot || lease;
         if (snapshot && snapshot.archiveKey === operation.item.archiveKey) {
-            for (const field of ['packageType', 'archiveSize', 'executablePath', 'versionLabel', 'origin', 'protectedPaths']) {
+            for (const field of ['packageType', 'archiveSize', 'executablePath', 'origin', 'protectedPaths']) {
                 if (snapshot[field] !== undefined) operation.item[field] = snapshot[field];
             }
         }
@@ -170,7 +170,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
 
     function packageSnapshot(item) {
         return Object.fromEntries(['name', 'installName', 'packageType', 'archiveKey', 'archiveSize', 'executablePath',
-            'versionLabel', 'origin', 'protectedPaths'].filter(field => item[field] !== undefined).map(field => [field, item[field]]));
+            'origin', 'protectedPaths'].filter(field => item[field] !== undefined).map(field => [field, item[field]]));
     }
 
     function resumableItem(item, letter) {
@@ -327,7 +327,6 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             const marker = found && loadJson(path.join(found.path, MARKER), null);
             return { ...item, installed: found,
                 updateAvailable: Boolean(found && marker?.archiveKey && item.archiveKey && marker.archiveKey !== item.archiveKey),
-                installedVersionLabel: marker?.versionLabel || null,
                 requiredFreeBytes: requiredFreeBytes(item.archiveSize, 0, item.packageType),
                 // Admin metadata can be updated after a game was installed. Prefer the catalog value
                 // so an old local registry entry (including null) cannot hide the Play action.
@@ -1097,7 +1096,6 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             if (operation.integrityManifest) await saveJson(integrityFile(item.id, item.archiveKey), operation.integrityManifest);
             await fs.promises.writeFile(path.join(staging, MARKER), JSON.stringify({
                 id: item.id, archiveKey: item.archiveKey, executablePath: item.executablePath,
-                versionLabel: item.versionLabel || null,
                 installedAt: new Date().toISOString(),
             }), { flag: 'wx' });
             if (fs.existsSync(target)) throw new Error('folder_exists');
@@ -1276,7 +1274,6 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             emit(operation, onProgress, 'applying', { files: 0, totalFiles: plan.replace.length + plan.remove.length }, true);
             await applyUpdate({ root: current.path, id, payload: staged.payload, plan,
                 marker: { ...marker, id, archiveKey: item.archiveKey, executablePath: item.executablePath || marker.executablePath,
-                    versionLabel: item.versionLabel || marker.versionLabel || null,
                     [repairing ? 'repairedAt' : 'updatedAt']: new Date().toISOString() },
                 signal: operation.controller.signal,
                 onProgress: progress => emit(operation, onProgress, 'applying', progress) });
