@@ -70,6 +70,11 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         const result = await cloudSyncService.retry();
         return { ...result, filesReady: dllInstaller.cloudSupportReady(getSteamPath()) };
     });
+    ipcMain.handle('cloud-sync:cached-games', async () => {
+        if (!cloudSyncService.status().connected || !await isSteamRunning()) return null;
+        const accountId = await getSteamAccountId?.({ liveOnly: true });
+        return accountId ? cloudSyncService.cachedGames(accountId) : null;
+    });
     ipcMain.handle('cloud-sync:list-games', async () => {
         if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
         if (!await isSteamRunning()) return { success: false, code: 'steam_closed' };
@@ -77,6 +82,9 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         try {
             const result = await cloudSyncService.listGames(accountId);
+            if (accountId !== await getSteamAccountId?.({ liveOnly: true })) {
+                return { success: false, code: 'steam_account_changed' };
+            }
             return { ...result, accountId };
         } catch (error) {
             return { success: false, code: error.response?.status === 401 ? 'auth_required' : error.code || 'cloud_games_failed' };

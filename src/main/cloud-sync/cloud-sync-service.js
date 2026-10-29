@@ -11,6 +11,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     const credentialsPath = path.join(cloudDir, 'credentials.json');
     const keyIdPath = path.join(cloudDir, 'key-id.json');
     const environmentPath = path.join(cloudDir, 'environment.json');
+    const gamesCachePath = path.join(cloudDir, 'games-list-cache.json');
     let timer = null;
     let connecting = null;
     let lastConnectedAt = null;
@@ -50,6 +51,23 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
             try { fs.rmSync(temporary, { force: true }); } catch (_) {}
             throw error;
         }
+    }
+
+    function clearGamesCache() {
+        try { fs.rmSync(gamesCachePath, { force: true }); } catch (_) {}
+    }
+
+    function cachedGames(accountId) {
+        const origin = supportedOrigin();
+        if (!origin || !status().connected || !/^[1-9]\d{0,9}$/.test(String(accountId))) return null;
+        try {
+            const cache = JSON.parse(fs.readFileSync(gamesCachePath, 'utf8'));
+            if (cache.version !== 1 || cache.origin !== origin || cache.accountId !== String(accountId)
+                || !Array.isArray(cache.games) || !Number.isFinite(Date.parse(cache.fetchedAt))
+                || !cache.games.every(game => game && /^[1-9]\d{0,9}$/.test(String(game.appId))
+                    && typeof game.name === 'string')) return null;
+            return { success: true, accountId: String(accountId), games: cache.games, fetchedAt: cache.fetchedAt };
+        } catch (_) { return null; }
     }
 
     function existingKeyId() {
@@ -169,7 +187,14 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     async function listGames(accountId) {
         const value = String(accountId || '').trim();
         if (!/^\d{1,10}$/.test(value) || value === '0') throw Object.assign(new Error('invalid_steam_account'), { code: 'invalid_steam_account' });
-        return requestCloudApi('GET', `/launcher/cloud/games?accountId=${encodeURIComponent(value)}`);
+        const epoch = stateEpoch;
+        const result = await requestCloudApi('GET', `/launcher/cloud/games?accountId=${encodeURIComponent(value)}`);
+        if (result.success === true && Array.isArray(result.games) && epoch === stateEpoch && status().connected) {
+            try { writeJsonAtomic(gamesCachePath, { version: 1, origin: supportedOrigin(), accountId: value,
+                fetchedAt: new Date().toISOString(), games: result.games }); }
+            catch (error) { console.warn('Could not cache cloud games list:', error.message); }
+        }
+        return result;
     }
 
     async function getGame(accountId, appId) {
@@ -188,7 +213,9 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         if (!/^\d{1,10}$/.test(account) || account === '0' || !/^\d{1,10}$/.test(app) || app === '0' || !/^[a-f0-9]{64}$/.test(recovery)) {
             throw Object.assign(new Error('invalid_recovery'), { code: 'invalid_recovery' });
         }
-        return requestCloudApi('POST', '/launcher/cloud/restore', { accountId: account, appId: app, recoveryId: recovery }, 120_000);
+        const result = await requestCloudApi('POST', '/launcher/cloud/restore', { accountId: account, appId: app, recoveryId: recovery }, 120_000);
+        if (result.success === true) clearGamesCache();
+        return result;
     }
 
     async function enable() {
@@ -227,6 +254,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     async function suspendForLogout() {
+        clearGamesCache();
         if (!enabled()) return status();
         stateEpoch += 1;
         stopTimer();
@@ -263,6 +291,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
     }
 
     async function disable() {
+        clearGamesCache();
         stateEpoch += 1;
         stopTimer();
         await revokeCredentials();
@@ -320,6 +349,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
 
     return {
         acknowledgeSteamRestart,
+        cachedGames,
         disable,
         enable,
         getGame,

@@ -19,7 +19,8 @@ function fixture({ running = true, connected = true, installError = null, startE
         async getGame(account, appId) {
             events.push(['getGame', account, appId]);
             return { success: true, game: { appId } };
-        }
+        },
+        cachedGames(account) { events.push(['cachedGames', account]); return { success: true, accountId: account, games: [] }; }
     };
     registerCloudSyncIpc({
         ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
@@ -107,6 +108,15 @@ test('the games list is unavailable while Steam is closed, even with a cached ac
     assert.deepEqual(await invoke('cloud-sync:account-status'), { steamRunning: false, accountAvailable: false });
     assert.equal((await invoke('cloud-sync:list-games')).code, 'steam_closed');
     assert.deepEqual(events, []);
+});
+
+test('cached games are only exposed for the live connected Steam account', async () => {
+    const connected = fixture({ startEnabled: true, accountId: '123456' });
+    assert.equal((await connected.invoke('cloud-sync:cached-games')).accountId, '123456');
+    assert.deepEqual(connected.events, [['cachedGames', '123456']]);
+    const closed = fixture({ startEnabled: true, running: false });
+    assert.equal(await closed.invoke('cloud-sync:cached-games'), null);
+    assert.deepEqual(closed.events, []);
 });
 
 test('an already selected game can refresh after restore with Steam closed', async () => {

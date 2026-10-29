@@ -76,6 +76,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         enable: () => ipcRenderer.invoke('cloud-sync:enable'),
         disable: () => ipcRenderer.invoke('cloud-sync:disable'),
         retry: () => ipcRenderer.invoke('cloud-sync:retry'),
+        cachedGames: () => ipcRenderer.invoke('cloud-sync:cached-games'),
         listGames: () => ipcRenderer.invoke('cloud-sync:list-games'),
         getGame: (appId) => ipcRenderer.invoke('cloud-sync:get-game', appId),
         restore: (appId, recoveryId) => ipcRenderer.invoke('cloud-sync:restore', appId, recoveryId),

@@ -19,7 +19,7 @@ function element() {
     };
 }
 
-function renderer(getGame) {
+function renderer(getGame, options = {}) {
     const nodes = new Map();
     const events = new Map();
     let view = 'settings';
@@ -35,7 +35,8 @@ function renderer(getGame) {
     };
     const window = {
         electronAPI: { cloudSync: {
-            async listGames() { return { success: true, games: [{ appId: '4231820', name: 'Castlevania', backupCount: 0 }] }; },
+            async cachedGames() { return options.cachedGames ? options.cachedGames() : null; },
+            async listGames() { return options.listGames ? options.listGames() : { success: true, games: [{ appId: '4231820', name: 'Castlevania', backupCount: 0 }] }; },
             getGame,
         } },
         merlinI18n: { register() {}, t: key => key, current: () => 'ptbr' },
@@ -44,7 +45,7 @@ function renderer(getGame) {
     };
     vm.runInNewContext(script, { window, document });
     events.get('document:DOMContentLoaded')();
-    return { get, window };
+    return { get, window, events };
 }
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
@@ -81,4 +82,48 @@ test('a late game detail response cannot reopen details after reentry', async ()
     await settle();
     assert.equal(ui.get('cloudSavesListState').hidden, false);
     assert.equal(ui.get('cloudSavesDetailsState').hidden, true);
+});
+
+test('shows cached games while the live list loads, then replaces them', async () => {
+    let finishList;
+    const ui = renderer(async () => ({ success: true, game: {} }), {
+        cachedGames: async () => ({ success: true, accountId: '123456', games: [{ appId: '730', name: 'Cached' }] }),
+        listGames: () => new Promise(resolve => { finishList = resolve; }),
+    });
+    ui.window.merlinView.set('cloud-saves');
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 1);
+    assert.equal(ui.get('cloudSavesCacheNotice').hidden, false);
+    finishList({ success: true, accountId: '123456', games: [{ appId: '730', name: 'Fresh' }] });
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 1);
+    assert.equal(ui.get('cloudSavesCacheNotice').hidden, true);
+});
+
+test('keeps a verified cache on timeout but clears it on logout', async () => {
+    const ui = renderer(async () => ({ success: true, game: {} }), {
+        cachedGames: async () => ({ success: true, accountId: '123456', games: [{ appId: '730', name: 'Cached' }] }),
+        listGames: async () => ({ success: false, code: 'cloud_timeout' }),
+    });
+    ui.window.merlinView.set('cloud-saves');
+    await settle();
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 1);
+    assert.equal(ui.get('cloudSavesCacheNotice').hidden, false);
+    ui.events.get('merlin-logout')();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 0);
+});
+
+test('does not keep cached games if the live Steam account changes during refresh', async () => {
+    let calls = 0;
+    const ui = renderer(async () => ({ success: true, game: {} }), {
+        cachedGames: async () => ({ success: true, accountId: ++calls === 1 ? '123456' : '654321',
+            games: [{ appId: '730', name: 'Cached' }] }),
+        listGames: async () => ({ success: false, code: 'steam_account_changed' }),
+    });
+    ui.window.merlinView.set('cloud-saves');
+    await settle();
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 0);
+    assert.equal(ui.get('cloudSavesErrorState').hidden, false);
 });

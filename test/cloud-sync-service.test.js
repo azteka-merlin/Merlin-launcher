@@ -126,3 +126,39 @@ test('cloud sync supports stage and production without inheriting the other envi
         fs.rmSync(temporary, { recursive: true, force: true });
     }
 });
+
+test('cloud games cache is scoped to Steam account and environment, and cleared on logout', async () => {
+    const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-cloud-games-'));
+    try {
+        const config = { cloudSync: { enabled: false, startAtLogin: false } };
+        const configStore = { get: () => config, update: values => Object.assign(config, values) };
+        const axios = {
+            post: async url => ({ data: {
+                success: true, accessKeyId: `MCL${'a'.repeat(40)}`, secretAccessKey: 'b'.repeat(64),
+                endpoint: new URL(url).origin, bucket: 'merlin-cloud', keyPrefix: 'steam/', region: 'us-east-1',
+                expiresAt: new Date(Date.now() + 1_200_000).toISOString()
+            } }),
+            request: async () => ({ data: { success: true, games: [{ appId: '730', name: 'Game' }] } })
+        };
+        const authSession = { getAccessToken: async () => 'token' };
+        const stage = createCloudSyncService({ axios, authSession, configStore,
+            apiBaseUrl: 'https://staging.api-merlin.com/api', localAppData: temporary });
+        await stage.enable();
+        assert.equal(stage.cachedGames('123456'), null);
+        await stage.listGames('123456');
+        assert.equal(stage.cachedGames('123456').games[0].name, 'Game');
+        assert.equal(stage.cachedGames('654321'), null);
+        const restarted = createCloudSyncService({ axios, authSession, configStore,
+            apiBaseUrl: 'https://staging.api-merlin.com/api', localAppData: temporary });
+        await restarted.renew();
+        assert.equal(restarted.cachedGames('123456').games[0].name, 'Game');
+        const production = createCloudSyncService({ axios, authSession, configStore,
+            apiBaseUrl: 'https://api-merlin.com/api', localAppData: temporary });
+        assert.equal(production.cachedGames('123456'), null);
+        await stage.suspendForLogout();
+        assert.equal(stage.cachedGames('123456'), null);
+        assert.equal(fs.existsSync(path.join(temporary, 'Merlin', 'cloud', 'games-list-cache.json')), false);
+    } finally {
+        fs.rmSync(temporary, { recursive: true, force: true });
+    }
+});

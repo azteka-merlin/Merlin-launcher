@@ -55,6 +55,11 @@
     Object.assign(messages.es, { cloud_saves_refresh: 'Actualizar juegos', cloud_saves_refreshing: 'Actualizando…' });
     Object.assign(messages.fr, { cloud_saves_refresh: 'Actualiser les jeux', cloud_saves_refreshing: 'Actualisation…' });
     Object.assign(messages.de, { cloud_saves_refresh: 'Spiele aktualisieren', cloud_saves_refreshing: 'Aktualisiere…' });
+    Object.assign(messages.ptbr, { cloud_saves_cached_refreshing: 'Exibindo a última lista enquanto atualiza…', cloud_saves_cached_stale: 'Não foi possível atualizar. Exibindo a última lista salva.' });
+    Object.assign(messages.en, { cloud_saves_cached_refreshing: 'Showing the last saved list while refreshing…', cloud_saves_cached_stale: 'Could not refresh. Showing the last saved list.' });
+    Object.assign(messages.es, { cloud_saves_cached_refreshing: 'Mostrando la última lista mientras se actualiza…', cloud_saves_cached_stale: 'No se pudo actualizar. Se muestra la última lista guardada.' });
+    Object.assign(messages.fr, { cloud_saves_cached_refreshing: 'Affichage de la dernière liste pendant l’actualisation…', cloud_saves_cached_stale: 'Actualisation impossible. Affichage de la dernière liste enregistrée.' });
+    Object.assign(messages.de, { cloud_saves_cached_refreshing: 'Die letzte Liste wird angezeigt und aktualisiert…', cloud_saves_cached_stale: 'Aktualisierung fehlgeschlagen. Die letzte gespeicherte Liste wird angezeigt.' });
     window.merlinI18n?.register(messages);
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -66,6 +71,7 @@
             search: document.getElementById('cloudSavesSearchInput'),
             refresh: document.getElementById('cloudSavesRefreshBtn'),
             refreshText: document.getElementById('cloudSavesRefreshText'),
+            cacheNotice: document.getElementById('cloudSavesCacheNotice'),
             loading: document.getElementById('cloudSavesLoadingState'),
             error: document.getElementById('cloudSavesErrorState'),
             retry: document.getElementById('cloudSavesRetryBtn'),
@@ -111,7 +117,7 @@
         const notify = (message, type = 'info') => window.showNotification?.(message, type);
         const plural = (count, one, many) => tr(count === 1 ? one : many, { count });
         const fileSummary = (count, size) => tr(count === 1 ? 'cloud_saves_file_one' : 'cloud_saves_file_many', { count, size: bytes(size) });
-        const state = { games: [], selected: null, loading: false, error: false, detailRequestId: 0 };
+        const state = { games: [], selected: null, loading: false, error: false, cached: false, cachedAccountId: null, detailRequestId: 0, listRequestId: 0 };
         let wasActive = false;
 
         function errorMessage(code) {
@@ -152,13 +158,16 @@
         function renderList() {
             const query = elements.search.value.trim().toLocaleLowerCase();
             const games = state.games.filter(game => String(game.name || '').toLocaleLowerCase().includes(query));
-            // Loading and error are mutually exclusive states. This also
-            // protects against a late failed request rendering over a retry.
-            elements.loading.hidden = !state.loading || state.error;
-            elements.error.hidden = state.loading || !state.error;
-            elements.empty.hidden = state.loading || state.error || state.games.length > 0;
-            elements.noResults.hidden = state.loading || state.error || state.games.length === 0 || games.length > 0;
-            elements.list.hidden = state.loading || state.error || !games.length;
+            const hasGames = state.games.length > 0;
+            elements.loading.hidden = !state.loading || hasGames;
+            elements.error.hidden = state.loading || !state.error || hasGames;
+            elements.empty.hidden = state.loading || state.error || hasGames;
+            elements.noResults.hidden = state.loading || state.error || !hasGames || games.length > 0;
+            elements.list.hidden = !games.length;
+            if (elements.cacheNotice) {
+                elements.cacheNotice.hidden = !state.cached || !hasGames;
+                elements.cacheNotice.textContent = state.loading ? tr('cloud_saves_cached_refreshing') : tr('cloud_saves_cached_stale');
+            }
             elements.list.replaceChildren();
             for (const game of games) {
                 const row = document.createElement('button');
@@ -248,8 +257,12 @@
 
         async function loadGames() {
             if (state.loading) return;
+            const requestId = ++state.listRequestId;
             state.loading = true;
             state.error = false;
+            state.games = [];
+            state.cached = false;
+            state.cachedAccountId = null;
             if (elements.refresh) {
                 elements.refresh.disabled = true;
                 elements.refresh.classList.add('loading');
@@ -258,15 +271,40 @@
             if (elements.refreshText) elements.refreshText.textContent = tr('cloud_saves_refreshing');
             renderList();
             try {
+                if (window.electronAPI.cloudSync.cachedGames) {
+                    const cached = await window.electronAPI.cloudSync.cachedGames().catch(() => null);
+                    if (requestId !== state.listRequestId) return;
+                    if (cached?.success && Array.isArray(cached.games)) {
+                        state.cachedAccountId = cached.accountId;
+                        state.games = cached.games;
+                        state.cached = true;
+                        renderList();
+                    }
+                }
                 const result = await window.electronAPI.cloudSync.listGames();
+                if (requestId !== state.listRequestId) return;
                 if (!result?.success) throw new Error(result?.code || 'cloud_games_failed');
                 state.games = Array.isArray(result.games) ? result.games : [];
                 state.error = false;
+                state.cached = false;
+                state.cachedAccountId = null;
             } catch (error) {
-                state.games = [];
-                state.error = true;
+                if (requestId !== state.listRequestId) return;
+                // A disconnected or changed Steam account must never see an old list.
+                if (state.cached) {
+                    const current = window.electronAPI.cloudSync.cachedGames
+                        ? await window.electronAPI.cloudSync.cachedGames().catch(() => null) : null;
+                    if (requestId !== state.listRequestId) return;
+                    if (!current?.success || current.accountId !== state.cachedAccountId) {
+                        state.games = [];
+                        state.cached = false;
+                        state.cachedAccountId = null;
+                    }
+                }
+                state.error = !state.cached || state.games.length === 0;
                 notify(errorMessage(error.message), 'error');
             } finally {
+                if (requestId !== state.listRequestId) return;
                 state.loading = false;
                 if (elements.refresh) {
                     elements.refresh.disabled = false;
@@ -352,8 +390,8 @@
             elements.search.focus();
         });
         window.addEventListener('merlin-view-changed', syncVisibility);
-        window.addEventListener('merlin-authenticated', () => { state.games = []; if (window.merlinView?.get?.() === 'cloud-saves') void loadGames(); });
-        window.addEventListener('merlin-logout', () => { state.detailRequestId += 1; state.games = []; state.selected = null; renderBreadcrumb(); elements.detailsState.hidden = true; elements.listState.hidden = false; });
+        window.addEventListener('merlin-authenticated', () => { state.listRequestId += 1; state.loading = false; state.games = []; state.cached = false; state.cachedAccountId = null; if (window.merlinView?.get?.() === 'cloud-saves') void loadGames(); });
+        window.addEventListener('merlin-logout', () => { state.listRequestId += 1; state.detailRequestId += 1; state.loading = false; state.games = []; state.cached = false; state.cachedAccountId = null; state.selected = null; renderBreadcrumb(); elements.detailsState.hidden = true; elements.listState.hidden = false; renderList(); });
         window.addEventListener('merlin-language-changed', () => { renderList(); if (state.selected) renderDetails(state.selected); });
         renderBreadcrumb();
         syncVisibility();
