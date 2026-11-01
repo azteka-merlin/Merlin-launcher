@@ -206,7 +206,7 @@ function createCorrectionsService({
             const hydrated = await hydrateImages(downloaded.items);
             catalogStore.replace(hydrated, downloaded.syncedAt);
             cachedItems = hydrated;
-            return { success: true, items: cloneItems(hydrated), stale: false };
+            return { success: true, items: cloneItems(hydrated), stale: false, online: true };
         } catch (error) {
             const fallbackItems = catalogStore.list();
             if (fallbackItems.length > 0) {
@@ -215,6 +215,7 @@ function createCorrectionsService({
                     success: true,
                     items: cloneItems(fallbackItems),
                     stale: true,
+                    online: false,
                     code: 'refresh_failed'
                 };
             }
@@ -224,13 +225,13 @@ function createCorrectionsService({
 
     async function list({ force = false } = {}) {
         if (!force && cachedItems) {
-            return { success: true, items: cloneItems(cachedItems), stale: false };
+            return { success: true, items: cloneItems(cachedItems), stale: false, online: false };
         }
 
         const storedItems = catalogStore.list();
         if (!force && storedItems.length > 0) {
             cachedItems = storedItems;
-            return { success: true, items: cloneItems(storedItems), stale: false };
+            return { success: true, items: cloneItems(storedItems), stale: false, online: false };
         }
 
         return refresh();

@@ -102,7 +102,7 @@ Result Fetch(const Request& request)
                  request.channel, request.component, cacheDir.string(), mkdirEc.message());
     }
 
-    // 3. Try remote (mirror chain with early-out on 404).
+    // 3. Try each remote mirror, including after a 404.
     const std::vector<std::string> urlTemplates = BuildUrlTemplates();
     OSTPlatform::Http::Result http;
     std::string lastUrl;
@@ -120,10 +120,7 @@ Result Fetch(const Request& request)
         if (http.ok && http.status == 404) {
             LOG_WARN("RemoteToml({}/{}): mirror has no such file (HTTP 404): {}",
                      request.channel, request.component, lastUrl);
-            break;   // all mirrors serve same data
-        }
-
-        if (i + 1 < urlTemplates.size()) {
+        } else if (i + 1 < urlTemplates.size()) {
             LOG_WARN("RemoteToml({}/{}): mirror failed ({} ok={} HTTP={}), falling back",
                      request.channel, request.component, lastUrl, http.ok, http.status);
         }

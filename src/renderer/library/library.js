@@ -448,18 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 : Promise.resolve();
             const [result] = await Promise.all([request, minimumLoadingTime]);
             if (!result.success) {
-                if (result.code === 'load_failed') {
-                    window.merlinServiceStatus?.report?.('library-catalog');
-                }
                 showError(result.code);
                 return;
             }
-            window.merlinServiceStatus?.clear?.('library-catalog');
             items = result.items;
             loaded = true;
             render();
         } catch (_) {
-            window.merlinServiceStatus?.report?.('library-catalog');
             showError('load_failed');
         } finally {
             loading = false;

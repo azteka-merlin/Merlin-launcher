@@ -1,11 +1,22 @@
 #include "AppTicket.h"
+#include "SourceTicket.h"
 #include "Hook/Hooks_Decryption.h"
+#include "OSTPlatform/include/Encoding.h"
 #include "OSTPlatform/include/SteamCredentialStore.h"
 #include "Utils/Config/LuaConfig.h"
 #include "Utils/Logging/Log.h"
+#include "dllmain.h"
+
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <mutex>
+#include <optional>
+#include <system_error>
 
 namespace AppTicket {
-    constexpr AppId_t kLocalAppTicketSourceAppId = 7;
+    constexpr AppId_t kPrimaryAppTicketSourceAppId = 7;
+    constexpr AppId_t kFallbackAppTicketSourceAppId = 228980;
     constexpr size_t kSteamIdTicketMinimumSize = 16;
 
     static uint64_t GetSteamIDFromCredentialStore(AppId_t appId) {
@@ -39,25 +50,119 @@ namespace AppTicket {
         return ticket;
     }
 
-    // Exploit steamdrmp's off-by-four ticket parsing vulnerability:
-    static std::vector<uint8_t> ForgeLocalAppOwnershipTicket(AppId_t appId) {
-        std::vector<uint8_t> source = Hooks_Decryption::GetCacheAppOwnershipTicket(kLocalAppTicketSourceAppId);
-        if (source.size() <= kAppTicketSignatureSize) {
-            LOG_DEBUG("ForgeLocalAppOwnershipTicket for AppId {}: no source appticket", appId);
+    static std::filesystem::path LocalConfigPath(uint32_t accountId) {
+        if (!SteamInstallPath[0]) return {};
+
+        const std::wstring steamPath = OSTPlatform::Encoding::Utf8ToWide(SteamInstallPath);
+        if (steamPath.empty()) return {};
+
+        return std::filesystem::path(steamPath) / L"userdata" / std::to_wstring(accountId) /
+               L"config" / L"localconfig.vdf";
+    }
+
+    static std::optional<SourceTicket> ReadLocalConfigSourceTicket(const std::filesystem::path& path,
+                                                                   uint32_t accountId) {
+        std::ifstream file(path, std::ios::binary);
+        if (!file) {
+            LOG_DEBUG("ReadLocalConfigSourceTicket: cannot open localconfig for account {}", accountId);
+            return std::nullopt;
+        }
+
+        const std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        if (file.bad()) {
+            LOG_DEBUG("ReadLocalConfigSourceTicket: failed while reading account {}", accountId);
+            return std::nullopt;
+        }
+        SourceTicket source = FindLocalConfigSourceTicket(data, accountId);
+        if (source.appId != 0) {
+            LOG_INFO("ReadLocalConfigSourceTicket: using AppId {} ticket for account {}",
+                     source.appId, accountId);
+        }
+        return source;
+    }
+
+    static SourceTicket PickForgeSourceTicket() {
+        uint32_t accountId = 0;
+        std::wstring universe;
+        const auto status = OSTPlatform::SteamCredentialStore::GetActiveUser(accountId, universe);
+        if (status != OSTPlatform::SteamCredentialStore::Status::Ok || accountId == 0) {
+            LOG_DEBUG("PickForgeSourceTicket: active Steam account unavailable ({})",
+                      OSTPlatform::SteamCredentialStore::ToString(status));
             return {};
         }
 
-        const size_t signedSize = source.size() - kAppTicketSignatureSize;
+        // A Steam account change invalidates the selected ticket. File misses
+        // are checked again when Steam writes a new localconfig version.
+        static std::mutex sourceMutex;
+        static uint32_t cachedAccountId = 0;
+        static SourceTicket cachedSource;
+        static std::optional<std::filesystem::file_time_type> checkedLocalConfigWriteTime;
+        std::lock_guard<std::mutex> lock(sourceMutex);
+        if (cachedAccountId != accountId) {
+            cachedAccountId = accountId;
+            cachedSource = {};
+            checkedLocalConfigWriteTime.reset();
+        }
+        if (cachedSource.appId != 0) return cachedSource;
+
+        // A missing or unchanged file needs no repeat read on every IPC call.
+        // Steam updates its write time when tickets change, so retry then.
+        const std::filesystem::path path = LocalConfigPath(accountId);
+        if (!path.empty()) {
+            std::error_code error;
+            const auto writeTime = std::filesystem::last_write_time(path, error);
+            if (!error && (!checkedLocalConfigWriteTime || *checkedLocalConfigWriteTime != writeTime)) {
+                const auto source = ReadLocalConfigSourceTicket(path, accountId);
+                std::error_code afterReadError;
+                const auto afterReadWriteTime = std::filesystem::last_write_time(path, afterReadError);
+                if (source && !afterReadError && afterReadWriteTime == writeTime) {
+                    checkedLocalConfigWriteTime = writeTime;
+                    if (source->appId != 0) {
+                        cachedSource = *source;
+                        return *source;
+                    }
+                }
+            }
+        }
+
+        const auto tryCachedAppId = [&](AppId_t sourceAppId) -> SourceTicket {
+            std::vector<uint8_t> data = Hooks_Decryption::GetCacheAppOwnershipTicket(sourceAppId);
+            if (IsSourceTicketForAccount(data, accountId)) {
+                LOG_INFO("PickForgeSourceTicket: using cached AppId {} ticket for account {}",
+                         sourceAppId, accountId);
+                return {sourceAppId, std::move(data)};
+            }
+            if (!data.empty()) {
+                LOG_DEBUG("PickForgeSourceTicket: skip cached AppId {} ticket (SteamID account {} != active {})",
+                          sourceAppId, static_cast<uint32_t>(ExtractSteamIdFromTicketBytes(data)), accountId);
+            }
+            return {};
+        };
+
+        SourceTicket source = tryCachedAppId(kPrimaryAppTicketSourceAppId);
+        if (source.appId == 0) source = tryCachedAppId(kFallbackAppTicketSourceAppId);
+        return source;
+    }
+
+    // Exploit steamdrmp's off-by-four ticket parsing vulnerability:
+    static std::vector<uint8_t> ForgeLocalAppOwnershipTicket(AppId_t appId) {
+        SourceTicket source = PickForgeSourceTicket();
+        if (source.appId == 0) {
+            LOG_DEBUG("ForgeLocalAppOwnershipTicket for AppId {}: no ticket for active Steam account", appId);
+            return {};
+        }
+
+        const size_t signedSize = source.data.size() - kAppTicketSignatureSize;
         std::vector<uint8_t> ticket;
-        ticket.reserve(source.size() + sizeof(AppId_t));
-        ticket.insert(ticket.end(), source.begin(), source.begin() + signedSize);
+        ticket.reserve(source.data.size() + sizeof(AppId_t));
+        ticket.insert(ticket.end(), source.data.begin(), source.data.begin() + signedSize);
 
         const uint8_t* appIdBytes = reinterpret_cast<const uint8_t*>(&appId);
         ticket.insert(ticket.end(), appIdBytes, appIdBytes + sizeof(AppId_t));
-        ticket.insert(ticket.end(), source.begin() + signedSize, source.end());
+        ticket.insert(ticket.end(), source.data.begin() + signedSize, source.data.end());
 
         LOG_INFO("Forged App Ownership Ticket, AppId: {}, SourceAppId: {}, Physical Size: {}, Total Size: {}",
-                 appId, kLocalAppTicketSourceAppId, ticket.size(), source.size());
+                 appId, source.appId, ticket.size(), source.data.size());
         return ticket;
     }
 

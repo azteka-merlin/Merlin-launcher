@@ -218,11 +218,18 @@ function createAddGamesService({
         const term = String(query || '').trim();
         if (!term) return { success: true, items: [] };
         try {
+            const searchResult = catalogService.searchWithStatus
+                ? await catalogService.searchWithStatus(term, { limit: 4 })
+                : { items: await catalogService.search(term, { limit: 4 }), online: false };
             const items = await Promise.all(
-                (await catalogService.search(term, { limit: 4 }))
+                searchResult.items
                     .map(item => applyManifestPolicy(item))
             );
-            return { success: true, items };
+            return {
+                success: true,
+                items,
+                ...(searchResult.online === true ? { online: true } : {})
+            };
         } catch (error) {
             return {
                 success: false,

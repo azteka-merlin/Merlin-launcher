@@ -27,17 +27,7 @@ Merlin Launcher is the Electron desktop app used by end users. It integrates Ste
 
 ## Merlin API Integration
 
-Defaults:
-
-- Base API: `https://api-merlin.com/api`
-- Manifests: `${MERLIN_API_BASE_URL}/manifests`
-- Updates: `https://api-merlin.com/api/updates/latest` and `/api/updates/download`
-- Fixes: `https://api-merlin.com/api/fixes/catalog`
-- Premium: `https://api-merlin.com/api/premium/catalog`
-- Polls: `https://api-merlin.com/api/polls/active`
-- Game search: `https://api-merlin.com/api/games/search`
-
-For development, `MERLIN_API_BASE_URL` can point the app at another API. `npm run start:stage` sets it to `https://staging.api-merlin.com/api`; `npm start` keeps the production default.
+`main.js` uses `MERLIN_API_BASE_URL` for Auth, game search, manifests, Fixes, Premium, Polls, Announcements, Home, release notes and Updates. Its default is `https://api-merlin.com/api`; `npm run start:stage` sets the staging base and `npm start` keeps the production default. `MERLIN_API_URL` overrides only manifests. The Library's metadata catalog is an external Ryuu feed, independent of the Merlin API base.
 
 ## App Workflows
 

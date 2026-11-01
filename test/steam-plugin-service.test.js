@@ -89,6 +89,31 @@ test('Store script retries when its previous initialization stopped early', () =
     assert.equal(observerAttempts, 2);
 });
 
+test('the Merlin menu icon appears beside the add button without the old Steam header', () => {
+    const nodes = new Map();
+    const actionContainer = { appendChild(node) { node.parentElement = this; nodes.set(node.id, node); } };
+    const action = { dataset: {}, closest: () => actionContainer };
+    const document = {
+        documentElement: {}, body: { innerText: '' }, title: 'Game',
+        head: { appendChild(node) { nodes.set(node.id, node); } },
+        getElementById: id => nodes.get(id) || null,
+        querySelector: selector => selector === '.merlin-steam-add-actions' ? actionContainer
+            : selector === '.merlin-steam-action' ? action : null,
+        querySelectorAll: () => [],
+        createElement: () => ({ setAttribute() {}, querySelector: () => ({}) })
+    };
+    const browser = {
+        window: { sessionStorage: { getItem() {}, setItem() {}, removeItem() {} } }, document,
+        location: { pathname: '/app/123', reload() {} },
+        MutationObserver: class { observe() {} disconnect() {} },
+        setInterval: () => 1, clearInterval() {}
+    };
+    vm.runInNewContext(buildMerlinStoreScript(), browser);
+    const icon = nodes.get('merlin-steam-icon');
+    assert.equal(icon.parentElement, actionContainer);
+    assert.equal(typeof icon.onclick, 'function');
+});
+
 test('bridge removes handled requests in place so the injected script keeps its queue reference', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'steam-plugin', 'steam-plugin-service.js'), 'utf8');
     assert.match(source, /queue\.splice\(index,1\)/);

@@ -43,4 +43,9 @@ test('premium catalog refresh renews a rejected access token once', async () => 
     assert.deepEqual(requestedTokens, ['expired-token', 'fresh-token']);
     assert.equal(result.success, true);
     assert.equal(result.stale, false);
+    assert.equal(result.online, true);
+
+    const cached = await service.list();
+    assert.equal(cached.success, true);
+    assert.equal(cached.online, false);
 });

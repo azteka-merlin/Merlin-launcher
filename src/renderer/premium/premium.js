@@ -1498,10 +1498,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!result.success) {
                 if (result.code === 'expired') {
                     // Expiry is an account state, not a service outage.
-                    window.merlinServiceStatus?.clear?.('premium-catalog');
                     notify(tr('premium_error_expired'), 'error');
                 } else {
-                    window.merlinServiceStatus?.report?.('premium-catalog');
                     notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
                 }
                 elements.loading.hidden = true;
@@ -1514,14 +1512,13 @@ document.addEventListener('DOMContentLoaded', () => {
             render();
 
             if (result.stale) {
-                window.merlinServiceStatus?.report?.('premium-catalog');
                 notify(tr('premium_refresh_stale'));
-            } else {
-                window.merlinServiceStatus?.clear?.('premium-catalog');
+            }
+            if (result.online === true) {
+                window.merlinServiceStatus?.markServiceResponsive?.();
             }
         } catch (_) {
             if (generation !== loadGeneration) return;
-            window.merlinServiceStatus?.report?.('premium-catalog');
             notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
             elements.loading.hidden = true;
         } finally {
@@ -1681,6 +1678,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await api.activate({ appId: item.appId, operationId });
             finalizeProgress(result, item);
             if (result.success) {
+                window.merlinServiceStatus?.markServiceResponsive?.();
                 await loadPremium(true);
             }
         } catch (_) {

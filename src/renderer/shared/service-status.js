@@ -1,42 +1,42 @@
 ﻿window.merlinI18n.register({
     ptbr: {
         service_status_normal: 'Serviços normais',
-        service_status_badge: 'Instabilidade',
-        service_status_title: 'Instabilidade temporária',
-        service_status_message: 'Algumas magias do Merlin estão instáveis no momento. Buscas, ativações e correções podem falhar temporariamente.',
-        service_status_hint: 'Tente novamente em instantes.',
+        service_status_badge: 'Serviço instável',
+        service_status_title: 'Serviço Merlin instável',
+        service_status_message: 'O serviço online do Merlin falhou em duas verificações seguidas. Algumas funções que dependem dele podem ficar indisponíveis.',
+        service_status_hint: 'Erros isolados continuam sendo mostrados na própria tela da função.',
         service_status_acknowledge: 'Entendi'
     },
     en: {
         service_status_normal: 'Services normal',
-        service_status_badge: 'Instability',
-        service_status_title: 'Temporary instability',
-        service_status_message: 'Some Merlin features are unstable right now. Searches, activations, and corrections may fail temporarily.',
-        service_status_hint: 'Please try again in a moment.',
+        service_status_badge: 'Service issue',
+        service_status_title: 'Merlin service is unstable',
+        service_status_message: 'The Merlin online service failed two consecutive health checks. Some features that depend on it may be unavailable.',
+        service_status_hint: 'Isolated feature errors are still shown on that feature’s screen.',
         service_status_acknowledge: 'Understood'
     },
     es: {
         service_status_normal: 'Servicios normales',
-        service_status_badge: 'Inestabilidad',
-        service_status_title: 'Inestabilidad temporal',
-        service_status_message: 'Algunas funciones de Merlin están inestables en este momento. Las búsquedas, activaciones y correcciones pueden fallar temporalmente.',
-        service_status_hint: 'Vuelva a intentarlo en unos instantes.',
+        service_status_badge: 'Servicio inestable',
+        service_status_title: 'El servicio Merlin está inestable',
+        service_status_message: 'El servicio en línea de Merlin falló dos verificaciones de salud consecutivas. Algunas funciones que dependen de él podrían no estar disponibles.',
+        service_status_hint: 'Los errores aislados de una función siguen apareciendo en su propia pantalla.',
         service_status_acknowledge: 'Entendido'
     },
     fr: {
         service_status_normal: 'Services normaux',
-        service_status_badge: 'Instabilité',
-        service_status_title: 'Instabilité temporaire',
-        service_status_message: 'Certaines fonctions de Merlin sont instables pour le moment. Les recherches, activations et correctifs peuvent échouer temporairement.',
-        service_status_hint: 'Réessayez dans un instant.',
+        service_status_badge: 'Service instable',
+        service_status_title: 'Le service Merlin est instable',
+        service_status_message: 'Le service en ligne de Merlin a échoué à deux vérifications consécutives. Certaines fonctions qui en dépendent peuvent être indisponibles.',
+        service_status_hint: 'Les erreurs isolées restent affichées sur l’écran de la fonction concernée.',
         service_status_acknowledge: 'Compris'
     },
     de: {
         service_status_normal: 'Dienste normal',
-        service_status_badge: 'Instabilität',
-        service_status_title: 'Vorübergehende Instabilität',
-        service_status_message: 'Einige Merlin-Funktionen sind derzeit instabil. Suchen, Aktivierungen und Korrekturen können vorübergehend fehlschlagen.',
-        service_status_hint: 'Bitte versuchen Sie es in einem Moment erneut.',
+        service_status_badge: 'Dienst gestört',
+        service_status_title: 'Der Merlin-Dienst ist instabil',
+        service_status_message: 'Der Merlin-Onlinedienst hat zwei aufeinanderfolgende Statusprüfungen nicht bestanden. Einige davon abhängige Funktionen sind möglicherweise nicht verfügbar.',
+        service_status_hint: 'Einzelfehler werden weiterhin direkt auf dem jeweiligen Funktionsbildschirm angezeigt.',
         service_status_acknowledge: 'Verstanden'
     }
 });
@@ -45,6 +45,7 @@
     const HEALTH_CHECK_URL = 'https://generator.ryuu.lol/api/health';
     const HEALTH_CHECK_INTERVAL_MS = 120000;
     const HEALTH_CHECK_TIMEOUT_MS = 5000;
+    const HEALTH_CHECK_RETRY_DELAY_MS = 1500;
     const issueMap = new Map();
     let hasShownModal = false;
 
@@ -108,10 +109,8 @@
         if (!hasIssues()) closeModal();
     }
 
-    function clearAll() {
-        issueMap.clear();
-        render();
-        closeModal();
+    function waitForRetry() {
+        return new Promise(resolve => window.setTimeout(resolve, HEALTH_CHECK_RETRY_DELAY_MS));
     }
 
     function isHealthy(payload) {
@@ -120,7 +119,7 @@
             && payload.downloads_available === true;
     }
 
-    async function checkHealth() {
+    async function checkHealthOnce() {
         const controller = typeof AbortController === 'function'
             ? new AbortController()
             : null;
@@ -135,25 +134,39 @@
             });
 
             if (!response.ok) {
-                report('service-health');
-                return;
+                return false;
             }
 
             const payload = await response.json();
-            if (isHealthy(payload)) {
-                clear('service-health');
-                return;
-            }
-
-            report('service-health');
+            return isHealthy(payload);
         } catch (_) {
-            report('service-health');
+            return false;
         } finally {
             if (timeoutId) window.clearTimeout(timeoutId);
         }
     }
 
-    window.merlinServiceStatus = { report, clear, clearAll, hasIssues };
+    async function checkHealth() {
+        if (await checkHealthOnce()) {
+            clear('service-health');
+            return;
+        }
+
+        // A single timeout or lost packet should not trigger a global warning.
+        await waitForRetry();
+        if (await checkHealthOnce()) {
+            clear('service-health');
+            return;
+        }
+
+        report('service-health');
+    }
+
+    window.merlinServiceStatus = {
+        markServiceResponsive() {
+            clear('service-health');
+        }
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
         render();

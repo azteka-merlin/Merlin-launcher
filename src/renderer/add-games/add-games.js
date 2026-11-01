@@ -409,6 +409,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showFeedback(errorMessage(result), 'error');
                 return;
             }
+            if (result.online === true) {
+                window.merlinServiceStatus?.markServiceResponsive?.();
+            }
             setSelectedGame(result.item);
             clearSuggestions();
             showFeedback('');
@@ -421,18 +424,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (requestId !== searchRequestId) return;
 
         if (!result.success) {
-            if (result.code === 'expired') {
-                // Expiry is an entitlement state, never a catalog outage.
-                window.merlinServiceStatus?.clear?.('catalog-search');
-            } else if (result.code === 'search_failed') {
-                window.merlinServiceStatus?.report?.('catalog-search');
-            }
             clearSuggestions();
             showFeedback(errorMessage(result), 'error');
             return;
         }
 
-        window.merlinServiceStatus?.clear?.('catalog-search');
+        if (result.online === true) {
+            window.merlinServiceStatus?.markServiceResponsive?.();
+        }
         renderSuggestions(result.items);
         if (result.items.length === 0) {
             showFeedback(tr('games_suggestions_empty'));
@@ -453,7 +452,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchTimer = setTimeout(() => {
             renderSearchLoading();
             runSearch(query).catch(() => {
-                window.merlinServiceStatus?.report?.('catalog-search');
                 showFeedback(tr('games_error_search_failed'), 'error');
             });
         }, 300);

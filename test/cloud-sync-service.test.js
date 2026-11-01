@@ -162,3 +162,28 @@ test('cloud games cache is scoped to Steam account and environment, and cleared 
         fs.rmSync(temporary, { recursive: true, force: true });
     }
 });
+
+test('a fresh production profile connects automatically and retains a later opt-out', async () => {
+    const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-cloud-default-'));
+    const config = { cloudSync: { enabled: true, startAtLogin: true, defaultMigration: 1 } };
+    const configStore = { get: () => config, update: patch => Object.assign(config, patch) };
+    const service = createCloudSyncService({
+        configStore, localAppData: temporary, apiBaseUrl: 'https://api-merlin.com/api',
+        authSession: { getAccessToken: async () => 'token' },
+        axios: { post: async url => ({ data: {
+            success: true, accessKeyId: `MCL${'a'.repeat(40)}`, secretAccessKey: 'b'.repeat(64),
+            endpoint: new URL(url).origin, bucket: 'merlin-cloud', keyPrefix: 'steam/',
+            region: 'us-east-1', expiresAt: new Date(Date.now() + 1_200_000).toISOString()
+        } }) }
+    });
+    try {
+        service.start();
+        assert.equal((await service.renew()).connected, true);
+        await service.disable();
+        assert.equal(config.cloudSync.enabled, false);
+        assert.equal(config.cloudSync.defaultMigration, 1);
+    } finally {
+        service.stop();
+        fs.rmSync(temporary, { recursive: true, force: true });
+    }
+});

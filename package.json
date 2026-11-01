@@ -1,6 +1,6 @@
 {
   "name": "merlin",
-  "version": "2.3.7",
+  "version": "2.4.0",
   "description": "Merlin game launcher",
   "main": "main.js",
   "scripts": {
@@ -52,6 +52,8 @@
       "**/*",
       "!build.js",
       "!scripts{,/**/*}",
+      "!cods-launchers{,/**/*}",
+      "!*.obj",
       "!OpenSteamTool{,/**/*}",
       "!vendor{,/**/*}",
       "!.deps{,/**/*}",

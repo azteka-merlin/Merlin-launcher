@@ -44,14 +44,7 @@ Local pode existir para UI e desenvolvimento rapido, mas nao deve ser assumido c
 
 ## Deploy
 
-Proposta de nomes, ainda dependente de analisar os repos da API/admin:
-
-- `npm run deploy`: API + cadastro publico em producao.
-- `npm run deploy-stage`: API + cadastro publico em staging.
-- `npm run deploy:panel`: painel admin em producao.
-- `npm run deploy-stage:panel`: painel admin em staging.
-
-Nao implementar estes scripts no launcher. Eles pertencem ao repo da API/admin, a menos que o projeto vire monorepo.
+Scripts atuais da API: `deploy` e `deploy-stage` publicam o Worker com o dist Admin existente; `deploy:panel` e `deploy-stage:panel` compilam o Admin irmao antes de publicar. O site Public tem build e deploy proprios no repositorio `Merlin-public`. Nenhum desses scripts pertence ao Launcher. Consulte `ENVIRONMENTS.md` antes de uma atualizacao.
 
 ## Protecoes Importantes
 

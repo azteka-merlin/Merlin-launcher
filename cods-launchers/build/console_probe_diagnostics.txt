@@ -1,0 +1,6 @@
+console=0000000000600BD6
+before parent=0000000000000000 root=0000000000600BD6 style=0x4ef0000 exstyle=0xc0110 IsWindowVisible=0 EnumWindows=1 titleVisible=0 desktopVisible=0
+shown  parent=0000000000000000 root=0000000000600BD6 style=0x4ef0000 exstyle=0xc0110 IsWindowVisible=0 EnumWindows=1 titleVisible=0 desktopVisible=0
+hidden parent=0000000000000000 root=0000000000600BD6 style=0x4ef0000 exstyle=0xc0110 IsWindowVisible=0 EnumWindows=1 titleVisible=0 desktopVisible=0
+sawVisible=0 hideMilliseconds=0
+rename genericVisible=1 renamedVisible=1 hidden=1 hideMilliseconds=47

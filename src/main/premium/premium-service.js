@@ -127,7 +127,7 @@ function createPremiumService({
             }
             catalogStore.replace(downloaded.items, downloaded.syncedAt);
             cachedItems = downloaded.items;
-            return { success: true, items: cloneItems(downloaded.items), stale: false };
+            return { success: true, items: cloneItems(downloaded.items), stale: false, online: true };
         } catch (error) {
             const fallbackItems = catalogStore.list();
             if (fallbackItems.length > 0) {
@@ -136,6 +136,7 @@ function createPremiumService({
                     success: true,
                     items: cloneItems(fallbackItems),
                     stale: true,
+                    online: false,
                     code: 'refresh_failed'
                 };
             }
@@ -151,13 +152,13 @@ function createPremiumService({
 
     async function list({ force = false } = {}) {
         if (!force && cachedItems) {
-            return { success: true, items: cloneItems(cachedItems), stale: false };
+            return { success: true, items: cloneItems(cachedItems), stale: false, online: false };
         }
 
         const storedItems = catalogStore.list();
         if (!force && storedItems.length > 0) {
             cachedItems = storedItems;
-            return { success: true, items: cloneItems(storedItems), stale: false };
+            return { success: true, items: cloneItems(storedItems), stale: false, online: false };
         }
 
         return refresh();

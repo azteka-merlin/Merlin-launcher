@@ -974,7 +974,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const [result] = await Promise.all([request, minimumLoadingTime]);
 
             if (!result.success) {
-                window.merlinServiceStatus?.report?.('corrections-catalog');
                 notify(tr(force ? 'corrections_error_refresh_failed' : 'corrections_error_load'), 'error');
                 elements.loading.hidden = true;
                 return;
@@ -986,13 +985,12 @@ document.addEventListener('DOMContentLoaded', () => {
             render();
 
             if (result.stale) {
-                window.merlinServiceStatus?.report?.('corrections-catalog');
                 notify(tr('corrections_refresh_stale'));
-            } else {
-                window.merlinServiceStatus?.clear?.('corrections-catalog');
+            }
+            if (result.online === true) {
+                window.merlinServiceStatus?.markServiceResponsive?.();
             }
         } catch (_) {
-            window.merlinServiceStatus?.report?.('corrections-catalog');
             notify(tr(force ? 'corrections_error_refresh_failed' : 'corrections_error_load'), 'error');
             elements.loading.hidden = true;
         } finally {
@@ -1266,6 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            window.merlinServiceStatus?.markServiceResponsive?.();
             mergeVoteResult(item.appId, result);
             render();
         } catch (_) {
@@ -1283,6 +1282,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const result = await api.download({ appId: item.appId, operationId });
+            if (result?.success) {
+                window.merlinServiceStatus?.markServiceResponsive?.();
+            }
             finalizeProgress(result, 'download');
         } catch (_) {
             finalizeProgress({ success: false, code: 'download_failed' }, 'download');

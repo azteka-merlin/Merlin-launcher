@@ -14,6 +14,8 @@ const appDllDir = path.join(rootDir, 'assets', 'dlls');
 const distDir = path.join(rootDir, 'dist');
 const requiredDlls = ['OpenSteamTool.dll', 'dwmapi.dll', 'xinput1_4.dll', 'merlin_cloud_redirect.dll'];
 const helperDll = 'merlin-helper.dll';
+const rebuildAllDlls = process.argv.includes('--rebuild-all-dlls');
+const preservedDlls = [...requiredDlls.slice(1), helperDll];
 const requestedGenerator = process.env.MERLIN_CMAKE_GENERATOR?.trim();
 
 function sha256(filePath) {
@@ -79,8 +81,15 @@ if (!fs.existsSync(path.join(nativeProjectDir, 'CMakeLists.txt'))) {
         `OpenSteamTool source tree not found: ${nativeProjectDir}`
     );
 }
-if (!fs.existsSync(path.join(cloudRedirectProjectDir, 'CMakeLists.txt'))) {
+if (rebuildAllDlls && !fs.existsSync(path.join(cloudRedirectProjectDir, 'CMakeLists.txt'))) {
     throw new Error(`Vendored CloudRedirect source tree not found: ${cloudRedirectProjectDir}`);
+}
+if (!rebuildAllDlls) {
+    for (const dll of preservedDlls) {
+        if (!fs.existsSync(path.join(appDllDir, dll))) {
+            throw new Error(`Required support DLL not found: ${path.join(appDllDir, dll)}`);
+        }
+    }
 }
 
 function hasCommand(command) {
@@ -110,17 +119,20 @@ if (!generator) {
     }
 }
 
-console.log(`Building OpenSteamTool DLLs from ${nativeProjectDir} (Release) using ${generator}...`);
-console.log(`Building Merlin CloudRedirect DLL from ${cloudRedirectProjectDir}...`);
-cleanBuildDirectory(cloudRedirectBuildDir);
-const cloudConfigureArgs = ['-S', cloudRedirectProjectDir, '-B', cloudRedirectBuildDir, '-G', generator];
-if (generator.startsWith('Visual Studio')) cloudConfigureArgs.push('-A', 'x64');
-execFileSync('cmake', cloudConfigureArgs, { cwd: cloudRedirectProjectDir, stdio: 'inherit', env: { ...process.env } });
-execFileSync('cmake', ['--build', cloudRedirectBuildDir, '--config', 'Release', '--target', 'cloud_redirect'], {
-    cwd: cloudRedirectProjectDir, stdio: 'inherit', env: { ...process.env }
-});
-const cloudDll = path.join(cloudRedirectBuildDir, 'Release', 'cloud_redirect.dll');
-if (!fs.existsSync(cloudDll)) throw new Error(`CloudRedirect did not produce ${cloudDll}`);
+console.log(`Building OpenSteamTool DLL from ${nativeProjectDir} (Release) using ${generator}...`);
+let cloudDll;
+if (rebuildAllDlls) {
+    console.log(`Building Merlin CloudRedirect DLL from ${cloudRedirectProjectDir}...`);
+    cleanBuildDirectory(cloudRedirectBuildDir);
+    const cloudConfigureArgs = ['-S', cloudRedirectProjectDir, '-B', cloudRedirectBuildDir, '-G', generator];
+    if (generator.startsWith('Visual Studio')) cloudConfigureArgs.push('-A', 'x64');
+    execFileSync('cmake', cloudConfigureArgs, { cwd: cloudRedirectProjectDir, stdio: 'inherit', env: { ...process.env } });
+    execFileSync('cmake', ['--build', cloudRedirectBuildDir, '--config', 'Release', '--target', 'cloud_redirect'], {
+        cwd: cloudRedirectProjectDir, stdio: 'inherit', env: { ...process.env }
+    });
+    cloudDll = path.join(cloudRedirectBuildDir, 'Release', 'cloud_redirect.dll');
+    if (!fs.existsSync(cloudDll)) throw new Error(`CloudRedirect did not produce ${cloudDll}`);
+}
 
 cleanBuildDirectory(nativeBuildDir);
 const configureArgs = ['-S', nativeSourceDir, '-B', nativeBuildDir, '-G', generator];
@@ -132,14 +144,16 @@ execFileSync('cmake', configureArgs, {
     stdio: 'inherit',
     env: { ...process.env }
 });
-execFileSync('cmake', ['--build', nativeBuildDir, '--config', 'Release'], {
+const nativeBuildArgs = ['--build', nativeBuildDir, '--config', 'Release'];
+if (!rebuildAllDlls) nativeBuildArgs.push('--target', 'OpenSteamTool');
+execFileSync('cmake', nativeBuildArgs, {
     cwd: nativeProjectDir,
     stdio: 'inherit',
     env: { ...process.env }
 });
 
-for (const dll of requiredDlls) {
-    if (dll === 'merlin_cloud_redirect.dll') continue;
+const nativeDlls = rebuildAllDlls ? requiredDlls.slice(0, -1) : ['OpenSteamTool.dll'];
+for (const dll of nativeDlls) {
     const output = path.join(nativeReleaseDir, dll);
     if (!fs.existsSync(output)) {
         throw new Error(`OpenSteamTool did not produce ${output}`);
@@ -147,21 +161,20 @@ for (const dll of requiredDlls) {
 }
 
 fs.mkdirSync(appDllDir, { recursive: true });
-for (const dll of requiredDlls) {
-    if (dll === 'merlin_cloud_redirect.dll') continue;
+for (const dll of nativeDlls) {
     fs.copyFileSync(
         path.join(nativeReleaseDir, dll),
         path.join(appDllDir, dll)
     );
 }
-fs.copyFileSync(cloudDll, path.join(appDllDir, 'merlin_cloud_redirect.dll'));
-console.log(`OpenSteamTool DLLs copied to ${appDllDir}`);
-
-const helperOutput = path.join(nativeReleaseDir, helperDll);
-if (fs.existsSync(helperOutput)) {
-    fs.copyFileSync(helperOutput, path.join(appDllDir, helperDll));
-    console.log(`Merlin helper DLL copied to ${appDllDir}`);
+if (rebuildAllDlls) {
+    fs.copyFileSync(cloudDll, path.join(appDllDir, 'merlin_cloud_redirect.dll'));
+    const helperOutput = path.join(nativeReleaseDir, helperDll);
+    if (fs.existsSync(helperOutput)) {
+        fs.copyFileSync(helperOutput, path.join(appDllDir, helperDll));
+    }
 }
+console.log(`${rebuildAllDlls ? 'All native DLLs' : 'OpenSteamTool.dll'} copied to ${appDllDir}`);
 
 const dllsOnly = process.argv.includes('--opensteamtool-only') || process.argv.includes('--lumacore-only');
 

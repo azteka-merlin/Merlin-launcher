@@ -15,6 +15,7 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         busy = true;
         let steamWasRunning = false;
         let steamStopped = false;
+        const wasEnabled = cloudSyncService.status().enabled;
         try {
             if (!cloudSyncService.status().available) return { success: false, code: 'unavailable' };
             const readiness = getSteamReadiness();
@@ -26,7 +27,7 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
             steamWasRunning = await isSteamRunning();
             if (steamWasRunning) {
                 if (!await stopSteam()) {
-                    await cloudSyncService.disable();
+                    if (!wasEnabled) await cloudSyncService.disable();
                     return { success: false, code: 'steam_close_failed' };
                 }
                 steamStopped = true;
@@ -35,7 +36,7 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
             onStateChanged?.();
             return { success: true, steamWasRunning, ...status() };
         } catch (error) {
-            if (cloudSyncService.status().enabled) {
+            if (!wasEnabled && cloudSyncService.status().enabled) {
                 try { await cloudSyncService.disable(); } catch (_) {}
             }
             onStateChanged?.();

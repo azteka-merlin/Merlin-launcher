@@ -73,23 +73,9 @@ Responsabilidades:
 
 ## Fluxo De API Atual
 
-Parte do launcher ja usa `MERLIN_API_BASE_URL`.
+`main.js` deriva de `MERLIN_API_BASE_URL` as URLs de Auth, busca, manifests, Corrections, Premium, Polls, Announcements, Home, novidades e Updates. O default continua `https://api-merlin.com/api`; `npm run start:stage` define a base de staging. `MERLIN_API_URL` continua sendo uma excecao que altera somente o endpoint de manifests.
 
-Atualmente confirmado:
-
-- Auth: `${MERLIN_API_BASE_URL}/auth/login` e `${MERLIN_API_BASE_URL}/auth/reset-hwid`
-- Game search: `${MERLIN_API_BASE_URL}/games/search`
-- Manifests: `MERLIN_API_URL` ou `${MERLIN_API_BASE_URL}/manifests`
-- Manifest status: `${manifestApiUrl}/status`
-
-Ainda exige cuidado porque possui default proprio ou URL hardcoded:
-
-- Updates: `https://api-merlin.com/api/updates/latest` e `/updates/download`
-- Premium catalog: `https://api-merlin.com/api/premium/catalog`
-- Polls: `https://api-merlin.com/api/polls/active`
-- Corrections catalog: `https://api-merlin.com/api/fixes/catalog`
-
-Antes de plugar staging, centralizar endpoints sem mudar producao por default.
+Alguns clients mantem defaults de producao para uso isolado, mas `main.js` injeta neles as URLs derivadas da base. Ao adicionar um fluxo, preserve essa injecao para que staging nao consulte a API de producao por engano. O catalogo de metadados da Biblioteca vem do Ryuu, um provedor externo, e nao da API Merlin.
 
 ## Build
 

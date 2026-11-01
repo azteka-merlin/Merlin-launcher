@@ -78,6 +78,37 @@ test('search does not refresh when the local catalog already has name matches', 
     assert.equal(results[0].appId, '20');
 });
 
+test('remote search success is distinguishable from a local cache result', async () => {
+    const fixture = createFixture({
+        '20': { name: 'Final Fantasy XVI', coverUrl: 'https://example.com/20.jpg', coverSource: 'capsule_image' }
+    });
+    const service = createLibraryCatalogService({
+        catalogStore: fixture.catalogStore,
+        catalogClient: { download: async () => ({ games: {}, syncedAt: null }) },
+        searchClient: { search: async () => [] }
+    });
+
+    const result = await service.searchWithStatus('final fantasy');
+
+    assert.equal(result.items.length, 1);
+    assert.equal(result.online, true);
+});
+
+test('local search results do not count as an online service response', async () => {
+    const fixture = createFixture({
+        '20': { name: 'Final Fantasy XVI', coverUrl: 'https://example.com/20.jpg', coverSource: 'capsule_image' }
+    });
+    const service = createLibraryCatalogService({
+        catalogStore: fixture.catalogStore,
+        catalogClient: { download: async () => ({ games: {}, syncedAt: null }) }
+    });
+
+    const result = await service.searchWithStatus('final fantasy');
+
+    assert.equal(result.items.length, 1);
+    assert.equal(result.online, false);
+});
+
 test('reuses old local catalog entries and strips the ryuu fallback image', async () => {
     const fixture = createFixture({
         '1736800': { name: 'PRAGMATA', coverUrl: null, coverSource: null }

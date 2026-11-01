@@ -79,6 +79,16 @@ test('failed install revokes connection and reports that Steam was stopped', asy
     assert.deepEqual(events, ['connect', 'stopSteam', 'install', 'revoke', 'stateChanged']);
 });
 
+test('a failed runtime installation preserves an existing cloud preference', async () => {
+    const error = new Error('locked');
+    error.code = 'EPERM';
+    const { invoke, events } = fixture({ installError: error, startEnabled: true });
+    const result = await invoke('cloud-sync:enable');
+    assert.equal(result.success, false);
+    assert.equal(result.code, 'cloud_files_permission');
+    assert.deepEqual(events, ['connect', 'stopSteam', 'install', 'stateChanged']);
+});
+
 test('deactivation stops Steam before revoking access', async () => {
     const { invoke, events } = fixture();
     await invoke('cloud-sync:enable');

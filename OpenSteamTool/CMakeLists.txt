@@ -103,6 +103,9 @@ add_library(OpenSteamTool SHARED
 
     # Shared utilities
     Utils/Tickets/AppTicket.cpp
+    Utils/Tickets/SourceTicket.cpp
+    Utils/Achievements/LocalAchievements.cpp
+    Utils/Achievements/AchievementResponse.cpp
     Utils/Config/Config.cpp
     Utils/Config/ConfigFileWatcher.cpp
     Utils/Config/LuaConfig.cpp
@@ -200,3 +203,29 @@ add_library(xinput1_4 SHARED
 )
 
 set_target_properties(OpenSteamTool MerlinHelper dwmapi xinput1_4 PROPERTIES PREFIX "")
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(OpenSteamToolSourceTicketTests
+        tests/SourceTicketTests.cpp
+        Utils/Tickets/SourceTicket.cpp
+    )
+    target_include_directories(OpenSteamToolSourceTicketTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    add_test(NAME OpenSteamToolSourceTicketTests COMMAND OpenSteamToolSourceTicketTests)
+
+    add_executable(OpenSteamToolAchievementResponseTests
+        tests/AchievementResponseTests.cpp
+        Utils/Achievements/AchievementResponse.cpp
+        "${PROTO_GEN_DIR}/steam_messages.pb.cc"
+    )
+    target_include_directories(OpenSteamToolAchievementResponseTests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/$<CONFIG>
+    )
+    target_link_libraries(OpenSteamToolAchievementResponseTests PRIVATE
+        $<$<CONFIG:Debug>:libprotobuf>
+        $<$<CONFIG:Release>:libprotobuf-lite>
+    )
+    add_test(NAME OpenSteamToolAchievementResponseTests
+             COMMAND OpenSteamToolAchievementResponseTests)
+endif()

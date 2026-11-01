@@ -1,6 +1,6 @@
-# Environments Plan - Merlin Ecosystem
+# Ambientes - Ecossistema Merlin
 
-Este plano ainda e conceitual. Ele deve ser implementado somente depois de analisar os repos da API e do painel admin.
+Staging e producao ja estao em uso. Consulte os scripts e as configuracoes atuais de cada repositorio antes de publicar; este documento registra somente a divisao entre projetos.
 
 ## Objetivo
 
@@ -8,37 +8,33 @@ Permitir testar API, cadastro publico, painel admin e launcher sem publicar alte
 
 ## Projetos
 
-Confirmado neste repo:
+- Merlin Launcher: este repositorio Electron.
+- Merlin API: Worker com regras e rotas publicas e administrativas; serve os assets compilados do Admin.
+- Merlin Admin: painel React em repositorio irmao, publicado junto com a API.
+- Merlin Public: site de compra e Meu acesso em Worker separado, com build e deploy proprios.
 
-- Merlin Launcher: este repositorio.
-
-Ainda pendente de analise:
-
-- Merlin API, que tambem contem o cadastro publico.
-- Merlin Admin/Panel.
-
-## Ambientes Recomendados
+## Ambientes em uso
 
 ### Production
 
 Ambiente real.
 
 - API: `https://api-merlin.com/api`
-- Cadastro publico: dominio publico real.
-- Painel admin: dominio real do admin.
+- Public: site/Worker separado, com chamadas relativas para as rotas da API.
+- Painel admin: assets servidos pelo Worker da API.
 - Banco, storage, secrets e email reais.
 
 ### Staging
 
 Ambiente de teste real com HTTPS.
 
-Sugestao:
+Configuracao atual:
 
 - API: `https://staging.api-merlin.com/api`
-- Cadastro publico: staging do cadastro, servido pelo projeto da API.
-- Painel admin: staging do admin.
+- Public: Worker de staging separado, apontando para as rotas da API de staging.
+- Painel admin: assets servidos pelo Worker da API de staging.
 
-Staging deve ter:
+Staging utiliza:
 
 - Banco separado.
 - Secrets podem ser iguais se o dono aceitar esse comportamento.
@@ -101,33 +97,17 @@ Endpoints que devem seguir a base:
 - `/updates/latest`
 - `/updates/download`
 
-## API E Cadastro Publico
+## API, Admin e Public
 
-Como o cadastro publico esta na API, os scripts ficam no repo da API:
+As rotas de cadastro, licencas e pagamento pertencem a API. A experiencia visual de compra e Meu acesso pertence ao Public, publicado em Worker separado.
 
-- `npm run deploy`: API + cadastro publico em producao.
-- `npm run deploy-stage`: API + cadastro publico em staging.
-- `npm run deploy:panel`: build do painel + deploy de producao pelo Worker da API.
-- `npm run deploy-stage:panel`: build do painel + deploy de staging pelo Worker da API.
+- Na API, `npm run deploy` e `npm run deploy-stage` publicam o Worker com os assets Admin ja presentes em `../merlin-admin/dist`.
+- Na API, `npm run deploy:panel` e `npm run deploy-stage:panel` primeiro compilam o Admin irmao e depois publicam o Worker correspondente. Nao executam migrations D1.
+- No Public, `npm run build` gera `dist/`; depois `npm run deploy` ou `npm run deploy-stage` publica o Worker Public. O deploy nao gera o build automaticamente.
 
 Overrides nao sao migrados: eles ficam no R2 compartilhado (`MERLIN_FILES` / `overrides.json`) e stage/prod leem a mesma configuracao atual.
 
-As variaveis podem ter os mesmos nomes entre ambientes, mas valores sensiveis nunca devem entrar em codigo/docs.
-
-Exemplos de nomes, sem valores reais:
-
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `EMAIL_FROM`
-- `STORAGE_BUCKET`
-- `PAYMENT_SECRET_KEY`
-- `WEBHOOK_SECRET`
-- `PUBLIC_BASE_URL`
-- `API_BASE_URL`
+As variaveis podem ter os mesmos nomes entre ambientes, mas valores sensiveis nunca devem entrar em codigo/docs. Para os nomes reais e bindings, consulte `Merlin-api/docs/ENVIRONMENT.md`, `Merlin-api/wrangler.jsonc` local e `Merlin-public/wrangler.jsonc`.
 
 ## Painel Admin
 
@@ -140,16 +120,11 @@ Use no repo da API:
 
 O frontend usa rotas relativas `/panel-api/*`; nao precisa hardcodar base URL de producao/staging no admin.
 
-## Ordem De Implementacao Recomendada
+## Conferencia antes de uma atualizacao
 
-1. Analisar repo da API/cadastro publico.
-2. Analisar repo do painel admin.
-3. Documentar variaveis reais de cada um.
-4. Criar env examples para staging.
-5. Criar scripts de deploy staging nos repos certos.
-6. Centralizar endpoints do launcher sem mudar comportamento default.
-7. Adicionar `start:stage` no launcher.
-8. Testar fluxo: cadastro staging -> admin staging -> launcher staging.
+1. Comparar o estado local e os assets realmente servidos de API/Admin e Public em cada ambiente.
+2. Conferir bindings, secrets por nome e migrations pendentes sem copiar valores para o Git.
+3. Validar o fluxo Public -> API -> Launcher em staging, preservando a base de producao como default do Launcher.
 
 ## Regra De Seguranca
 

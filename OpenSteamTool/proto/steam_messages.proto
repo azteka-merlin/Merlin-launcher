@@ -189,6 +189,61 @@ message CMsgClientGetUserStatsResponse {
 	repeated .CMsgClientGetUserStatsResponse.Achievement_Blocks achievement_blocks = 6;
 }
 
+// Player.GetGameAchievements#1 and Player.GetUserAchievements#1 are used by
+// the current Steam client to populate achievement groups and unlock state.
+enum EAchievementProgressType {
+	k_EAchievementProgressType_Invalid = 0;
+	k_EAchievementProgressType_Int = 1;
+	k_EAchievementProgressType_Float = 2;
+}
+
+message CPlayer_GetGameAchievements_Request {
+	optional uint32 appid = 1;
+	optional string language = 2;
+	optional bool hash_only = 3;
+}
+message CPlayer_GetGameAchievements_Response {
+	message Achievement {
+		optional string internal_name = 1;
+		optional uint32 internal_key = 8;
+		optional uint32 groupid = 11;
+		optional EAchievementProgressType progress_type = 13 [default = k_EAchievementProgressType_Invalid];
+	}
+	message Group {
+		optional uint32 groupid = 1;
+		optional uint32 total_achievements = 8;
+		optional uint32 completion_achievements = 9;
+	}
+	repeated .CPlayer_GetGameAchievements_Response.Achievement achievements = 1;
+	optional int32 schema_version = 2;
+	repeated .CPlayer_GetGameAchievements_Response.Group groups = 3;
+	optional uint32 schema_hash = 4;
+}
+message CPlayer_GetUserAchievements_Request {
+	optional uint64 steamid = 1;
+	optional uint32 appid = 2;
+}
+message CPlayer_GetUserAchievements_Response {
+	message Achievement {
+		optional uint32 internal_key = 1;
+		optional bool unlocked = 2;
+		optional fixed32 unlock_time = 3;
+		optional int32 progress_int = 4;
+		optional float progress_float = 5;
+	}
+	message Group {
+		optional uint32 groupid = 1;
+		optional bool is_achievable = 2;
+		optional uint32 completed_achievements = 3;
+		optional bool is_completed = 4;
+		optional fixed32 time_completed = 9;
+	}
+	repeated .CPlayer_GetUserAchievements_Response.Achievement achievements = 1;
+	optional int32 schema_version = 2;
+	optional uint32 schema_hash = 3;
+	repeated .CPlayer_GetUserAchievements_Response.Group groups = 4;
+}
+
 message CContentServerDirectory_GetManifestRequestCode_Request {
 	optional uint32 app_id = 1;
 	optional uint32 depot_id = 2;

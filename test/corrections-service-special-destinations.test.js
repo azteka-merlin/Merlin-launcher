@@ -128,3 +128,19 @@ test('allows FC 27 installed only through EA App when Steam is not configured', 
     assert.deepEqual(prepared.gamePaths, [fixture.eaAppGamePath]);
     assert.equal(prepared.installations[0].platform, 'ea_app');
 });
+
+test('cached correction catalogs do not count as a successful online response', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    const service = createService(fixture);
+
+    const cached = await service.list();
+    assert.equal(cached.success, true);
+    assert.equal(cached.stale, false);
+    assert.equal(cached.online, false);
+
+    const stale = await service.refresh();
+    assert.equal(stale.success, true);
+    assert.equal(stale.stale, true);
+    assert.equal(stale.online, false);
+});

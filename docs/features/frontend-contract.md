@@ -32,11 +32,10 @@ Os nomes completos estao em `preload.js`; ao altera-los, atualize testes `*-ipc-
 ## Compatibilidade com staging
 
 - `npm run start:stage` deve operar o novo front completo contra `MERLIN_API_BASE_URL=https://staging.api-merlin.com/api`; producao continua sendo o default de `npm start`.
-- Auth, busca, manifest/status, Corrections, Premium, Polls, Announcements, updates e o catalogo da Biblioteca devem receber a base por configuracao. Nenhum client novo pode criar URL de producao hardcoded.
-- O catalogo de metadados da Biblioteca atual ainda tem default proprio de producao; a migracao deve injetar a base de staging nele antes de declarar paridade.
-- O health do Ryuu e uma integracao externa fixa hoje. Em staging ele deve ser identificado como health de provedor, nao como health da API staging; nao pode levar o usuario a concluir que staging esta indisponivel.
+- `main.js` ja injeta URLs derivadas da base em Auth, busca, manifest/status, Corrections, Premium, Polls, Announcements e Updates. O novo front deve preservar esse contrato; nenhum client novo pode criar URL de producao hardcoded.
+- O catalogo de metadados da Biblioteca usa o feed externo do Ryuu, independentemente da API Merlin. Sua saude deve ser apresentada como integracao externa, sem confundir uma falha do provedor com falha de staging.
 - Catalogos/cache no renderer devem ser identificados pela base da API, ou invalidados ao trocar prod/staging. Dados stale de um ambiente jamais podem aparecer como dados do outro.
-- Criterio de aceite: executar login, busca, manifest, Biblioteca, Corrections, Premium, Polls, Announcements e update em staging sem trafego funcional para producao.
+- Criterio de aceite: executar login, busca, manifest, Biblioteca, Corrections, Premium, Polls, Announcements e update em staging sem trafego funcional para a API de producao. O feed externo da Biblioteca permanece identificado separadamente.
 
 ## Roteiro de migracao
 

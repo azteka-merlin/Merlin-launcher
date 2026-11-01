@@ -34,7 +34,12 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         const origin = supportedOrigin();
         if (!origin) return false;
         try { return JSON.parse(fs.readFileSync(environmentPath, 'utf8')).origin === origin; }
-        catch (_) { return origin === `https://${STAGE_HOST}`; } // Existing stage pilots have no marker.
+        catch (_) {
+            // An existing unmarked credential belongs to the old stage pilot.
+            // A fresh installation has no environment to inherit.
+            return !fs.existsSync(credentialsPath) && !fs.existsSync(keyIdPath)
+                || origin === `https://${STAGE_HOST}`;
+        }
     }
 
     function enabled() {
@@ -220,11 +225,12 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
 
     async function enable() {
         if (!supportedOrigin()) return { ...status(), errorCode: 'unavailable' };
+        const wasEnabled = enabled();
         suspended = false;
-        configStore.update({ cloudSync: { enabled: true, startAtLogin: true } });
+        configStore.update({ cloudSync: { ...configStore.get().cloudSync, enabled: true, startAtLogin: true } });
         const current = await renew();
-        if (!current.connected) {
-            configStore.update({ cloudSync: { enabled: false, startAtLogin: false } });
+        if (!current.connected && !wasEnabled) {
+            configStore.update({ cloudSync: { ...configStore.get().cloudSync, enabled: false, startAtLogin: false } });
             clearLocalConnection();
             return status();
         }
@@ -297,7 +303,7 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         await revokeCredentials();
         suspended = false;
         restartSteamRequired = false;
-        configStore.update({ cloudSync: { enabled: false, startAtLogin: false } });
+        configStore.update({ cloudSync: { ...configStore.get().cloudSync, enabled: false, startAtLogin: false } });
         clearLocalConnection();
         errorCode = null;
         return status();

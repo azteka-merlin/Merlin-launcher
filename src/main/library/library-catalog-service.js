@@ -106,19 +106,23 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return catalogStore.upsertMany(entries);
     }
 
-    async function searchRemote(query, { limit = 4 } = {}) {
-        if (!searchClient?.search) return [];
+    async function searchRemoteWithStatus(query, { limit = 4 } = {}) {
+        if (!searchClient?.search) return { items: [], online: false };
 
         try {
             const items = (await searchClient.search(query, { limit }))
                 .map(normalizeRemoteGame)
                 .filter(Boolean);
             rememberEntries(items);
-            return items;
+            return { items, online: true };
         } catch (error) {
             console.warn('Unable to search games using Merlin API:', error.message);
-            return [];
+            return { items: [], online: false };
         }
+    }
+
+    async function searchRemote(query, options) {
+        return (await searchRemoteWithStatus(query, options)).items;
     }
 
     async function enrichAppIds(appIds, { allowCatalogRefresh = true } = {}) {
@@ -187,16 +191,17 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return matches.get(appId) || null;
     }
 
-    async function search(query, { limit = 4 } = {}) {
+    async function searchWithStatus(query, { limit = 4 } = {}) {
         const rawQuery = String(query || '').trim();
         const normalizedQuery = rawQuery.toLocaleLowerCase();
-        if (!normalizedQuery) return [];
+        if (!normalizedQuery) return { items: [], online: false };
 
-        const remoteMatches = await searchRemote(rawQuery, { limit });
+        const remoteResult = await searchRemoteWithStatus(rawQuery, { limit });
+        const remoteMatches = remoteResult.items;
         if (remoteMatches.length > 0) {
             const incompleteRemoteMatches = remoteMatches.filter(item => !item.coverUrl);
             if (incompleteRemoteMatches.length === 0) {
-                return remoteMatches;
+                return { items: remoteMatches, online: remoteResult.online };
             }
 
             const hydrated = await enrichAppIds(
@@ -204,25 +209,37 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
                 { allowCatalogRefresh: true }
             );
 
-            return remoteMatches.map(item => hydrated.get(item.appId) || item);
+            return {
+                items: remoteMatches.map(item => hydrated.get(item.appId) || item),
+                online: remoteResult.online
+            };
         }
 
+        const needsBootstrap = catalogStore.needsBootstrap();
         const games = await ensureLoaded();
         let matches = findMatches(games, normalizedQuery, limit);
+        const online = remoteResult.online || needsBootstrap;
         if (matches.length > 0) {
             const hydrated = await enrichAppIds(
                 matches.map(item => item.appId),
                 { allowCatalogRefresh: true }
             );
-            return matches.map(item => hydrated.get(item.appId) || item);
+            return {
+                items: matches.map(item => hydrated.get(item.appId) || item),
+                online
+            };
         }
 
         await refresh();
         matches = findMatches(catalogStore.load().games, normalizedQuery, limit);
-        return matches;
+        return { items: matches, online: true };
     }
 
-    return { ensureLoaded, enrichAppIds, findByAppId, refresh, rememberEntries, resolveByAppId, search };
+    async function search(query, options) {
+        return (await searchWithStatus(query, options)).items;
+    }
+
+    return { ensureLoaded, enrichAppIds, findByAppId, refresh, rememberEntries, resolveByAppId, search, searchWithStatus };
 }
 
 module.exports = { createLibraryCatalogService };

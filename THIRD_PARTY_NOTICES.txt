@@ -1,3 +1,14 @@
+BetterSteamTools (https://github.com/madoiscool/BetterSteamTools)
+
+The local Steam achievement cache reader in
+OpenSteamTool/Utils/Achievements/LocalAchievements.cpp is adapted from
+BetterSteamTools commit 3cfd6d3. BetterSteamTools is licensed under the
+GNU General Public License version 3. The license text is included in
+BETTERSTEAMTOOLS_LICENSE.txt. The corresponding adapted source is available
+in the Merlin Launcher repository.
+
+---
+
 zlib-streams 1.4.0 (https://github.com/gildas-lormeau/zlib-streams)
 
 BSD 3-Clause License

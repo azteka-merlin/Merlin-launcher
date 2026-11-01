@@ -99,6 +99,8 @@ npm run build
 
 The installer is generated in `dist/`.
 
+`npm run build:release` increments the version in `package.json` before building; use `npm run build` when a version change is not intended.
+
 Full local release flow:
 
 ```powershell

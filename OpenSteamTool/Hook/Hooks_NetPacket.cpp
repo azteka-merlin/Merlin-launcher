@@ -4,12 +4,15 @@
 #include "HookMacros.h"
 #include "dllmain.h"
 #include "Utils/Tickets/AppTicket.h"
+#include "Utils/Achievements/AchievementResponse.h"
 #include "Utils/Support/FnvHash.h"
 #include "Steam/NetPacket.h"
 #include "OSTPlatform/include/Memory.h"
+#include "OSTPlatform/include/SteamCredentialStore.h"
 #include <algorithm>
 #include <chrono>
 #include <future>
+#include <mutex>
 #include <unordered_map>
 
 #include "steam_messages.pb.h"
@@ -19,7 +22,8 @@
 // ════════════════════════════════════════════════════════════════
 namespace {
 
-    constexpr uint32 kMaxBodySize   = 8092;
+    // New Steam achievement replies can exceed the old 8 KiB packet pool.
+    constexpr uint32 kMaxBodySize   = 65536;
     constexpr uint32 kMaxHdrSize    = 1024;
     constexpr uint32 kMaxPacketSize = 8 + kMaxHdrSize + kMaxBodySize;
     constexpr int    kPacketPoolSize = 8;
@@ -192,6 +196,8 @@ namespace {
     // ── Hash constants for target_job_name dispatch ─────────────
     constexpr uint32 HASH_JOB_NotifyRunningApps = Fnv1aHash("FamilyGroupsClient.NotifyRunningApps#1");
     constexpr uint32 HASH_JOB_GetUserStats = Fnv1aHash("Player.GetUserStats#1");
+    constexpr uint32 HASH_JOB_GetGameAchievements = Fnv1aHash("Player.GetGameAchievements#1");
+    constexpr uint32 HASH_JOB_GetUserAchievements = Fnv1aHash("Player.GetUserAchievements#1");
     constexpr uint32 HASH_JOB_GetManifestRequestCode = Fnv1aHash("ContentServerDirectory.GetManifestRequestCode#1");
 
 } // anonymous namespace
@@ -328,11 +334,10 @@ namespace Hooks_NetPacket_UserStats {
     }
 
     // ── Recv: CPlayer_GetUserStats_Response (eMsg 147) ─────────
-    //     Header: set eresult=OK.  Body: strip stats (field 4).
+    //     Only a correlated Lua request may have its result and stats changed.
     void HandleRecv_GetUserStatsResponse(const uint8* pHdr, uint32 cbHdr,
                                     const uint8* pBody, uint32 cbBody)
     {
-        // Header: set eresult=OK
         CMsgProtoBufHeader hdrMsg;
         if (!hdrMsg.ParseFromArray(pHdr, cbHdr)){
             LOG_ACHIEVEMENT_WARN("Player::GetUserStats response: failed to ParseFromArray original header");
@@ -354,14 +359,11 @@ namespace Hooks_NetPacket_UserStats {
             }
         }
 
-        hdrMsg.set_eresult(static_cast<int32_t>(k_EResultOK));
-        g_cbNewHdr = static_cast<uint32>(hdrMsg.ByteSizeLong());
-        if (g_cbNewHdr > kMaxHdrSize || !hdrMsg.SerializeToArray(g_NewHdr, kMaxHdrSize))
+        if (!hasAppId || !LuaConfig::HasDepot(appId)) {
+            LOG_ACHIEVEMENT_DEBUG("Player::GetUserStats response: no appid match, leaving reply unchanged");
             return;
-        LOG_ACHIEVEMENT_DEBUG("Player::GetUserStats response: modified header:\n{}", hdrMsg.DebugString());
-        g_NeedReplaceHdr = true;
+        }
 
-        // Body: strip stats (only if appid was matched and is in our config)
         CPlayer_GetUserStats_Response resp;
         if (!resp.ParseFromArray(pBody, cbBody)){
             LOG_ACHIEVEMENT_WARN("Player::GetUserStats response: failed to ParseFromArray original response");
@@ -369,18 +371,20 @@ namespace Hooks_NetPacket_UserStats {
         }
         LOG_ACHIEVEMENT_DEBUG("Player::GetUserStats response: original body:\n{}", resp.DebugString());
 
-        if (!hasAppId || !LuaConfig::HasDepot(appId)) {
-            LOG_ACHIEVEMENT_DEBUG("Player::GetUserStats response: no appid match, skip body strip");
-            return;
-        }
-
         resp.clear_stats();
-        g_NewBodySize = static_cast<uint32>(resp.ByteSizeLong());
-        if (!resp.SerializeToArray(const_cast<uint8*>(pBody), cbBody)){
-            LOG_ACHIEVEMENT_WARN("Player::GetUserStats response: failed to SerializeToArray modified response");
+        hdrMsg.set_eresult(static_cast<int32_t>(k_EResultOK));
+        const std::string newHdr = hdrMsg.SerializeAsString();
+        const std::string newBody = resp.SerializeAsString();
+        if (newHdr.size() > kMaxHdrSize || newBody.size() > kMaxBodySize) {
+            LOG_ACHIEVEMENT_WARN("Player::GetUserStats response: modified reply exceeds packet pool");
             return;
         }
-        g_ResizedInPlace = true;
+        memcpy(g_NewHdr, newHdr.data(), newHdr.size());
+        memcpy(g_NewBody, newBody.data(), newBody.size());
+        g_cbNewHdr = static_cast<uint32>(newHdr.size());
+        g_cbNewBody = static_cast<uint32>(newBody.size());
+        g_NeedReplaceHdr = true;
+        g_NeedReplaceBody = true;
 
         LOG_ACHIEVEMENT_DEBUG("Player::GetUserStats response: modified body:\n{}", resp.DebugString());
     }
@@ -449,6 +453,305 @@ namespace Hooks_NetPacket_UserStats {
     }
 
 } // namespace Hooks_NetPacket_UserStats
+
+
+// The current Steam library UI uses these two service methods rather than the
+// older 818/819 stats path. Keep request correlation separate from GetUserStats:
+// each user reply must retain its requested app and account, including when
+// requests for several games or friends are interleaved.
+namespace Hooks_NetPacket_Achievements {
+
+    using Clock = std::chrono::steady_clock;
+    using LocalState = std::unordered_map<std::string, LocalAchievements::Unlock>;
+    enum class RequestKind { GameSchema, UserState };
+    struct Request {
+        RequestKind kind;
+        AppId_t appId;
+        AccountID_t accountId;
+        Clock::time_point sentAt;
+    };
+    struct Schema {
+        AchievementResponse::Schema achievements;
+        AchievementResponse::GroupSchema groups;
+        int32_t version = 0;
+        uint32_t hash = 0;
+        bool hasVersion = false;
+        bool hasHash = false;
+    };
+    std::mutex g_RequestMutex;
+    std::unordered_map<uint64, Request> g_Requests;
+    // The schema cache is used only by the receive hook.
+    std::unordered_map<AppId_t, Schema> g_Schemas;
+    struct HeldReply {
+        AppId_t appId;
+        AccountID_t accountId;
+        std::string header;
+        std::string body;
+    };
+    std::vector<HeldReply> g_HeldReplies;
+    std::vector<std::vector<uint8>> g_ReadyReplies;
+    constexpr size_t kMaxTrackedRequests = 512;
+    constexpr auto kRequestLifetime = std::chrono::minutes(2);
+    // The protobuf header defines UINT64_MAX as its invalid job ID.
+    constexpr uint64 kInvalidJobId = UINT64_MAX;
+
+    void Track(const CMsgProtoBufHeader& hdr, RequestKind kind,
+               AppId_t appId, AccountID_t accountId = 0) {
+        if (!hdr.has_jobid_source() || hdr.jobid_source() == kInvalidJobId) return;
+        std::lock_guard<std::mutex> lock(g_RequestMutex);
+        const auto now = Clock::now();
+        for (auto it = g_Requests.begin(); it != g_Requests.end();) {
+            if (now - it->second.sentAt >= kRequestLifetime) it = g_Requests.erase(it);
+            else ++it;
+        }
+        if (g_Requests.size() >= kMaxTrackedRequests) return;
+        g_Requests.insert_or_assign(hdr.jobid_source(), Request{kind, appId, accountId, now});
+    }
+
+    bool Take(const CMsgProtoBufHeader& hdr, RequestKind kind, Request& out) {
+        if (!hdr.has_jobid_target()) return false;
+        std::lock_guard<std::mutex> lock(g_RequestMutex);
+        const auto it = g_Requests.find(hdr.jobid_target());
+        if (it == g_Requests.end() || it->second.kind != kind) return false;
+        out = it->second;
+        g_Requests.erase(it);
+        return Clock::now() - out.sentAt < kRequestLifetime;
+    }
+
+    bool HasPendingSchema(AppId_t appId) {
+        std::lock_guard<std::mutex> lock(g_RequestMutex);
+        const auto now = Clock::now();
+        for (const auto& [jobId, request] : g_Requests) {
+            if (request.kind == RequestKind::GameSchema && request.appId == appId &&
+                now - request.sentAt < kRequestLifetime) return true;
+        }
+        return false;
+    }
+
+    bool IsActiveAccount(AccountID_t accountId) {
+        AccountID_t active = 0;
+        std::wstring universe;
+        return accountId != 0 &&
+            OSTPlatform::SteamCredentialStore::GetActiveUser(active, universe) ==
+                OSTPlatform::SteamCredentialStore::Status::Ok &&
+            active == accountId;
+    }
+
+    bool TrackGameRequest(const uint8* pBody, uint32 cbBody,
+                          const uint8* pHdr, uint32 cbHdr) {
+        CPlayer_GetGameAchievements_Request req;
+        CMsgProtoBufHeader hdr;
+        if (!req.ParseFromArray(pBody, cbBody) || !req.has_appid() ||
+            !LuaConfig::HasDepot(req.appid()) || !hdr.ParseFromArray(pHdr, cbHdr)) return false;
+        Track(hdr, RequestKind::GameSchema, req.appid());
+        if (req.has_hash_only() && req.hash_only()) {
+            // The local user-state files contain achievement names and stats,
+            // but only this public reply joins names to Steam internal keys.
+            // Ask Steam for the full schema even when its UI cache asks for a hash.
+            req.set_hash_only(false);
+            const std::string body = req.SerializeAsString();
+            if (body.size() > kMaxBodySize) return false;
+            memcpy(g_SendNewBody, body.data(), body.size());
+            g_cbSendNewBody = static_cast<uint32>(body.size());
+            return true;
+        }
+        return false;
+    }
+
+    void TrackUserRequest(const uint8* pBody, uint32 cbBody,
+                          const uint8* pHdr, uint32 cbHdr) {
+        CPlayer_GetUserAchievements_Request req;
+        CMsgProtoBufHeader hdr;
+        if (!req.ParseFromArray(pBody, cbBody) || !req.has_appid() ||
+            !req.has_steamid() || !req.steamid() ||
+            !LuaConfig::HasDepot(req.appid()) || !hdr.ParseFromArray(pHdr, cbHdr)) return;
+
+        AccountID_t activeAccount = 0;
+        std::wstring universe;
+        if (OSTPlatform::SteamCredentialStore::GetActiveUser(activeAccount, universe) !=
+                OSTPlatform::SteamCredentialStore::Status::Ok ||
+            activeAccount == 0 || static_cast<AccountID_t>(req.steamid()) != activeAccount ||
+            (hdr.has_steamid() && hdr.steamid() != req.steamid())) {
+            // GetUserAchievements also serves friend profiles. Never overlay one.
+            return;
+        }
+        Track(hdr, RequestKind::UserState, req.appid(), activeAccount);
+    }
+
+    bool MergeLocal(AppId_t appId, AccountID_t accountId,
+                    CPlayer_GetUserAchievements_Response& response,
+                    size_t& unlockedCount) {
+        const auto schema = g_Schemas.find(appId);
+        if (schema == g_Schemas.end() || schema->second.achievements.empty()) return false;
+        if (!IsActiveAccount(accountId)) return false;
+        const auto& s = schema->second;
+        if ((s.hasVersion && response.has_schema_version() &&
+             s.version != response.schema_version()) ||
+            (s.hasHash && response.has_schema_hash() &&
+             s.hash != response.schema_hash())) return false;
+
+        const LocalState local = LocalAchievements::Read(appId, accountId);
+        if (local.empty()) return false;
+        bool nameMatched = false;
+        for (const auto& entry : s.achievements) {
+            if (local.find(entry.name) != local.end()) { nameMatched = true; break; }
+        }
+        if (!nameMatched) return false;
+        unlockedCount = AchievementResponse::RebuildUserAchievements(
+            response, s.achievements, s.groups, local);
+        return true;
+    }
+
+    // Replacement is committed only after both serialized fields fit. This
+    // prevents a patched OK header with an original, unpatched body.
+    bool ReplaceResponse(const CMsgProtoBufHeader& header,
+                         const CPlayer_GetUserAchievements_Response& response) {
+        const std::string newHeader = header.SerializeAsString();
+        const std::string newBody = response.SerializeAsString();
+        if (newHeader.size() > kMaxHdrSize || newBody.size() > kMaxBodySize) return false;
+        memcpy(g_NewHdr, newHeader.data(), newHeader.size());
+        memcpy(g_NewBody, newBody.data(), newBody.size());
+        g_cbNewHdr = static_cast<uint32>(newHeader.size());
+        g_cbNewBody = static_cast<uint32>(newBody.size());
+        g_NeedReplaceHdr = true;
+        g_NeedReplaceBody = true;
+        return true;
+    }
+
+    void QueueHeldReply(const HeldReply& held) {
+        CMsgProtoBufHeader header;
+        CPlayer_GetUserAchievements_Response response;
+        if (!header.ParseFromString(held.header) || !response.ParseFromString(held.body)) return;
+
+        size_t unlocked = 0;
+        if (MergeLocal(held.appId, held.accountId, response, unlocked)) {
+            header.set_eresult(static_cast<int32_t>(k_EResultOK));
+            LOG_ACHIEVEMENT_INFO("GetUserAchievements: app={} merged {} unlocked achievements after schema arrived",
+                                 held.appId, unlocked);
+        }
+
+        const std::string serializedHeader = header.SerializeAsString();
+        const std::string serializedBody = response.SerializeAsString();
+        const size_t packetSize = sizeof(MsgHdr) + serializedHeader.size() + serializedBody.size();
+        if (serializedHeader.size() > kMaxHdrSize || serializedBody.size() > kMaxBodySize ||
+            packetSize > kMaxPacketSize) return;
+
+        std::vector<uint8> frame(packetSize);
+        auto* messageHeader = reinterpret_cast<MsgHdr*>(frame.data());
+        messageHeader->eMsg = static_cast<EMsg>(
+            static_cast<uint32>(k_EMsgServiceMethodResponse) | kMsgHdrProtoFlag);
+        messageHeader->headerLength = static_cast<uint32>(serializedHeader.size());
+        memcpy(frame.data() + sizeof(MsgHdr), serializedHeader.data(), serializedHeader.size());
+        memcpy(frame.data() + sizeof(MsgHdr) + serializedHeader.size(),
+               serializedBody.data(), serializedBody.size());
+        g_ReadyReplies.push_back(std::move(frame));
+    }
+
+    void CaptureSchema(const uint8* pHdr, uint32 cbHdr,
+                       const uint8* pBody, uint32 cbBody) {
+        CMsgProtoBufHeader header;
+        Request request{};
+        if (!header.ParseFromArray(pHdr, cbHdr) ||
+            !Take(header, RequestKind::GameSchema, request)) return;
+
+        if (!header.has_eresult() || header.eresult() == k_EResultOK) {
+            CPlayer_GetGameAchievements_Response response;
+            if (response.ParseFromArray(pBody, cbBody)) {
+                Schema schema;
+                schema.hasVersion = response.has_schema_version();
+                schema.version = response.schema_version();
+                schema.hasHash = response.has_schema_hash();
+                schema.hash = response.schema_hash();
+                for (const auto& achievement : response.achievements()) {
+                    if (!achievement.has_internal_key() || !achievement.has_internal_name() ||
+                        achievement.internal_name().empty()) continue;
+                    auto& entry = schema.achievements.emplace_back();
+                    entry.key = achievement.internal_key();
+                    entry.name = achievement.internal_name();
+                    if (achievement.has_groupid()) entry.groupId = achievement.groupid();
+                    if (achievement.progress_type() == k_EAchievementProgressType_Int)
+                        entry.progressType = AchievementResponse::ProgressType::Integer;
+                    else if (achievement.progress_type() == k_EAchievementProgressType_Float)
+                        entry.progressType = AchievementResponse::ProgressType::Float;
+                }
+                for (const auto& group : response.groups()) {
+                    if (!group.has_groupid()) continue;
+                    AchievementResponse::GroupSchemaEntry entry{group.groupid()};
+                    if (group.has_total_achievements()) entry.totalAchievements = group.total_achievements();
+                    if (group.has_completion_achievements()) entry.completionAchievements = group.completion_achievements();
+                    schema.groups.push_back(entry);
+                }
+                if (!schema.achievements.empty())
+                    g_Schemas.insert_or_assign(request.appId, std::move(schema));
+            }
+        }
+
+        // Resolve only after Steam has consumed this schema reply; the injected
+        // user reply then follows it on the same receive call.
+        for (auto it = g_HeldReplies.begin(); it != g_HeldReplies.end();) {
+            if (it->appId == request.appId) {
+                QueueHeldReply(*it);
+                it = g_HeldReplies.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    void MergeUserResponse(const uint8* pHdr, uint32 cbHdr,
+                           const uint8* pBody, uint32 cbBody) {
+        CMsgProtoBufHeader header;
+        Request request{};
+        if (!header.ParseFromArray(pHdr, cbHdr) ||
+            !Take(header, RequestKind::UserState, request) ||
+            !LuaConfig::HasDepot(request.appId) ||
+            !IsActiveAccount(request.accountId)) return;
+
+        CPlayer_GetUserAchievements_Response response;
+        if (!response.ParseFromArray(pBody, cbBody)) return;
+        size_t unlocked = 0;
+        // If Steam already has a full schema request in flight, hold the reply
+        // until names are mapped to internal keys. CaptureSchema releases it after the
+        // schema packet is consumed; all other replies pass through unchanged.
+        if (MergeLocal(request.appId, request.accountId, response, unlocked)) {
+            header.set_eresult(static_cast<int32_t>(k_EResultOK));
+            if (ReplaceResponse(header, response))
+                LOG_ACHIEVEMENT_INFO("GetUserAchievements: app={} merged {} unlocked achievements",
+                                     request.appId, unlocked);
+            return;
+        }
+        if (!HasPendingSchema(request.appId) ||
+            g_HeldReplies.size() >= 32 || cbHdr > kMaxHdrSize || cbBody > kMaxBodySize) return;
+
+        CMsgProtoBufHeader discarded = header;
+        discarded.set_jobid_target(kInvalidJobId);
+        const std::string discardedHeader = discarded.SerializeAsString();
+        if (discardedHeader.size() > kMaxHdrSize) return;
+        g_HeldReplies.push_back(HeldReply{
+            request.appId, request.accountId,
+            std::string(reinterpret_cast<const char*>(pHdr), cbHdr),
+            std::string(reinterpret_cast<const char*>(pBody), cbBody)});
+        memcpy(g_NewHdr, discardedHeader.data(), discardedHeader.size());
+        g_cbNewHdr = static_cast<uint32>(discardedHeader.size());
+        g_NeedReplaceHdr = true;
+    }
+
+    void DrainReadyReplies(void* pThis, CNetPacket* carrier,
+                           void* (*invokeOriginal)(void*, CNetPacket*)) {
+        std::vector<std::vector<uint8>> ready;
+        ready.swap(g_ReadyReplies);
+        for (auto& frame : ready) {
+            uint8* originalData = NetPkt::Data(carrier);
+            const uint32 originalSize = NetPkt::Size(carrier);
+            NetPkt::Data(carrier) = frame.data();
+            NetPkt::Size(carrier) = static_cast<uint32>(frame.size());
+            invokeOriginal(pThis, carrier);
+            NetPkt::Data(carrier) = originalData;
+            NetPkt::Size(carrier) = originalSize;
+        }
+    }
+
+} // namespace Hooks_NetPacket_Achievements
 
 
 // ════════════════════════════════════════════════════════════════
@@ -994,6 +1297,13 @@ namespace {
         case HASH_JOB_GetUserStats:
             return Hooks_NetPacket_UserStats::HandleSend_GetUserStats(pBody, cbBody, pHdr, cbHdr);
 
+        case HASH_JOB_GetGameAchievements:
+            return Hooks_NetPacket_Achievements::TrackGameRequest(pBody, cbBody, pHdr, cbHdr);
+
+        case HASH_JOB_GetUserAchievements:
+            Hooks_NetPacket_Achievements::TrackUserRequest(pBody, cbBody, pHdr, cbHdr);
+            return false;
+
         case HASH_JOB_GetManifestRequestCode:
             return Hooks_NetPacket_Manifest::HandleSend(pBody, cbBody, pHdr, cbHdr);
 
@@ -1058,6 +1368,14 @@ namespace {
 
         case HASH_JOB_GetUserStats:
             Hooks_NetPacket_UserStats::HandleRecv_GetUserStatsResponse(pHdr, cbHdr, pBody, cbBody);
+            return;
+
+        case HASH_JOB_GetGameAchievements:
+            Hooks_NetPacket_Achievements::CaptureSchema(pHdr, cbHdr, pBody, cbBody);
+            return;
+
+        case HASH_JOB_GetUserAchievements:
+            Hooks_NetPacket_Achievements::MergeUserResponse(pHdr, cbHdr, pBody, cbBody);
             return;
 
         case HASH_JOB_GetManifestRequestCode:
@@ -1183,7 +1501,11 @@ namespace {
             }
         }
 
-        return oRecvPkt(pThis, pPacket);
+        void* result = oRecvPkt(pThis, pPacket);
+        Hooks_NetPacket_Achievements::DrainReadyReplies(
+            pThis, pPacket,
+            [](void* pT, CNetPacket* pP) -> void* { return oRecvPkt(pT, pP); });
+        return result;
     }
 
 } // anonymous namespace

@@ -68,6 +68,7 @@ const { createLibraryCatalogStore } = require('./src/main/library/library-catalo
 const { createLibraryService } = require('./src/main/library/library-service');
 const { createDllInstaller } = require('./src/main/lumacore/dll-installer');
 const { createCloudSyncService } = require('./src/main/cloud-sync/cloud-sync-service');
+const { migrateCloudDefault } = require('./src/main/cloud-sync/cloud-default');
 const { registerCloudSyncIpc } = require('./src/main/ipc/register-cloud-sync-ipc');
 const { createArchiveClient } = require('./src/main/network/archive-client');
 const { createApiAgent } = require('./src/main/network/api-agent');
@@ -557,6 +558,24 @@ const dllInstaller = createDllInstaller({
     getMainWindow: () => mainWindow
 });
 
+let preparingCloudRuntime = false;
+async function prepareCloudRuntime() {
+    if (preparingCloudRuntime || !configStore.get().cloudSync?.enabled) return;
+    const steamPath = configStore.get().steamPath;
+    if (!steamPath || dllInstaller.cloudSupportReady(steamPath)) return;
+    preparingCloudRuntime = true;
+    try {
+        if (!await steamService.isRunning() && configStore.get().cloudSync?.enabled) {
+            dllInstaller.installCloudSupport(steamPath);
+            mainWindow?.webContents.send('cloud-sync:resumed', cloudSyncService.status());
+        }
+    } catch (error) {
+        console.warn('Could not prepare cloud runtime:', error.message);
+    } finally {
+        preparingCloudRuntime = false;
+    }
+}
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1400,
@@ -755,6 +774,7 @@ registerAuthIpc({
         updateTray();
     },
     onAuthenticated: async () => {
+        await prepareCloudRuntime();
         const cloudState = await cloudSyncService.resumeAfterLogin();
         applyLoginItemSettings();
         updateTray();
@@ -820,7 +840,11 @@ app.whenReady().then(() => {
     if (process.defaultApp) app.removeAsDefaultProtocolClient('merlin', process.execPath, [path.resolve(process.argv[1])]);
     else app.removeAsDefaultProtocolClient('merlin');
     configStore.load();
+    migrateCloudDefault(configStore);
     cloudSyncService.start();
+    void prepareCloudRuntime();
+    const cloudRuntimeTimer = setInterval(() => { void prepareCloudRuntime(); }, 30000);
+    cloudRuntimeTimer.unref?.();
     const plugin = configStore.get().steamPlugin || {};
     startInBackground = !process.defaultApp
         && process.argv.includes('--background')
