@@ -5,6 +5,7 @@
 #include "steam_messages.pb.h"
 #include "Utils/HookSupport/VehCommon.h"
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -33,7 +34,9 @@ namespace
     // Apps to drop from the library: queued off-thread, marked on the UI thread.
     std::mutex g_removalMutex;
     std::vector<AppId_t> g_pendingRemovals;
+    std::unordered_set<AppId_t> g_pendingRestorations;
     std::unordered_set<AppId_t> g_removedAppIds;
+    std::unordered_map<AppId_t, EAppOwnershipFlags> g_savedOwnership;
 
     // A full rebuild never lists removed_appid for apps still in the map
     // so re-assert our set after the snapshot is built.
@@ -61,12 +64,16 @@ namespace
         if (CAPTURE_READY(GetAppByID) && CAPTURE_READY(MarkAppChange))
         {
             std::vector<AppId_t> draining;
+            std::unordered_set<AppId_t> restoring;
             {
                 std::lock_guard<std::mutex> lock(g_removalMutex);
                 draining.swap(g_pendingRemovals);
+                restoring.swap(g_pendingRestorations);
             }
             for (AppId_t appId : draining)
             {
+                // An add can arrive after the queue was drained.
+                if (LuaConfig::HasDepot(appId, false)) continue;
                 if (LuaConfig::IsOwned(appId))
                 {
                     LOG_STEAMUI_DEBUG("RunFrame: appId {} is owned again, skipping removal", appId);
@@ -74,6 +81,13 @@ namespace
                 }
                 if (CSteamApp *pApp = oGetAppByID(g_pController, appId, false))
                 {
+                    {
+                        std::lock_guard<std::mutex> lock(g_removalMutex);
+                        // Keep the original state for a later re-add. Never
+                        // synthesize ownership for an unrelated Steam app.
+                        g_savedOwnership.try_emplace(appId, pApp->OwnershipFlags);
+                        LOG_STEAMUI_DEBUG("RunFrame: saved ownership {} for removed appId {}", static_cast<unsigned>(pApp->OwnershipFlags), appId);
+                    }
                     // Only remove from the library if it's not already uninstalled
                     pApp->OwnershipFlags = k_EAppOwnershipFlags_None;
                     if(pApp->AppStateFlags == k_EAppStateUninstalled){
@@ -83,6 +97,28 @@ namespace
                 }
                 
                 oMarkAppChange(g_pAppChangeSource, appId, EAppChangeFlags::AppInfoOrConfig);
+            }
+            for (AppId_t appId : restoring)
+            {
+                if (!LuaConfig::HasDepot(appId, false)) continue;
+                CSteamApp* pApp = oGetAppByID(g_pController, appId, false);
+                if (!pApp) continue;
+                {
+                    std::lock_guard<std::mutex> lock(g_removalMutex);
+                    auto saved = g_savedOwnership.find(appId);
+                    if (saved != g_savedOwnership.end()) {
+                        if (!LuaConfig::IsOwned(appId))
+                            pApp->OwnershipFlags = saved->second;
+                        LOG_STEAMUI_DEBUG("RunFrame: restored ownership {} for appId {}", static_cast<unsigned>(pApp->OwnershipFlags), appId);
+                        g_savedOwnership.erase(saved);
+                    }
+                    g_removedAppIds.erase(appId);
+                }
+                const auto flags = static_cast<EAppChangeFlags>(
+                    static_cast<unsigned>(EAppChangeFlags::AddedOrCreated) |
+                    static_cast<unsigned>(EAppChangeFlags::AppInfoOrConfig));
+                oMarkAppChange(g_pAppChangeSource, appId, flags);
+                LOG_STEAMUI_DEBUG("RunFrame: refreshed re-added appId {}", appId);
             }
         }
         return oCSteamUIAppControllerRunFrame(pController);
@@ -125,5 +161,6 @@ namespace Hooks_SteamUI
         std::lock_guard<std::mutex> lock(g_removalMutex);
         std::erase(g_pendingRemovals, appId);
         g_removedAppIds.erase(appId);
+        g_pendingRestorations.insert(appId);
     }
 }

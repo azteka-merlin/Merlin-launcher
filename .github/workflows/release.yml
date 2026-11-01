@@ -115,5 +115,6 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
+          draft: ${{ steps.version.outputs.version == '2.4.22' }}
           files: ${{ steps.release_files.outputs.files }}
           generate_release_notes: true
