@@ -1,6 +1,8 @@
 !include "getProcessInfo.nsh"
 Var pid
+!ifndef BUILD_UNINSTALLER
 Var steamInstallPath
+!endif
 
 !macro customCheckAppRunning
   ${GetProcessInfo} 0 $pid $1 $2 $3 $4
