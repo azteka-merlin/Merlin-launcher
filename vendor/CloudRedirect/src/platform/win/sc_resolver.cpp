@@ -570,6 +570,16 @@ static uintptr_t ResolveGetAppInfo() {
     static const char mask[] = "xxxxxxxxxxx";
 
     uintptr_t result = SigScanner::FindPattern(pat, mask, 11);
+    if (!result) {
+        // Newer Steam clients moved the same tree fields within the cache.
+        // Include the table load to avoid accepting a partial prologue match.
+        static const uint8_t newer[] = {
+            0x44, 0x8B, 0x41, 0x28, 0x44, 0x8B, 0xCA,
+            0x41, 0x83, 0xF8, 0xFF, 0x74, 0x4E,
+            0x4C, 0x8B, 0x59, 0x40,
+        };
+        result = SigScanner::FindPattern(newer, "xxxxxxxxxxxxxxxxx", sizeof(newer));
+    }
     if (result)
         LOG("[Resolver] GetAppInfo @ %p (RVA 0x%llX) via signature",
             (void*)result, (uint64_t)(result - SigScanner::GetImageBase()));

@@ -53,6 +53,8 @@ struct Resolved {
     KvSetIntFn       kvSetInt = nullptr;
     KvSetStringFn    kvSetString = nullptr;
     uint32_t         appInfoCacheOffset = 0;
+    uint32_t         appInfoIndexOffset = 0;
+    uint32_t         appInfoTableOffset = 0;
 };
 
 static Resolved g_r;
@@ -70,12 +72,12 @@ static void* GetCachePtr() {
         void* engine = *g_r.globalEnginePtrPtr;
         if (!engine) return nullptr;
         auto* cache = reinterpret_cast<uint8_t*>(engine) + g_r.appInfoCacheOffset;
-        // GetAppInfo indexes the table at cache+0x80 when cache+0x68 is not
+        // GetAppInfo indexes its table when the index is not
         // -1. With an obsolete engine member offset this table was null and
         // Steam crashed on a read at 0x50. Do not call any Steam KV method in
         // that state, even if the signature resolver found the functions.
-        const uint32_t index = *reinterpret_cast<const uint32_t*>(cache + 0x68);
-        const uintptr_t table = *reinterpret_cast<const uintptr_t*>(cache + 0x80);
+        const uint32_t index = *reinterpret_cast<const uint32_t*>(cache + g_r.appInfoIndexOffset);
+        const uintptr_t table = *reinterpret_cast<const uintptr_t*>(cache + g_r.appInfoTableOffset);
         if (index != UINT32_MAX) {
             if (table < 0x10000 || index > 0x100000) return nullptr;
             // Match the first table read in the current GetAppInfo function.
@@ -137,6 +139,20 @@ bool Init() {
                             PAGE_EXECUTE_WRITECOPY)) == 0) {
             LOG("[KvInjector] Init: getAppInfo at %p not in executable memory; aborting",
                 g_r.getAppInfo);
+            return;
+        }
+
+        // The resolver recognizes only these two known GetAppInfo layouts.
+        // Keep cache validation in sync with the layout it actually found.
+        const auto* getAppInfoBytes = reinterpret_cast<const uint8_t*>(c.getAppInfo);
+        if (getAppInfoBytes[3] == 0x68) {
+            g_r.appInfoIndexOffset = 0x68;
+            g_r.appInfoTableOffset = 0x80;
+        } else if (getAppInfoBytes[3] == 0x28) {
+            g_r.appInfoIndexOffset = 0x28;
+            g_r.appInfoTableOffset = 0x40;
+        } else {
+            LOG("[KvInjector] Init: unsupported app-info cache layout; aborting");
             return;
         }
 
