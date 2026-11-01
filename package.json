@@ -1,6 +1,6 @@
 {
   "name": "merlin",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Merlin game launcher",
   "main": "main.js",
   "scripts": {

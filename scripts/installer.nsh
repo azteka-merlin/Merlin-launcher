@@ -1,5 +1,6 @@
 !include "getProcessInfo.nsh"
 Var pid
+Var steamInstallPath
 
 !macro customCheckAppRunning
   ${GetProcessInfo} 0 $pid $1 $2 $3 $4
@@ -14,13 +15,6 @@ Var pid
         Sleep 1000
         Goto doStopProcess
       ${endIf}
-
-      ${If} $LANGUAGE == 1046
-        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "Merlin ja esta aberto.$\r$\nClique em OK para fechar o Merlin e continuar.$\r$\nSe ele nao fechar, feche o Merlin manualmente." /SD IDOK IDOK doStopProcess
-      ${Else}
-        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "Merlin is already open.$\r$\nClick OK to close Merlin and continue.$\r$\nIf it doesn't close, close Merlin manually." /SD IDOK IDOK doStopProcess
-      ${EndIf}
-      Quit
 
       doStopProcess:
 
@@ -58,11 +52,8 @@ Var pid
         ${endIf}
 
         ${if} $R1 > 1
-          ${If} $LANGUAGE == 1046
-            MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Nao foi possivel fechar o Merlin.$\r$\nFeche o Merlin manualmente e clique em Repetir para continuar." /SD IDCANCEL IDRETRY loop
-          ${Else}
-            MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Merlin could not be closed.$\r$\nClose Merlin manually and click Retry to continue." /SD IDCANCEL IDRETRY loop
-          ${EndIf}
+          DetailPrint 'Unable to close Merlin; stopping installation.'
+          SetErrorLevel 1
           Quit
         ${else}
           Goto loop
@@ -80,34 +71,45 @@ Var pid
     SetErrorLevel 740
     Quit
   ${EndIf}
-!macroend
 
-!macro customInstall
-  StrCpy $0 "$PROGRAMFILES32\Steam"
+  ; Resolve the Steam client itself, which can be installed on any drive.
+  ReadRegStr $steamInstallPath HKCU "Software\Valve\Steam" "SteamPath"
+  ${IfNot} ${FileExists} "$steamInstallPath\steam.exe"
+    ReadRegStr $steamInstallPath HKLM "Software\WOW6432Node\Valve\Steam" "InstallPath"
+  ${EndIf}
+  ${IfNot} ${FileExists} "$steamInstallPath\steam.exe"
+    StrCpy $steamInstallPath "$PROGRAMFILES32\Steam"
+  ${EndIf}
 
-  ${If} ${FileExists} "$0\steam.exe"
-    StrCpy $1 "0"
-
-    ; Steam locks the OpenSteamTool files while it is running. Ask for consent before
-    ; closing it, then verify that the process really stopped before copying.
-    nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -Command "if (Get-Process steam -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"'
-    Pop $2
-    Pop $3
-
-    ${If} $2 == "0"
-      MessageBox MB_ICONEXCLAMATION|MB_OK "Steam is currently open. Merlin needs to close Steam for a moment to finish installing the required files. Click OK to continue. If Steam stays open, close it manually and try again."
+  ; Shut down Steam before updating its DLLs. First let Steam exit normally,
+  ; then terminate it if it has not closed in time.
+  !insertmacro FIND_PROCESS "steam.exe" $R0
+  ${If} $R0 == 0
+    ${If} ${FileExists} "$steamInstallPath\steam.exe"
+      Exec '"$steamInstallPath\steam.exe" -shutdown'
+      Sleep 3000
+    ${EndIf}
+    !insertmacro FIND_PROCESS "steam.exe" $R0
+    ${If} $R0 == 0
       nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM steam.exe'
       Pop $2
       Pop $3
       Sleep 1500
-
-      nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -Command "if (Get-Process steam -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"'
-      Pop $2
-      Pop $3
-      ${If} $2 == "0"
-        StrCpy $1 "1"
+      !insertmacro FIND_PROCESS "steam.exe" $R0
+      ${If} $R0 == 0
+        DetailPrint 'Unable to close Steam; stopping installation.'
+        SetErrorLevel 1
+        Quit
       ${EndIf}
     ${EndIf}
+  ${EndIf}
+!macroend
+
+!macro customInstall
+  StrCpy $0 "$steamInstallPath"
+
+  ${If} ${FileExists} "$0\steam.exe"
+    StrCpy $1 "0"
 
     ${If} $1 == "0"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\OpenSteamTool.dll"
@@ -170,7 +172,7 @@ Var pid
     ${EndIf}
 
     ${If} $1 == "1"
-      MessageBox MB_ICONEXCLAMATION|MB_OK "Merlin was installed, but the OpenSteamTool files could not be copied to the default Steam folder. Make sure Steam is closed and use Repair inside Merlin."
+      MessageBox MB_ICONEXCLAMATION|MB_OK "Merlin was installed, but the files could not be copied to the Steam folder. Make sure Steam is closed and use Repair inside Merlin."
     ${EndIf}
   ${EndIf}
 !macroend

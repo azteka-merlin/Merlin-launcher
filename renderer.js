@@ -1455,38 +1455,6 @@ function setupEventListeners() {
     void updateSteamPluginCard();
     window.setInterval(() => { if (window.merlinView?.get() === 'settings') void updateSteamPluginCard(); }, 4000);
 
-    let cloudRestartPromptHandled = false;
-    const promptSteamRestartAfterCloudResume = async state => {
-        if (cloudRestartPromptHandled || !state.available || !state.enabled || !state.connected
-            || (state.filesReady && !state.restartSteamRequired)) return;
-        cloudRestartPromptHandled = true;
-        const steamRunning = await window.electronAPI.isSteamRunning().catch(() => false);
-        if (!steamRunning) {
-            if (state.filesReady) await window.electronAPI.cloudSync.acknowledgeSteamRestart();
-            return;
-        }
-        const accepted = await window.merlinRestartPrompt.ask({
-            title: t('cloud_title'),
-            message: t(state.filesReady ? 'cloud_resume_restart_message' : 'cloud_enable_running'),
-            cancelLabel: t('restart_prompt_later'),
-            actionLabel: t('restart_prompt_action')
-        });
-        if (!accepted) return;
-        try {
-            if (state.filesReady) {
-                if (!await window.electronAPI.closeSteam()) throw new Error('steam_close_failed');
-            } else {
-                const result = await window.electronAPI.cloudSync.enable();
-                if (!result.success) throw new Error(result.code || 'activation_failed');
-            }
-            if (!await window.electronAPI.startSteam()) throw new Error('steam_start_failed');
-            await window.electronAPI.cloudSync.acknowledgeSteamRestart();
-            showNotification(t('steam_restarted'), 'success');
-        } catch (error) {
-            const key = error.message === 'steam_start_failed' ? 'cloud_error_steam_start_failed' : `cloud_error_${error.message}`;
-            showNotification(t(key) === key ? t('cloud_error_generic') : t(key), 'error');
-        }
-    };
     const cloudToggle = document.getElementById('cloudSyncToggle');
     const enableCloudButton = document.getElementById('enableCloudSyncBtn');
     const disableCloudButton = document.getElementById('disableCloudSyncBtn');
@@ -1564,7 +1532,10 @@ function setupEventListeners() {
                 openGamesWrap.tabIndex = reason ? 0 : -1;
                 openGamesWrap.setAttribute('aria-label', reason ? `${t('cloud_open_games')}: ${t(reason)}` : t('cloud_open_games'));
             }
-            if (!cloudTogglePending) void promptSteamRestartAfterCloudResume(state);
+            if (state.enabled && state.filesReady && state.restartSteamRequired) {
+                const steamRunning = await window.electronAPI.isSteamRunning().catch(() => true);
+                if (!steamRunning) await window.electronAPI.cloudSync.acknowledgeSteamRestart();
+            }
         } catch (_) {
             if (requestId === cloudCardRequestId && label && !cloudTogglePending) label.textContent = t('cloud_disconnected');
         }
