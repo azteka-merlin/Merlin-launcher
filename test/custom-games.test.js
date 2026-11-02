@@ -64,12 +64,14 @@ test('a stale install record on a removed drive does not hide the catalog', asyn
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('folder manifest safety ceiling accepts up to 100,000 files', () => {
+test('folder manifest safety ceiling accepts up to 200,000 files', () => {
     assert.equal(validFolderManifestFileCount(new Array(11_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(20_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(30_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(100_000)), true);
-    assert.equal(validFolderManifestFileCount(new Array(100_001)), false);
+    assert.equal(validFolderManifestFileCount(new Array(100_001)), true);
+    assert.equal(validFolderManifestFileCount(new Array(200_000)), true);
+    assert.equal(validFolderManifestFileCount(new Array(200_001)), false);
 });
 
 test('installation checks room for the ZIP, extraction and a safety margin', () => {

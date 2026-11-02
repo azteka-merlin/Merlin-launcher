@@ -3,7 +3,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { safeEntryPath } = require('./safe-zip');
 
-const MAX_FILES = 100000;
+const MAX_FILES = 200000;
 const MAX_BYTES = 200 * 1024 ** 3;
 const MAX_ISSUES = 100;
 

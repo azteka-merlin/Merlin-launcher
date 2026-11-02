@@ -45,6 +45,13 @@ function normalizeCatalogGame(entry) {
             status: ['available', 'cooldown', 'reserved', 'unavailable', 'locked'].includes(entry.viewer.status)
                 ? entry.viewer.status
                 : 'unavailable',
+            wishlisted: entry.viewer.wishlisted === true,
+            slotWatching: entry.viewer.slotWatching === true,
+            contactEmail: typeof entry.viewer.contactEmail === 'string' ? entry.viewer.contactEmail : null,
+            operationStatus: ['pending', 'review'].includes(entry.viewer.operationStatus) ? entry.viewer.operationStatus : null,
+            pendingOperationId: typeof entry.viewer.pendingOperationId === 'string' ? entry.viewer.pendingOperationId : null,
+            retry: entry.viewer.retry && ['available', 'processing', 'review'].includes(entry.viewer.retry.status)
+                ? { id: String(entry.viewer.retry.id), status: entry.viewer.retry.status, expiresAt: entry.viewer.retry.expiresAt || null } : null,
             canActivate: entry.viewer.canActivate === true,
             cooldownUntil: typeof entry.viewer.cooldownUntil === 'string'
                 ? entry.viewer.cooldownUntil.trim() || null
@@ -106,6 +113,7 @@ function normalizeCatalogGame(entry) {
         activationType,
         launchExecutablePath: launchExecutablePath || null,
         activationLimit,
+        comingSoon: entry.comingSoon === true,
         enabled: entry.enabled === true,
         archiveAvailable: entry.archiveAvailable === true,
         availability,
@@ -142,10 +150,10 @@ function createPremiumCatalogClient({
         };
     }
 
-    async function activate({ appId, accessToken }) {
+    async function activate({ appId, accessToken, operationId, retryGrantId }) {
         return (await axios.post(
             activateUrl,
-            { appId },
+            { appId, operationId, ...(retryGrantId ? { retryGrantId } : {}) },
             {
                 timeout: Math.max(timeout, 120000),
                 headers: {
@@ -187,7 +195,20 @@ function createPremiumCatalogClient({
         )).data;
     }
 
+    async function authenticatedAction({ kind, appId, data, remove, operationId, accessToken }) {
+        const base = activateUrl.replace(/\/activate$/, '');
+        const endpoint = kind === 'operation-status'
+            ? `${base}/operation-status?operationId=${encodeURIComponent(operationId)}`
+            : `${base}/${kind}/${encodeURIComponent(appId)}`;
+        const config = { timeout, headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } };
+        const response = kind === 'operation-status'
+            ? await axios.get(endpoint, config)
+            : remove ? await axios.delete(endpoint, config) : await axios.post(endpoint, data, config);
+        return response.data;
+    }
+
     return {
+        authenticatedAction,
         activate,
         activateThirdParty,
         logActivationEvent,

@@ -461,7 +461,7 @@ async function recoverUpdate(root, id) {
         return true;
     }
     if (journal.id !== id || journal.root !== path.resolve(root) || !Array.isArray(journal.entries) ||
-        journal.entries.length > 200000 || !journal.marker || journal.marker.id !== id) throw new Error('update_recovery_required');
+        journal.entries.length > 400000 || !journal.marker || journal.marker.id !== id) throw new Error('update_recovery_required');
     if (journal.format === 2 && !journal.committed) {
         const operations = path.join(backup, 'operations.ndjson');
         const stat = await fs.promises.lstat(operations).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
@@ -476,7 +476,7 @@ async function recoverUpdate(root, id) {
             if (record.type === 'intent' && record.entry && !journal.committed) journal.entries.push(record.entry);
             else if (record.type === 'committed') journal.committed = true;
             else throw new Error('update_recovery_required');
-            if (journal.entries.length > 200000) throw new Error('update_recovery_required');
+            if (journal.entries.length > 400000) throw new Error('update_recovery_required');
         }
     }
     if (!journal.committed) {

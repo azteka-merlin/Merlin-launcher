@@ -84,7 +84,7 @@ const translations = {
         files_verified: 'Arquivos verificados com sucesso',
         files_already_ok: 'Tudo já está configurado.',
         repair_steam_close_failed: 'Não foi possível fechar a Steam por completo. Feche-a pelo Gerenciador de Tarefas e tente Reparar novamente.',
-        repair_steam_files_locked: 'A Steam ainda está usando um arquivo do Merlin. Feche-a por completo e tente Reparar novamente.',
+        repair_steam_files_locked: 'Não foi possível atualizar {file}. Ele pode estar em uso ou o Merlin pode não ter permissão para alterá-lo.',
         activation_path_invalid: 'O caminho configurado não é uma instalação válida do Steam.',
         activation_files_missing: 'Os arquivos obrigatórios não estão instalados. Clique em Reparar primeiro.'
     },
@@ -173,7 +173,7 @@ const translations = {
         files_verified: 'Files verified successfully',
         files_already_ok: 'Everything is already set up.',
         repair_steam_close_failed: 'Steam could not be closed completely. Close it in Task Manager and try Repair again.',
-        repair_steam_files_locked: 'Steam is still using a Merlin file. Close Steam completely and try Repair again.',
+        repair_steam_files_locked: 'Could not update {file}. It may be in use, or Merlin may not have permission to change it.',
         activation_path_invalid: 'The configured path is not a valid Steam installation.',
         activation_files_missing: 'Required files are not installed. Click Repair first.'
     },
@@ -262,7 +262,7 @@ const translations = {
         files_verified: 'Archivos verificados con éxito',
         files_already_ok: 'Todo ya está configurado.',
         repair_steam_close_failed: 'No se pudo cerrar Steam por completo. Ciérrela desde el Administrador de tareas e intente Reparar de nuevo.',
-        repair_steam_files_locked: 'Steam sigue usando un archivo de Merlin. Cierre Steam por completo e intente Reparar de nuevo.',
+        repair_steam_files_locked: 'No se pudo actualizar {file}. Puede estar en uso o Merlin puede no tener permiso para modificarlo.',
         activation_path_invalid: 'La ruta configurada no es una instalación válida de Steam.',
         activation_files_missing: 'Los archivos obligatorios no están instalados. Use Reparar primero.'
     },
@@ -351,7 +351,7 @@ const translations = {
         files_verified: 'Fichiers vérifiés avec succès',
         files_already_ok: 'Tout est déjà configuré.',
         repair_steam_close_failed: 'Steam n’a pas pu être fermée complètement. Fermez-la dans le Gestionnaire des tâches puis réessayez Réparer.',
-        repair_steam_files_locked: 'Steam utilise encore un fichier Merlin. Fermez Steam complètement puis réessayez Réparer.',
+        repair_steam_files_locked: 'Impossible de mettre à jour {file}. Il est peut-être utilisé ou Merlin ne dispose pas des autorisations nécessaires.',
         activation_path_invalid: 'Le chemin configuré n’est pas une installation Steam valide.',
         activation_files_missing: 'Les fichiers requis ne sont pas installés. Utilisez Réparer.'
     },
@@ -440,7 +440,7 @@ const translations = {
         files_verified: 'Dateien erfolgreich verifiziert',
         files_already_ok: 'Alles ist bereits eingerichtet.',
         repair_steam_close_failed: 'Steam konnte nicht vollständig geschlossen werden. Schließen Sie Steam im Task-Manager und versuchen Sie die Reparatur erneut.',
-        repair_steam_files_locked: 'Steam verwendet noch eine Merlin-Datei. Schließen Sie Steam vollständig und versuchen Sie die Reparatur erneut.',
+        repair_steam_files_locked: '{file} konnte nicht aktualisiert werden. Die Datei wird möglicherweise verwendet oder Merlin fehlen die nötigen Berechtigungen.',
         activation_path_invalid: 'Der konfigurierte Pfad ist keine gültige Steam-Installation.',
         activation_files_missing: 'Erforderliche Dateien fehlen. Verwenden Sie zuerst Reparieren.'
     }
@@ -1770,9 +1770,9 @@ function setupEventListeners() {
                 showNotification(t('files_already_ok'));
             }
         } catch (error) {
-            const isSteamFileLocked = /Steam appears to be using/i.test(error?.message || '');
+            const repairFileError = /Merlin could not replace ([^\\/\r\n]+?) \((?:EBUSY|EPERM|EACCES)\)/i.exec(error?.message || '');
             showNotification(
-                isSteamFileLocked ? t('repair_steam_files_locked') : `${t('download_error')}: ${error.message}`,
+                repairFileError ? t('repair_steam_files_locked').replace('{file}', repairFileError[1]) : `${t('download_error')}: ${error.message}`,
                 'error'
             );
         }

@@ -1,5 +1,38 @@
 window.merlinI18n.register({
     ptbr: {
+        premium_pending_confirmation: "Aguardando confirmação",
+        premium_support_review: "Verificar com suporte",
+        premium_wishlist_title: "Lista de desejos",
+        premium_wishlist_description: "Receba um e-mail quando estes jogos estiverem disponíveis no Merlin.",
+        premium_wishlist_empty: "Sua lista está vazia. Adicione os próximos lançamentos na aba Premium.",
+        premium_coming_soon: "Em breve",
+        premium_wishlist_add: "Adicionar à lista de desejos",
+        premium_wishlisted: "Na lista de desejos",
+        premium_wishlist_remove: "Remover da lista",
+        premium_slot_watch: "Avisar próxima ativação disponível",
+        premium_slot_watch_cancel: "Cancelar aviso",
+        premium_wishlist_modal_description: "Você receberá um e-mail quando o jogo estiver disponível, com os planos liberados no momento. Você também pode ser convidado para testar a ativação.",
+        premium_slot_modal_description: "Enviaremos um e-mail cerca de 5 minutos antes da próxima vaga pública. O aviso não reserva uma vaga; a disponibilidade depende do seu plano.",
+        premium_contact_email: "E-mail",
+        premium_contact_phone: "Telefone (opcional)",
+        premium_phone_hint: "Deixe seu número se quiser receber contato sobre testes ou informações antecipadas deste jogo.",
+        premium_phone_consent: "Entendo que este número será usado pelo atendimento do Merlin apenas para informações sobre o jogo escolhido.",
+        premium_interest_cancel: "Cancelar",
+        premium_interest_save: "Confirmar",
+        premium_interest_error: "Não foi possível salvar. Confira sua conexão e tente novamente.",
+        premium_wishlist_saved: "Adicionado à lista de desejos.",
+        premium_slot_saved: "Aviso de próxima ativação ativado.",
+        premium_slot_removed: "Aviso cancelado.",
+        premium_wishlist_removed: "Removido da lista de desejos.",
+        premium_retry_action: "Nova tentativa",
+        premium_retry_hint: "Até {time} · Sem consumir outra ativação mensal.",
+        premium_retry_review: "Tentativa em conferência pelo suporte.",
+        premium_wishlist_available: "Disponível no Merlin",
+        premium_wishlist_soon: "Em breve no Merlin",
+        premium_email_invalid: "Insira um e-mail válido.",
+        premium_consent_required: "Para informar um telefone, confirme o uso para contato sobre este jogo.",
+        premium_success_refresh_failed: "Ativação concluída. Não foi possível atualizar a lista; clique em Atualizar lista para conferir o cooldown.",
+        premium_no_slots_hint: "Sem previsão de nova vaga.",
         premium_button: 'Premium',
         premium_title: 'Premium',
         premium_subtitle: 'Ative jogos disponíveis para assinantes Merlin.',
@@ -50,6 +83,8 @@ window.merlinI18n.register({
         premium_users_in_cooldown_plural: '{count} em cooldown',
         premium_user_release: 'Usuário {index}: disponível em {date}',
         premium_refresh_stale: 'Não foi possível atualizar agora. Exibindo a última lista salva.',
+        premium_check_status: 'Não foi possível confirmar a ativação',
+        premium_retry_refresh: 'Atualize a lista para confirmar o estado da ativação.',
         premium_error_load: 'Não foi possível carregar a lista premium.',
         premium_error_refresh_failed: 'Não foi possível atualizar a lista premium.',
         premium_error_auth_required: 'Faça login novamente para usar as ativações premium.',
@@ -133,6 +168,39 @@ window.merlinI18n.register({
         premium_intro_help_label: 'Como funciona o Premium'
     },
     en: {
+        premium_pending_confirmation: "Awaiting confirmation",
+        premium_support_review: "Check with support",
+        premium_wishlist_title: "Wishlist",
+        premium_wishlist_description: "Get an email when these games become available in Merlin.",
+        premium_wishlist_empty: "Your list is empty. Add upcoming games in Premium.",
+        premium_coming_soon: "Coming soon",
+        premium_wishlist_add: "Add to wishlist",
+        premium_wishlisted: "Wishlisted",
+        premium_wishlist_remove: "Remove from list",
+        premium_slot_watch: "Notify me of the next available activation",
+        premium_slot_watch_cancel: "Cancel alert",
+        premium_wishlist_modal_description: "You will receive an email when this game becomes available, including the plans with access at that time. You may also be invited to test activation.",
+        premium_slot_modal_description: "We will email you about 5 minutes before the next public slot. The alert does not reserve a slot; availability depends on your plan.",
+        premium_contact_email: "Email",
+        premium_contact_phone: "Phone (optional)",
+        premium_phone_hint: "Leave your number if you would like contact about tests or early information for this game.",
+        premium_phone_consent: "I understand Merlin support will use this number only to contact me about the selected game.",
+        premium_interest_cancel: "Cancel",
+        premium_interest_save: "Confirm",
+        premium_interest_error: "Could not save. Check your connection and try again.",
+        premium_wishlist_saved: "Added to wishlist.",
+        premium_slot_saved: "Next activation alert enabled.",
+        premium_slot_removed: "Alert canceled.",
+        premium_wishlist_removed: "Removed from wishlist.",
+        premium_retry_action: "Try again",
+        premium_retry_hint: "Until {time} · No extra monthly activation.",
+        premium_retry_review: "Support is checking this attempt.",
+        premium_wishlist_available: "Available in Merlin",
+        premium_wishlist_soon: "Coming soon to Merlin",
+        premium_email_invalid: "Enter a valid email.",
+        premium_consent_required: "To share a phone number, confirm contact about this game.",
+        premium_success_refresh_failed: "Activation completed. The list could not be updated; select Refresh list to check the cooldown.",
+        premium_no_slots_hint: "No new slot scheduled yet.",
         premium_button: 'Premium',
         premium_title: 'Premium',
         premium_subtitle: 'Activate games available to Merlin subscribers.',
@@ -183,6 +251,8 @@ window.merlinI18n.register({
         premium_users_in_cooldown_plural: '{count} in cooldown',
         premium_user_release: 'User {index}: available on {date}',
         premium_refresh_stale: 'Could not refresh right now. Showing the last saved list.',
+        premium_check_status: 'Could not confirm activation',
+        premium_retry_refresh: 'Refresh the list to confirm the activation status.',
         premium_error_load: 'Could not load the premium list.',
         premium_error_refresh_failed: 'Could not refresh the premium list.',
         premium_error_auth_required: 'Please sign in again to use premium activations.',
@@ -266,6 +336,39 @@ window.merlinI18n.register({
         premium_intro_help_label: 'How Premium works'
     },
     es: {
+        premium_pending_confirmation: "Esperando confirmación",
+        premium_support_review: "Consultar con soporte",
+        premium_wishlist_title: "Lista de deseos",
+        premium_wishlist_description: "Recibe un correo cuando estos juegos estén disponibles en Merlin.",
+        premium_wishlist_empty: "Tu lista está vacía. Añade próximos lanzamientos en Premium.",
+        premium_coming_soon: "Próximamente",
+        premium_wishlist_add: "Añadir a la lista de deseos",
+        premium_wishlisted: "En tu lista de deseos",
+        premium_wishlist_remove: "Quitar de la lista",
+        premium_slot_watch: "Avisar de la próxima activación disponible",
+        premium_slot_watch_cancel: "Cancelar aviso",
+        premium_wishlist_modal_description: "Recibirás un correo cuando el juego esté disponible, con los planes habilitados en ese momento. También puedes recibir una invitación para probar la activación.",
+        premium_slot_modal_description: "Enviaremos un correo unos 5 minutos antes de la próxima plaza pública. El aviso no reserva plaza; depende de tu plan.",
+        premium_contact_email: "Correo electrónico",
+        premium_contact_phone: "Teléfono (opcional)",
+        premium_phone_hint: "Deja tu número para recibir contacto sobre pruebas o información anticipada de este juego.",
+        premium_phone_consent: "Entiendo que el soporte de Merlin usará este número solo para información sobre el juego elegido.",
+        premium_interest_cancel: "Cancelar",
+        premium_interest_save: "Confirmar",
+        premium_interest_error: "No se pudo guardar. Comprueba tu conexión e inténtalo de nuevo.",
+        premium_wishlist_saved: "Añadido a tu lista de deseos.",
+        premium_slot_saved: "Aviso de próxima activación activado.",
+        premium_slot_removed: "Aviso cancelado.",
+        premium_wishlist_removed: "Quitado de la lista de deseos.",
+        premium_retry_action: "Nuevo intento",
+        premium_retry_hint: "Hasta {time} · Sin otra activación mensual.",
+        premium_retry_review: "Soporte está revisando el intento.",
+        premium_wishlist_available: "Disponible en Merlin",
+        premium_wishlist_soon: "Próximamente en Merlin",
+        premium_email_invalid: "Introduce un correo válido.",
+        premium_consent_required: "Confirma el uso del teléfono para contactar sobre este juego.",
+        premium_success_refresh_failed: "Activación completada. No se pudo actualizar la lista; actualízala para comprobar el tiempo de espera.",
+        premium_no_slots_hint: "Sin fecha para una nueva plaza.",
         premium_button: 'Premium',
         premium_title: 'Premium',
         premium_subtitle: 'Active juegos disponibles para los suscriptores de Merlin.',
@@ -316,6 +419,8 @@ window.merlinI18n.register({
         premium_users_in_cooldown_plural: '{count} en cooldown',
         premium_user_release: 'Usuario {index}: disponible el {date}',
         premium_refresh_stale: 'No se pudo actualizar ahora. Se muestra la última lista guardada.',
+        premium_check_status: 'No se pudo confirmar la activación',
+        premium_retry_refresh: 'Actualiza la lista para confirmar el estado de la activación.',
         premium_error_load: 'No se pudo cargar la lista premium.',
         premium_error_refresh_failed: 'No se pudo actualizar la lista premium.',
         premium_error_auth_required: 'Vuelva a iniciar sesión para usar las activaciones premium.',
@@ -399,6 +504,39 @@ window.merlinI18n.register({
         premium_intro_help_label: 'Cómo funciona Premium'
     },
     fr: {
+        premium_pending_confirmation: "Confirmation en attente",
+        premium_support_review: "Contacter le support",
+        premium_wishlist_title: "Liste de souhaits",
+        premium_wishlist_description: "Recevez un e-mail lorsque ces jeux seront disponibles dans Merlin.",
+        premium_wishlist_empty: "Votre liste est vide. Ajoutez les prochaines sorties dans Premium.",
+        premium_coming_soon: "Bientôt",
+        premium_wishlist_add: "Ajouter aux souhaits",
+        premium_wishlisted: "Dans vos souhaits",
+        premium_wishlist_remove: "Retirer de la liste",
+        premium_slot_watch: "Alerte prochaine activation disponible",
+        premium_slot_watch_cancel: "Annuler l’alerte",
+        premium_wishlist_modal_description: "Vous recevrez un e-mail lorsque le jeu sera disponible, avec les formules autorisées à ce moment. Vous pourrez aussi être invité à tester l’activation.",
+        premium_slot_modal_description: "Un e-mail sera envoyé environ 5 minutes avant la prochaine place publique. Aucune place n’est réservée ; l’accès dépend de votre formule.",
+        premium_contact_email: "E-mail",
+        premium_contact_phone: "Téléphone (facultatif)",
+        premium_phone_hint: "Laissez votre numéro pour être contacté concernant les tests ou les informations anticipées de ce jeu.",
+        premium_phone_consent: "Je comprends que le support Merlin utilisera ce numéro uniquement pour des informations sur le jeu choisi.",
+        premium_interest_cancel: "Annuler",
+        premium_interest_save: "Confirmer",
+        premium_interest_error: "Enregistrement impossible. Vérifiez votre connexion et réessayez.",
+        premium_wishlist_saved: "Ajouté aux souhaits.",
+        premium_slot_saved: "Alerte prochaine activation activée.",
+        premium_slot_removed: "Alerte annulée.",
+        premium_wishlist_removed: "Retiré des souhaits.",
+        premium_retry_action: "Nouvelle tentative",
+        premium_retry_hint: "Jusqu’à {time} · Aucune activation mensuelle supplémentaire.",
+        premium_retry_review: "Le support vérifie cette tentative.",
+        premium_wishlist_available: "Disponible dans Merlin",
+        premium_wishlist_soon: "Bientôt dans Merlin",
+        premium_email_invalid: "Saisissez un e-mail valide.",
+        premium_consent_required: "Confirmez le contact téléphonique pour ce jeu.",
+        premium_success_refresh_failed: "Activation terminée. La liste n’a pas pu être actualisée ; actualisez-la pour vérifier le délai.",
+        premium_no_slots_hint: "Aucune nouvelle place prévue.",
         premium_button: 'Premium',
         premium_title: 'Premium',
         premium_subtitle: 'Activez les jeux disponibles pour les abonnés Merlin.',
@@ -449,6 +587,8 @@ window.merlinI18n.register({
         premium_users_in_cooldown_plural: '{count} en cooldown',
         premium_user_release: 'Utilisateur {index} : disponible le {date}',
         premium_refresh_stale: 'Impossible d’actualiser maintenant. Affichage de la dernière liste enregistrée.',
+        premium_check_status: 'Impossible de confirmer l’activation',
+        premium_retry_refresh: 'Actualisez la liste pour vérifier l’état de l’activation.',
         premium_error_load: 'Impossible de charger la liste premium.',
         premium_error_refresh_failed: 'Impossible d’actualiser la liste premium.',
         premium_error_auth_required: 'Reconnectez-vous pour utiliser les activations premium.',
@@ -532,6 +672,39 @@ window.merlinI18n.register({
         premium_intro_help_label: 'Comment fonctionne Premium'
     },
     de: {
+        premium_pending_confirmation: "Bestätigung ausstehend",
+        premium_support_review: "Support kontaktieren",
+        premium_wishlist_title: "Wunschliste",
+        premium_wishlist_description: "Erhalte eine E-Mail, sobald diese Spiele in Merlin verfügbar sind.",
+        premium_wishlist_empty: "Deine Liste ist leer. Füge kommende Spiele unter Premium hinzu.",
+        premium_coming_soon: "Demnächst",
+        premium_wishlist_add: "Zur Wunschliste",
+        premium_wishlisted: "Auf der Wunschliste",
+        premium_wishlist_remove: "Von der Liste entfernen",
+        premium_slot_watch: "Nächste verfügbare Aktivierung melden",
+        premium_slot_watch_cancel: "Hinweis abbrechen",
+        premium_wishlist_modal_description: "Du erhältst eine E-Mail mit den verfügbaren Tarifen, sobald das Spiel bereitsteht. Du kannst auch zu einem Aktivierungstest eingeladen werden.",
+        premium_slot_modal_description: "Wir senden etwa 5 Minuten vor dem nächsten öffentlichen Platz eine E-Mail. Kein Platz wird reserviert; der Zugang hängt vom Tarif ab.",
+        premium_contact_email: "E-Mail",
+        premium_contact_phone: "Telefon (optional)",
+        premium_phone_hint: "Hinterlasse deine Nummer für Tests oder Vorabinformationen zu diesem Spiel.",
+        premium_phone_consent: "Ich verstehe, dass der Merlin-Support diese Nummer nur für Informationen zum ausgewählten Spiel verwendet.",
+        premium_interest_cancel: "Abbrechen",
+        premium_interest_save: "Bestätigen",
+        premium_interest_error: "Speichern fehlgeschlagen. Prüfe die Verbindung und versuche es erneut.",
+        premium_wishlist_saved: "Zur Wunschliste hinzugefügt.",
+        premium_slot_saved: "Aktivierungshinweis aktiviert.",
+        premium_slot_removed: "Hinweis abgebrochen.",
+        premium_wishlist_removed: "Von der Wunschliste entfernt.",
+        premium_retry_action: "Neuer Versuch",
+        premium_retry_hint: "Bis {time} · Keine zusätzliche monatliche Aktivierung.",
+        premium_retry_review: "Der Support prüft diesen Versuch.",
+        premium_wishlist_available: "In Merlin verfügbar",
+        premium_wishlist_soon: "Demnächst in Merlin",
+        premium_email_invalid: "Gib eine gültige E-Mail ein.",
+        premium_consent_required: "Bestätige den Telefonkontakt zu diesem Spiel.",
+        premium_success_refresh_failed: "Aktivierung abgeschlossen. Die Liste wurde nicht aktualisiert; aktualisiere sie, um die Wartezeit zu prüfen.",
+        premium_no_slots_hint: "Noch kein neuer Platz geplant.",
         premium_button: 'Premium',
         premium_title: 'Premium',
         premium_subtitle: 'Aktivieren Sie Spiele, die für Merlin-Abonnenten verfügbar sind.',
@@ -582,6 +755,8 @@ window.merlinI18n.register({
         premium_users_in_cooldown_plural: '{count} im Cooldown',
         premium_user_release: 'Benutzer {index}: verfügbar am {date}',
         premium_refresh_stale: 'Aktualisierung derzeit nicht möglich. Letzte gespeicherte Liste wird angezeigt.',
+        premium_check_status: 'Aktivierung konnte nicht bestätigt werden',
+        premium_retry_refresh: 'Aktualisiere die Liste, um den Aktivierungsstatus zu prüfen.',
         premium_error_load: 'Die Premium-Liste konnte nicht geladen werden.',
         premium_error_refresh_failed: 'Die Premium-Liste konnte nicht aktualisiert werden.',
         premium_error_auth_required: 'Bitte melden Sie sich erneut an, um Premium-Aktivierungen zu nutzen.',
@@ -666,6 +841,7 @@ window.merlinI18n.register({
     }
 });
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const api = window.electronAPI.premium;
     const pageSize = 9;
@@ -727,9 +903,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let items = [];
     let loaded = false;
     let loading = false;
+    let currentLoadFinished = null;
     let loadGeneration = 0;
+    let accountGeneration = 0;
+    let activationStatusVersion = 0;
     let currentPage = 1;
     let activeOperation = null;
+    const unconfirmedActivations = new Map();
+    const confirmedCooldowns = new Map();
+    let interestContext = null;
+    let interestReturnFocus = null;
+    let savingInterest = false;
+    let retryExpiryRefresh = new Set();
+    const interest = Object.fromEntries(['Modal', 'Form', 'Title', 'Game', 'Description', 'Email', 'PhoneGroup', 'Phone', 'Consent', 'Error', 'CancelBtn', 'SubmitBtn'].map(name => [name, document.getElementById(`premiumInterest${name}`)]));
+    const wishlist = { view: document.getElementById('premiumWishlistView'), grid: document.getElementById('premiumWishlistGrid'), empty: document.getElementById('premiumWishlistEmpty'), button: document.getElementById('accountWishlistBtn'), refresh: document.getElementById('premiumWishlistRefreshBtn') };
     let tooltipState = null;
     let tooltipHideTimer = null;
     let progressCloseResolver = null;
@@ -1035,6 +1222,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stateForItem(item) {
+        if (unconfirmedActivations.has(item.appId) || item.viewer.pendingOperationId) return 'checking';
+        if (item.viewer.operationStatus === 'pending' || item.viewer.operationStatus === 'review') return 'checking';
+        if (item.comingSoon) return 'coming-soon';
+        if (item.viewer.retry?.status === 'review' || item.viewer.retry?.status === 'processing') return 'checking';
+        if (item.viewer.retry?.status === 'available') {
+            return item.viewer.canActivate && Date.parse(item.viewer.retry.expiresAt) > Date.now() ? 'retry' : 'checking';
+        }
+        if (confirmedCooldowns.has(item.appId) && Date.parse(confirmedCooldowns.get(item.appId)) > Date.now()) return 'cooldown';
         if (item.viewer.status === 'locked') {
             return 'locked';
         }
@@ -1119,8 +1314,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return tr('premium_plan_locked');
     }
 
+    function confirmationLabel(item, compact = false) {
+        if (item.viewer.operationStatus === 'review' || item.viewer.retry?.status === 'review') return tr(compact ? 'premium_support_review' : 'premium_retry_review');
+        if (item.viewer.operationStatus === 'pending' || item.viewer.retry?.status === 'processing') return tr('premium_pending_confirmation');
+        return tr('premium_check_status');
+    }
+
     function buttonConfig(item) {
         const state = stateForItem(item);
+        if (state === 'coming-soon') return { disabled: false, className: 'btn btn-secondary correction-card-btn premium-card-btn', text: tr(item.viewer.wishlisted ? 'premium_wishlisted' : 'premium_wishlist_add'), action: item.viewer.wishlisted ? 'wishlist-view' : 'wishlist' };
+        if (state === 'retry') return { disabled: Boolean(activeOperation), className: 'btn btn-primary correction-card-btn premium-card-btn', text: tr('premium_retry_action'), action: 'activate' };
+        if (state === 'checking') {
+            return { disabled: true, className: 'btn btn-secondary correction-card-btn premium-card-btn is-unavailable', text: confirmationLabel(item, true) };
+        }
         if (state === 'cooldown') {
             return {
                 disabled: true,
@@ -1282,7 +1488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cooldownEntries.length === 0) {
             const empty = document.createElement('p');
             empty.className = 'premium-tooltip-empty';
-            empty.textContent = tr('premium_available_now');
+            empty.textContent = tr(item.availability.availableSlots > 0 ? 'premium_available_now' : 'premium_no_slots_hint');
             list.append(empty);
         } else {
             cooldownEntries.forEach((entry, index) => {
@@ -1346,6 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function render() {
+        closeTooltip();
         const filtered = filteredItems();
         const page = window.libraryModel.paginate(filtered, currentPage, pageSize);
         const { totalPages, visible } = page;
@@ -1361,6 +1568,7 @@ document.addEventListener('DOMContentLoaded', () => {
         visible.forEach(item => {
             const card = document.createElement('article');
             card.className = 'correction-card premium-entry-card';
+            card.dataset.appId = item.appId;
 
             const imageWrap = document.createElement('div');
             imageWrap.className = 'correction-card-image-wrap';
@@ -1378,15 +1586,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const availability = document.createElement('div');
             const state = stateForItem(item);
             availability.className = 'premium-availability';
-            availability.dataset.state = state === 'available' ? 'success' : state === 'warning' ? 'warning' : 'danger';
+            availability.dataset.state = ['available', 'retry'].includes(state) ? 'success' : ['warning', 'coming-soon'].includes(state) ? 'warning' : 'danger';
 
             const dot = document.createElement('span');
             dot.className = 'premium-availability-dot';
             dot.setAttribute('aria-hidden', 'true');
 
             const availabilityText = document.createElement('span');
-            availabilityText.textContent = state === 'locked' ? lockedTitle(item) : slotsText(item);
+            availabilityText.textContent = state === 'coming-soon' ? tr('premium_coming_soon') : state === 'retry' ? tr('premium_retry_action') : state === 'checking' ? confirmationLabel(item) : state === 'locked' ? lockedTitle(item) : slotsText(item);
             availability.append(dot, availabilityText);
+            if (!item.comingSoon && item.availability.availableSlots <= 0 && !['retry', 'checking'].includes(state)) {
+                const bell = document.createElement('button');
+                bell.type = 'button'; bell.className = 'premium-slot-watch';
+                const label = tr(item.viewer.slotWatching ? 'premium_slot_watch_cancel' : 'premium_slot_watch');
+                bell.setAttribute('aria-label', label); bell.setAttribute('aria-pressed', String(item.viewer.slotWatching === true)); bell.title = label;
+                const icon = document.createElement('img'); icon.alt = ''; icon.src = `node_modules/lucide-static/icons/${item.viewer.slotWatching ? 'bell-ring' : 'bell'}.svg`; bell.append(icon);
+                bell.addEventListener('click', event => { event.stopPropagation(); if (item.viewer.slotWatching) void removeInterest(item, 'slot-watch'); else openInterest(item, 'slot-watch', bell); });
+                availability.append(bell);
+            }
 
             if (state === 'locked' && item.viewer.lockedReason === 'free_catalog_cutoff') {
                 const info = document.createElement('button');
@@ -1404,8 +1621,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const cooldownHint = document.createElement('p');
             cooldownHint.className = 'premium-cooldown-hint';
-            const expiry = item.viewer.cooldownUntil || item.viewer.reservedUntil || item.viewer.releaseAvailableAt || item.availability.nextSlotAt || null;
-            if (state === 'cooldown') {
+            const expiry = confirmedCooldowns.get(item.appId) || item.viewer.cooldownUntil || item.viewer.reservedUntil || item.viewer.releaseAvailableAt || item.availability.nextSlotAt || null;
+            if (state === 'coming-soon') {
+                cooldownHint.dataset.expiry = ''; cooldownHint.textContent = tr('premium_wishlist_soon');
+            } else if (state === 'retry') {
+                cooldownHint.dataset.expiry = ''; cooldownHint.classList.add('premium-retry-hint');
+                cooldownHint.textContent = tr('premium_retry_hint', { time: new Date(item.viewer.retry.expiresAt).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' }) });
+            } else if (state === 'checking') {
+                cooldownHint.dataset.expiry = '';
+                cooldownHint.textContent = tr(item.viewer.retry?.status === 'review' || item.viewer.operationStatus === 'review' ? 'premium_retry_review' : 'premium_retry_refresh');
+            } else if (state === 'cooldown') {
                 cooldownHint.dataset.expiry = expiry || '';
                 cooldownHint.textContent = cooldownLabel(expiry);
             } else if (state === 'locked' && item.viewer.releaseAvailableAt) {
@@ -1414,6 +1639,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (state === 'locked') {
                 cooldownHint.dataset.expiry = '';
                 cooldownHint.textContent = lockedDetail(item);
+            } else if (state === 'unavailable') {
+                cooldownHint.dataset.expiry = '';
+                cooldownHint.textContent = item.availability.nextSlotAt ? cooldownLabel(item.availability.nextSlotAt) : tr('premium_no_slots_hint');
             } else {
                 cooldownHint.dataset.expiry = '';
                 const cooldownEntries = getCooldownEntries(item);
@@ -1433,6 +1661,8 @@ document.addEventListener('DOMContentLoaded', () => {
             actionButton.textContent = buttonState.text;
             if (!buttonState.disabled) {
                 actionButton.addEventListener('click', () => {
+                    if (buttonState.action === 'wishlist') { openInterest(item, 'wishlist', actionButton); return; }
+                    if (buttonState.action === 'wishlist-view') { window.merlinView?.set?.('premium-wishlist'); return; }
                     if (buttonState.action === 'plans') {
                         openPlans();
                         return;
@@ -1445,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.append(imageWrap, title, appId, availability, cooldownHint, actions);
             // The existing availability tooltip remains unchanged for its original
             // states. New plan-locked cards use their compact card copy instead.
-            if (state !== 'locked') {
+            if (!['locked', 'checking', 'coming-soon', 'retry'].includes(state)) {
                 card.addEventListener('mouseenter', () => openTooltip(item, card));
                 card.addEventListener('mouseleave', event => {
                     if (event.relatedTarget && elements.tooltip.contains(event.relatedTarget)) return;
@@ -1463,16 +1693,31 @@ document.addEventListener('DOMContentLoaded', () => {
             total: filtered.length
         });
         renderPagination(totalPages);
+        renderWishlist();
         renderGlobalCooldownNotice();
         updateTooltip();
         updateCountdowns();
     }
 
     async function loadPremium(force = false) {
-        if (loading) return;
+        if (loading) {
+            // A refresh already in flight may predate the activation. Queue a
+            // fresh request so its response cannot falsely confirm that result.
+            const account = accountGeneration;
+            const pending = currentLoadFinished;
+            if (force && pending) {
+                await pending;
+                if (account === accountGeneration) return loadPremium(true);
+            }
+            return;
+        }
         const generation = ++loadGeneration;
+        const statusVersion = activationStatusVersion;
         loading = true;
+        let finishLoad;
+        currentLoadFinished = new Promise(resolve => { finishLoad = resolve; });
         elements.refresh.disabled = true;
+        wishlist.refresh.disabled = true;
         elements.refresh.classList.toggle('loading', force);
         elements.refreshLabel.textContent = tr(force ? 'premium_refreshing' : 'premium_refresh');
 
@@ -1507,6 +1752,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             items = Array.isArray(result.items) ? result.items : [];
+            for (const item of items) {
+                if (item.viewer.pendingOperationId) unconfirmedActivations.set(item.appId, item.viewer.pendingOperationId);
+            }
+            if (result.online === true && statusVersion === activationStatusVersion) {
+                confirmedCooldowns.clear();
+                const settled = await confirmPendingOperations();
+                if (generation !== loadGeneration) return;
+                if (settled) {
+                    // The first catalog may have been read while the operation was still pending.
+                    // Fetch again only after its own result became terminal.
+                    const confirmedCatalog = await api.refresh();
+                    if (generation !== loadGeneration) return;
+                    if (confirmedCatalog.success && confirmedCatalog.online === true) {
+                        items = Array.isArray(confirmedCatalog.items) ? confirmedCatalog.items : [];
+                        confirmedCooldowns.clear();
+                    }
+                }
+            }
             loaded = true;
             currentPage = 1;
             render();
@@ -1522,14 +1785,46 @@ document.addEventListener('DOMContentLoaded', () => {
             notify(tr(force ? 'premium_error_refresh_failed' : 'premium_error_load'), 'error');
             elements.loading.hidden = true;
         } finally {
+            finishLoad();
             if (generation === loadGeneration) {
                 loading = false;
+                currentLoadFinished = null;
                 elements.refresh.disabled = false;
+                wishlist.refresh.disabled = false;
                 elements.refresh.classList.remove('loading');
                 elements.refreshLabel.textContent = tr('premium_refresh');
                 render();
             }
         }
+    }
+
+    async function confirmPendingOperations() {
+        if (!api.operationStatus) return false;
+        let settled = false;
+        const generation = accountGeneration;
+        for (const [appId, operationId] of unconfirmedActivations) {
+            try {
+                const outcome = await api.operationStatus(operationId);
+                if (generation !== accountGeneration) return;
+                if (outcome.success && ['active', 'failed'].includes(outcome.status)) {
+                    settled = true;
+                    unconfirmedActivations.delete(appId);
+                    const item = items.find(entry => entry.appId === appId);
+                    if (item) {
+                        item.viewer.pendingOperationId = null;
+                        item.viewer.operationStatus = null;
+                        if (outcome.status === 'active') {
+                            item.viewer.retry = null;
+                            item.viewer.canActivate = false;
+                            item.viewer.status = 'cooldown';
+                            item.viewer.cooldownUntil = outcome.cooldownUntil || item.viewer.cooldownUntil;
+                        }
+                    }
+                    if (outcome.status === 'active' && outcome.cooldownUntil) confirmedCooldowns.set(appId, outcome.cooldownUntil);
+                }
+            } catch (_) { /* Keep the action blocked until its own result is confirmed. */ }
+        }
+        return settled;
     }
 
     function stageLabel(stage) {
@@ -1671,20 +1966,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeOperation || loading) return;
 
         const operationId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const operationAccount = accountGeneration;
         showProgressModal(item, operationId);
         render();
 
         try {
-            const result = await api.activate({ appId: item.appId, operationId });
+            const result = await api.activate({ appId: item.appId, operationId, ...(item.viewer.retry?.status === 'available' && Date.parse(item.viewer.retry.expiresAt) > Date.now() ? { retryGrantId: item.viewer.retry.id } : {}) });
+            if (operationAccount !== accountGeneration) return;
+            activationStatusVersion += 1;
+            if (result.statusRequired) unconfirmedActivations.set(item.appId, operationId);
+            else if (result.success && result.cooldownUntil) confirmedCooldowns.set(item.appId, result.cooldownUntil);
+            else if (result.success) unconfirmedActivations.set(item.appId, operationId);
             finalizeProgress(result, item);
             if (result.success) {
                 window.merlinServiceStatus?.markServiceResponsive?.();
-                await loadPremium(true);
             }
         } catch (_) {
+            if (operationAccount !== accountGeneration) return;
+            activationStatusVersion += 1;
             finalizeProgress({ success: false, code: 'activate_failed' }, item);
+            unconfirmedActivations.set(item.appId, operationId);
         } finally {
-            render();
+            if (operationAccount === accountGeneration) {
+                await loadPremium(true);
+                if (operationAccount !== accountGeneration) return;
+                if (activeOperation?.result?.success && items.some(entry => entry.appId === item.appId && stateForItem(entry) !== 'cooldown')) {
+                    elements.progressSuccessMessage.textContent = tr('premium_success_refresh_failed');
+                }
+                render();
+            }
         }
     }
 
@@ -1698,8 +2008,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function syncVisibility() {
+        const isWishlist = currentView() === 'premium-wishlist';
+        wishlist.view.hidden = !isWishlist;
         const isActive = currentView() === 'premium';
         elements.view.hidden = !isActive;
+        if (isWishlist) { renderWishlist(); if (!loading) void loadPremium(true); }
         elements.button.classList.toggle('active', isActive);
         elements.button.setAttribute('aria-pressed', String(isActive));
         if (isActive) {
@@ -1715,6 +2028,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCountdowns() {
         if (elements.view.hidden) return;
+        for (const item of items) {
+            if (item.viewer.retry?.status === 'available' && Date.parse(item.viewer.retry.expiresAt) <= Date.now() && !retryExpiryRefresh.has(item.viewer.retry.id)) {
+                retryExpiryRefresh.add(item.viewer.retry.id);
+                render(); void loadPremium(true); return;
+            }
+        }
         elements.grid.querySelectorAll('.premium-cooldown-hint[data-expiry]').forEach(node => {
             const expiry = node.dataset.expiry || '';
             if (!expiry) return;
@@ -1739,6 +2058,139 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 
+    function renderWishlist() {
+        if (!wishlist.grid) return;
+        wishlist.grid.replaceChildren();
+        const wished = items.filter(item => item.viewer.wishlisted);
+        wishlist.empty.hidden = wished.length > 0;
+        wishlist.empty.textContent = tr(!loaded && loading ? 'premium_loading' : 'premium_wishlist_empty');
+        for (const item of wished) {
+            const card = document.createElement('article'); card.className = 'correction-card premium-entry-card';
+            const image = document.createElement('div'); image.className = 'correction-card-image-wrap'; image.append(coverElement(item));
+            const title = document.createElement('strong'); title.className = 'correction-card-title'; title.textContent = displayName(item);
+            const status = document.createElement('p'); status.className = 'premium-wishlist-meta'; status.textContent = tr(item.comingSoon ? 'premium_wishlist_soon' : 'premium_wishlist_available');
+            const actions = document.createElement('div'); actions.className = 'correction-card-actions';
+            const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn btn-secondary'; remove.textContent = tr('premium_wishlist_remove');
+            remove.addEventListener('click', async () => { remove.disabled = true; await removeInterest(item, 'wishlist'); remove.disabled = false; }); actions.append(remove);
+            card.append(image, title, status, actions); wishlist.grid.append(card);
+        }
+    }
+
+    function focusInterestControl(item, kind) {
+        const selector = `[data-app-id="${item.appId}"] ${kind === 'wishlist' ? '.premium-card-btn' : '.premium-slot-watch'}`;
+        const control = elements.grid.querySelector?.(selector);
+        (control || wishlist.refresh)?.focus();
+    }
+
+    function formatInterestPhone(value) {
+        const raw = String(value || '').trim();
+        const digits = raw.replace(/\D/g, '');
+        let national = digits;
+        let prefix = '';
+        if (raw.startsWith('+')) {
+            // Other countries keep their own format and all their digits.
+            if (!digits.startsWith('55') || digits.length > 13) return raw;
+            national = digits.slice(2);
+            prefix = '+55';
+        } else if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+            national = digits.slice(2);
+            prefix = '+55';
+        } else if (digits.length > 11) {
+            return raw;
+        }
+        if (!national) return prefix;
+        let formatted = `(${national.slice(0, 2)}`;
+        if (national.length > 2) formatted += `) ${national.slice(2)}`;
+        if (national.length > 7) {
+            const split = national.length > 10 ? 7 : 6;
+            formatted = `(${national.slice(0, 2)}) ${national.slice(2, split)}-${national.slice(split)}`;
+        }
+        return prefix ? `${prefix} ${formatted}` : formatted;
+    }
+
+    function formatInterestPhoneInput(event) {
+        if (event.isComposing) return;
+        const input = interest.Phone;
+        const before = input.value;
+        const formatted = formatInterestPhone(before);
+        if (formatted === before) return;
+        const selection = [input.selectionStart, input.selectionEnd];
+        input.value = formatted;
+        if (selection.every(position => typeof position === 'number') && input.setSelectionRange) {
+            const offsets = selection.map(position => {
+                const count = before.slice(0, position).replace(/[^+0-9]/g, '').length;
+                if (!count) return 0;
+                let seen = 0;
+                for (let index = 0; index < formatted.length; index++) {
+                    if (/[+0-9]/.test(formatted[index]) && ++seen === count) return index + 1;
+                }
+                return formatted.length;
+            });
+            input.setSelectionRange(...offsets);
+        }
+    }
+
+    function closeInterest(restoreFocus = true) {
+        interest.Modal.hidden = true; interestContext = null; savingInterest = false;
+        if (restoreFocus) interestReturnFocus?.focus();
+        interestReturnFocus = null;
+    }
+
+    function openInterest(item, kind, trigger) {
+        if (savingInterest) return;
+        interestContext = { item, kind, account: accountGeneration }; interestReturnFocus = trigger;
+        interest.Title.textContent = tr(kind === 'wishlist' ? 'premium_wishlist_add' : 'premium_slot_watch');
+        interest.Game.textContent = displayName(item);
+        interest.Description.textContent = tr(kind === 'wishlist' ? 'premium_wishlist_modal_description' : 'premium_slot_modal_description');
+        interest.Email.value = item.viewer.contactEmail || ''; interest.Phone.value = ''; interest.Consent.checked = false;
+        interest.PhoneGroup.hidden = kind !== 'wishlist'; interest.Error.hidden = true;
+        interest.SubmitBtn.disabled = false; interest.CancelBtn.disabled = false; interest.Modal.hidden = false;
+        interest.Email.focus();
+    }
+
+    async function removeInterest(item, kind) {
+        const account = accountGeneration;
+        try {
+            const result = await (kind === 'wishlist' ? api.wishlist : api.slotWatch)({ appId: item.appId, remove: true });
+            if (account !== accountGeneration) return;
+            if (!result.success) throw new Error('save_failed');
+            item.viewer[kind === 'wishlist' ? 'wishlisted' : 'slotWatching'] = false;
+            notify(tr(kind === 'wishlist' ? 'premium_wishlist_removed' : 'premium_slot_removed'), 'success'); render(); focusInterestControl(item, kind);
+        } catch (_) { if (account === accountGeneration) notify(tr('premium_interest_error'), 'error'); }
+    }
+
+    interest.Phone?.addEventListener('input', formatInterestPhoneInput);
+    interest.Form?.addEventListener('submit', async event => {
+        event.preventDefault(); if (!interestContext || savingInterest) return;
+        const context = interestContext; const email = interest.Email.value.trim(); const phone = context.kind === 'wishlist' ? formatInterestPhone(interest.Phone.value) : '';
+        const invalid = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'premium_email_invalid' : phone && !interest.Consent.checked ? 'premium_consent_required' : null;
+        interest.Error.hidden = !invalid;
+        if (invalid) { interest.Error.textContent = tr(invalid); (invalid === 'premium_email_invalid' ? interest.Email : interest.Consent).focus(); return; }
+        savingInterest = true; interest.SubmitBtn.disabled = true; interest.CancelBtn.disabled = true;
+        try {
+            const result = await (context.kind === 'wishlist' ? api.wishlist : api.slotWatch)({ appId: context.item.appId, email, ...(phone ? { phone, phoneConsent: true } : {}) });
+            if (context.account !== accountGeneration) return;
+            if (!result.success) throw new Error('save_failed');
+            context.item.viewer[context.kind === 'wishlist' ? 'wishlisted' : 'slotWatching'] = true;
+            context.item.viewer.contactEmail = email;
+            closeInterest(false); render(); focusInterestControl(context.item, context.kind); notify(tr(context.kind === 'wishlist' ? 'premium_wishlist_saved' : 'premium_slot_saved'), 'success');
+        } catch (_) { if (context.account === accountGeneration) { interest.Error.hidden = false; interest.Error.textContent = tr('premium_interest_error'); } }
+        finally { if (context.account === accountGeneration) { savingInterest = false; interest.SubmitBtn.disabled = false; interest.CancelBtn.disabled = false; } }
+    });
+    interest.CancelBtn?.addEventListener('click', () => { if (!savingInterest) closeInterest(); });
+    interest.Modal?.addEventListener('click', event => { if (event.target === interest.Modal && !savingInterest) closeInterest(); });
+    document.addEventListener('keydown', event => {
+        if (interest.Modal.hidden) return;
+        if (event.key === 'Escape' && !savingInterest) { event.preventDefault(); closeInterest(); }
+        if (event.key === 'Tab') {
+            const controls = [...interest.Form.querySelectorAll('input,button')].filter(node => !node.disabled && !node.closest('[hidden]'));
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }
+    });
+    wishlist.button?.addEventListener('click', () => window.merlinView?.set?.('premium-wishlist'));
+    wishlist.refresh?.addEventListener('click', () => loadPremium(true));
     elements.button.addEventListener('click', () => window.merlinView?.set?.('premium'));
     elements.introHelp?.addEventListener('click', openPremiumIntroManually);
     elements.refresh.addEventListener('click', () => loadPremium(true));
@@ -1779,8 +2231,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.addEventListener('merlin-view-changed', syncVisibility);
     window.addEventListener('merlin-logout', () => {
+        accountGeneration += 1;
         loadGeneration += 1;
         items = [];
+        unconfirmedActivations.clear();
+        confirmedCooldowns.clear();
+        retryExpiryRefresh.clear();
+        if (activeOperation && !activeOperation.result) void api.cancel(activeOperation.operationId);
+        activeOperation = null;
+        elements.progressModal.hidden = true;
+        elements.progressLaunchNotice.replaceChildren();
+        progressCloseResolver?.(); progressCloseResolver = null;
+        closeInterest(false);
+        wishlist.grid.replaceChildren();
         loaded = false;
         loading = false;
         currentPage = 1;

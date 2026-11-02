@@ -106,13 +106,17 @@ function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, ge
         for (const file of requiredFiles) {
             const srcPath = getSourcePath(file);
             const destPath = path.join(steamPath, file.relativeDestination);
-            fs.mkdirSync(path.dirname(destPath), { recursive: true });
+            // A repair should not reopen an already correct DLL for writing.
+            // Windows may deny replacement even when that file needs no change.
+            if (sameContents(srcPath, destPath)) continue;
             try {
+                fs.mkdirSync(path.dirname(destPath), { recursive: true });
                 fs.copyFileSync(srcPath, destPath);
             } catch (error) {
-                if (error && (error.code === 'EBUSY' || error.code === 'EPERM')) {
+                if (error && ['EBUSY', 'EPERM', 'EACCES'].includes(error.code)) {
                     throw new Error(
-                        `Steam appears to be using ${file.name}. Close Steam completely and try Repair again.`
+                        `Merlin could not replace ${file.name} (${error.code}). The file may be in use or access may be denied.`,
+                        { cause: error }
                     );
                 }
                 throw error;

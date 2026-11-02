@@ -2767,6 +2767,20 @@ webview {
     font-size: 0.78rem;
 }
 
+.premium-interest-card { width: min(100% - 32px, 500px); max-height: calc(100vh - 48px); overflow-y: auto; }
+.premium-interest-card label { display: block; margin: 16px 0 6px; font-size: .9rem; }
+.premium-interest-card input:not([type="checkbox"]) { box-sizing: border-box; width: 100%; min-height: 42px; padding: 10px 12px; color: var(--text-primary, #f1f1f5); background: var(--bg-primary, #11131c); border: 1px solid var(--border-color, #42465e); border-radius: 8px; }
+.premium-interest-card input:focus-visible, .premium-slot-watch:focus-visible { outline: 2px solid #ac72f6; outline-offset: 3px; }
+.premium-interest-card .premium-consent { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.premium-interest-card .premium-consent input { margin-top: 4px; flex-shrink: 0; }
+.premium-interest-card p { line-height: 1.5; }
+.premium-interest-game { font-weight: 600; }
+.premium-interest-error { color: #ff9eaa; }
+.premium-slot-watch { margin-left: auto; border: 1px solid var(--border-color, #42465e); border-radius: 6px; background: transparent; color: inherit; padding: 5px; cursor: pointer; flex-shrink: 0; }
+.premium-slot-watch img { display: block; height: 18px; width: 18px; filter: invert(85%); }
+.premium-slot-watch[aria-pressed="true"] { border-color: #ac72f6; background: #8847cf26; }
+.premium-retry-hint { color: #c4a4f4; }
+.premium-wishlist-meta { margin: 0; font-size: .85rem; color: var(--text-secondary, #a7acc2); }
 .premium-card-actions {
     margin-top: auto;
 }
@@ -5727,3 +5741,6 @@ body[data-merlin-view="steam-store"] .steam-context-bar {
     .custom-games-download-widget-actions { justify-content: flex-end; }
     .custom-games-progress-card .library-modal-actions .btn { flex: 1 1 100%; }
 }
+
+#premiumWishlistView.library-view { padding: clamp(1rem, 2vw, 1.75rem); }
+#premiumWishlistView .library-card { width: min(100%, 1360px); min-height: auto; margin-inline: auto; border: 0; border-radius: 0; background: transparent; box-shadow: none; }

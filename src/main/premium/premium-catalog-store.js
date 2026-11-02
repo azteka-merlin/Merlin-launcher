@@ -43,6 +43,13 @@ function normalizeItem(value) {
             status: ['available', 'cooldown', 'reserved', 'unavailable', 'locked'].includes(value.viewer.status)
                 ? value.viewer.status
                 : 'unavailable',
+            wishlisted: value.viewer.wishlisted === true,
+            slotWatching: value.viewer.slotWatching === true,
+            contactEmail: typeof value.viewer.contactEmail === 'string' ? value.viewer.contactEmail : null,
+            operationStatus: ['pending', 'review'].includes(value.viewer.operationStatus) ? value.viewer.operationStatus : null,
+            pendingOperationId: typeof value.viewer.pendingOperationId === 'string' ? value.viewer.pendingOperationId : null,
+            retry: value.viewer.retry && ['available', 'processing', 'review'].includes(value.viewer.retry.status)
+                ? { id: String(value.viewer.retry.id), status: value.viewer.retry.status, expiresAt: value.viewer.retry.expiresAt || null } : null,
             canActivate: value.viewer.canActivate === true,
             cooldownUntil: typeof value.viewer.cooldownUntil === 'string'
                 ? value.viewer.cooldownUntil.trim() || null
@@ -104,6 +111,7 @@ function normalizeItem(value) {
         activationType,
         launchExecutablePath: launchExecutablePath || null,
         activationLimit,
+        comingSoon: value.comingSoon === true,
         enabled: value.enabled === true,
         archiveAvailable: value.archiveAvailable === true,
         availability,

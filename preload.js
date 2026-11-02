@@ -177,6 +177,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     premium: {
         list: (payload) => ipcRenderer.invoke('premium:list', payload),
         refresh: () => ipcRenderer.invoke('premium:refresh'),
+        wishlist: payload => ipcRenderer.invoke('premium:wishlist', payload),
+        slotWatch: payload => ipcRenderer.invoke('premium:slot-watch', payload),
+        operationStatus: operationId => ipcRenderer.invoke('premium:operation-status', operationId),
         activate: (payload) => ipcRenderer.invoke('premium:activate', payload),
         cancel: (operationId) => ipcRenderer.invoke('premium:cancel', operationId),
         openGameFolder: (appId) => ipcRenderer.invoke('premium:open-game-folder', appId),

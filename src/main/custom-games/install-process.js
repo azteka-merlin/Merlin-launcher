@@ -28,7 +28,7 @@ function sanitizeInstallResult(value) {
     if (value.success) {
         const result = { success: true, ...(typeof value.path === 'string' ? { path: value.path.slice(0, 32768) } : {}) };
         for (const field of ['updatedFiles', 'removedFiles', 'protectedFiles']) {
-            if (Number.isSafeInteger(value[field]) && value[field] >= 0 && value[field] <= 100000) result[field] = value[field];
+            if (Number.isSafeInteger(value[field]) && value[field] >= 0 && value[field] <= 200000) result[field] = value[field];
         }
         return result;
     }
@@ -70,7 +70,7 @@ function createCustomGamesInstallRunner({ utilityProcess, app, authSession, apiB
         if (typeof id !== 'string' || !id || id.length > 120 || !/^[C-Z]$/i.test(String(letter || '')) || !Array.isArray(catalog) ||
             !['install', 'update', 'repair'].includes(mode) || mode === 'repair' &&
                 (typeof archiveKey !== 'string' || !archiveKey || !Array.isArray(repairPaths) || !repairPaths.length ||
-                    repairPaths.length > 100000 || repairPaths.some(relative => typeof relative !== 'string' || relative.length > 32767))) {
+                    repairPaths.length > 200000 || repairPaths.some(relative => typeof relative !== 'string' || relative.length > 32767))) {
             return Promise.resolve({ success: false, code: 'invalid_install_request' });
         }
         const job = { jobId: randomUUID(), id, letter: letter.toUpperCase(), child: null, settled: false,

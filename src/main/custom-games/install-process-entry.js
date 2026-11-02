@@ -42,7 +42,7 @@ function startInstallProcess({ parentPort = process.parentPort, createService,
                 !message.userData || !Array.isArray(message.catalog) ||
                 (message.mode != null && !['install', 'update', 'repair'].includes(message.mode)) ||
                 message.mode === 'repair' && (typeof message.archiveKey !== 'string' || !message.archiveKey ||
-                    !Array.isArray(message.repairPaths) || !message.repairPaths.length || message.repairPaths.length > 100000 ||
+                    !Array.isArray(message.repairPaths) || !message.repairPaths.length || message.repairPaths.length > 200000 ||
                     message.repairPaths.some(relative => typeof relative !== 'string' || relative.length > 32767))) {
                 return finish(message.jobId, { success: false, code: 'invalid_install_request' });
             }

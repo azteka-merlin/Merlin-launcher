@@ -44,6 +44,7 @@
                             <img class="account-menu-chevron" src="node_modules/lucide-static/icons/chevron-down.svg" alt="">
                         </button>
                         <div id="accountMenuPopover" class="account-menu-popover" role="menu" hidden>
+                            <button id="accountWishlistBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/heart.svg" alt=""><span data-i18n="premium_wishlist_title">Lista de desejos</span></button>
                             <button id="accountAccessBtn" class="account-menu-item" type="button" role="menuitem"><img src="node_modules/lucide-static/icons/user-round.svg" alt=""><span data-i18n="my_access">Meu acesso</span></button>
                             <div class="account-menu-divider" role="separator"></div>
                             <button id="accountNewsBtn" class="account-menu-item account-menu-news" type="button" role="menuitem" hidden><img src="node_modules/lucide-static/icons/sparkles.svg" alt=""><span data-i18n="release_notes_menu">Novidades</span><span id="accountNewsUnreadDot" class="account-menu-unread-dot" aria-label="Novidade não vista" data-i18n-aria-label="release_notes_unread" hidden></span></button>
@@ -511,6 +512,14 @@
                         </div>
                     </section>
 
+                    <section id="premiumWishlistView" class="library-view corrections-view" aria-labelledby="premiumWishlistTitle" hidden>
+                        <div class="library-card corrections-card">
+                            <header class="library-header"><h2 id="premiumWishlistTitle" data-i18n="premium_wishlist_title">Lista de desejos</h2><p data-i18n="premium_wishlist_description">Receba um e-mail quando estes jogos estiverem disponíveis no Merlin.</p></header>
+                            <div class="library-controls"><button id="premiumWishlistRefreshBtn" class="library-refresh-btn" type="button" data-i18n="premium_refresh">Atualizar lista</button></div>
+                            <p id="premiumWishlistEmpty" class="library-state" role="status" data-i18n="premium_wishlist_empty" hidden>Sua lista está vazia. Adicione os próximos lançamentos na aba Premium.</p>
+                            <div id="premiumWishlistGrid" class="corrections-grid premium-grid"></div>
+                        </div>
+                    </section>
                     <section id="premiumView" class="library-view corrections-view" aria-labelledby="premiumTitle" hidden>
                         <div class="library-card corrections-card premium-card-shell">
                             <header class="library-header">
@@ -1045,6 +1054,15 @@
                 <button id="premiumProgressCloseBtn" class="btn btn-primary" type="button" data-i18n="premium_progress_done" hidden>Done</button>
             </div>
         </div>
+    </div>
+
+    <div id="premiumInterestModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="premiumInterestTitle" aria-describedby="premiumInterestDescription" hidden>
+        <form id="premiumInterestForm" class="library-modal-card premium-interest-card">
+            <h2 id="premiumInterestTitle"></h2><p id="premiumInterestGame" class="premium-interest-game"></p><p id="premiumInterestDescription"></p>
+            <label for="premiumInterestEmail" data-i18n="premium_contact_email">E-mail</label><input id="premiumInterestEmail" name="email" type="email" autocomplete="email" required maxlength="254">
+            <div id="premiumInterestPhoneGroup"><label for="premiumInterestPhone" data-i18n="premium_contact_phone">Telefone (opcional)</label><input id="premiumInterestPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" maxlength="32"><p data-i18n="premium_phone_hint">Deixe seu número se quiser receber contato sobre testes ou informações antecipadas deste jogo.</p><label class="premium-consent"><input id="premiumInterestConsent" name="phoneConsent" type="checkbox"><span data-i18n="premium_phone_consent">Entendo que este número será usado pelo atendimento do Merlin apenas para informações sobre o jogo escolhido.</span></label></div>
+            <p id="premiumInterestError" class="premium-interest-error" role="alert" hidden></p><div class="library-modal-actions"><button id="premiumInterestCancelBtn" class="btn btn-secondary" type="button" data-i18n="premium_interest_cancel">Cancelar</button><button id="premiumInterestSubmitBtn" class="btn btn-primary" type="submit" data-i18n="premium_interest_save">Confirmar</button></div>
+        </form>
     </div>
 
     <div id="premiumTooltip" class="premium-tooltip" role="tooltip" hidden></div>

@@ -170,7 +170,7 @@ test('installs the new DLLs and removes legacy LumaCore.dll during migration', a
     assert.deepEqual(fixture.notifications, [{ channel: 'files-status', payload: { ok: true } }]);
 });
 
-test('reports a friendly error when Steam is locking a DLL during repair', async () => {
+test('reports the file and Windows error without assuming Steam holds the lock', async () => {
     const steamRoot = path.normalize('C:\\Steam');
     const fixture = createFixture({
         existing: [
@@ -214,6 +214,46 @@ test('reports a friendly error when Steam is locking a DLL during repair', async
 
     await assert.rejects(
         fixture.installer.checkAndInstall(steamRoot, 'en'),
-        /Steam appears to be using dwmapi\.dll\. Close Steam completely and try Repair again\./
+        /Merlin could not replace dwmapi\.dll \(EBUSY\)/
     );
+});
+
+test('repair skips an identical existing DLL even if it cannot be replaced', async () => {
+    const steamRoot = path.normalize('C:\\Steam');
+    const fixture = createFixture({
+        existing: [
+            path.join('C:\\bundle', 'OpenSteamTool.dll'),
+            path.join('C:\\bundle', 'dwmapi.dll'),
+            path.join('C:\\bundle', 'xinput1_4.dll'),
+            path.join('C:\\bundle', 'merlin-helper.dll'),
+            path.join(steamRoot, 'OpenSteamTool.dll'),
+        ]
+    });
+
+    const result = await fixture.installer.checkAndInstall(steamRoot, 'en');
+    assert.equal(result.installed, true);
+    assert.equal(fixture.copied.some(entry => path.basename(entry.destPath) === 'OpenSteamTool.dll'), false);
+    assert.deepEqual(fixture.copied.map(entry => path.basename(entry.destPath)),
+        ['dwmapi.dll', 'xinput1_4.dll', 'merlin-helper.dll']);
+});
+
+test('repair identifies access denied without claiming Steam is running', async () => {
+    const root = nativeFs.mkdtempSync(nativePath.join(os.tmpdir(), 'merlin-repair-access-'));
+    try {
+        const source = nativePath.join(root, 'source.dll');
+        nativeFs.writeFileSync(source, 'content');
+        const mockedFs = {
+            ...nativeFs,
+            copyFileSync() { const error = new Error('access denied'); error.code = 'EACCES'; throw error; }
+        };
+        const installer = createDllInstaller({
+            fs: mockedFs, path: nativePath,
+            dialog: { async showMessageBox() { return { response: 0 }; } },
+            requiredFiles: [{ name: 'OpenSteamTool.dll', relativeDestination: 'OpenSteamTool.dll' }],
+            getSourcePath: () => source, getMainWindow: () => null
+        });
+        await assert.rejects(installer.checkAndInstall(root), /OpenSteamTool\.dll \(EACCES\).*access may be denied/);
+    } finally {
+        nativeFs.rmSync(root, { recursive: true, force: true });
+    }
 });

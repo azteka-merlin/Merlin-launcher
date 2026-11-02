@@ -16,6 +16,7 @@ function createPremiumService({
     const zipArchiveTools = createZipArchiveTools({ fs, path, AdmZip });
     const operations = new Map();
     let cachedItems = null;
+    let cacheGeneration = 0;
     const THIRD_PARTY_TOKEN_REQ_TIMEOUT_MS = 15000;
 
     function cloneItem(item) {
@@ -111,8 +112,10 @@ function createPremiumService({
     }
 
     async function refresh() {
+        const generation = cacheGeneration;
+        let accessToken;
         try {
-            let accessToken = await getCatalogAccessToken();
+            accessToken = await getCatalogAccessToken();
             let downloaded;
             try {
                 downloaded = await catalogClient.requestCatalog(accessToken);
@@ -125,11 +128,18 @@ function createPremiumService({
                 accessToken = await getCatalogAccessToken();
                 downloaded = await catalogClient.requestCatalog(accessToken);
             }
+            if (generation !== cacheGeneration) return { success: false, code: 'auth_required' };
+            const pending = pendingForToken(accessToken);
+            downloaded.items = downloaded.items.map(item => ({ ...item, viewer: { ...item.viewer,
+                pendingOperationId: pending.find(entry => entry.appId === item.appId)?.operationId || null } }));
             catalogStore.replace(downloaded.items, downloaded.syncedAt);
             cachedItems = downloaded.items;
             return { success: true, items: cloneItems(downloaded.items), stale: false, online: true };
         } catch (error) {
-            const fallbackItems = catalogStore.list();
+            if (generation !== cacheGeneration) return { success: false, code: 'auth_required' };
+            const pending = accessToken ? pendingForToken(accessToken) : [];
+            const fallbackItems = catalogStore.list().map(item => ({ ...item, viewer: { ...item.viewer,
+                pendingOperationId: pending.find(entry => entry.appId === item.appId)?.operationId || item.viewer.pendingOperationId || null } }));
             if (fallbackItems.length > 0) {
                 cachedItems = fallbackItems;
                 return {
@@ -151,6 +161,7 @@ function createPremiumService({
     }
 
     async function list({ force = false } = {}) {
+        if ((configStore.get().premiumPendingOperations || []).length > 0) return refresh();
         if (!force && cachedItems) {
             return { success: true, items: cloneItems(cachedItems), stale: false, online: false };
         }
@@ -165,6 +176,8 @@ function createPremiumService({
     }
 
     function clearCache() {
+        cacheGeneration += 1;
+        for (const operationId of operations.keys()) cancel(operationId);
         cachedItems = null;
         catalogStore.clear?.();
     }
@@ -224,13 +237,69 @@ function createPremiumService({
         return { code: 'activate_failed', message: detail || 'Premium activation failed' };
     }
 
-    async function activateRemotely(appId) {
+    function accountForToken(token) {
+        try { return String(JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8')).sub || ''); }
+        catch (_) { return ''; }
+    }
+
+    function pendingForToken(token) {
+        const account = accountForToken(token);
+        return account ? (configStore.get().premiumPendingOperations || []).filter(entry => entry.account === account) : [];
+    }
+
+    function storePending(token, appId, operationId, remove = false, outcome = null) {
+        const account = accountForToken(token);
+        if (!account || !configStore.update) return;
+        const entries = (configStore.get().premiumPendingOperations || []).filter(entry => !(entry.account === account && entry.operationId === operationId));
+        if (!remove) entries.push({ account, appId, operationId, createdAt: new Date().toISOString() });
+        configStore.update({ premiumPendingOperations: entries });
+        if (remove) {
+            const stored = cachedItems || catalogStore.list();
+            if (stored.some(item => item.viewer.pendingOperationId === operationId)) {
+                const settled = stored.map(item => item.viewer.pendingOperationId !== operationId ? item : {
+                    ...item, viewer: { ...item.viewer, pendingOperationId: null,
+                        ...(outcome?.status === 'active' && outcome.cooldownUntil ? { status: 'cooldown', canActivate: false, cooldownUntil: outcome.cooldownUntil } : {}) }
+                });
+                cachedItems = settled;
+                catalogStore.replace(settled);
+            }
+        }
+    }
+
+    async function accountAction(payload) {
+        try {
+            let accessToken = await getCatalogAccessToken();
+            let result;
+            try { result = await catalogClient.authenticatedAction({ ...payload, accessToken }); }
+            catch (error) {
+                if (error?.response?.status !== 401) throw error;
+                await authSession.handleUnauthorized();
+                accessToken = await getCatalogAccessToken();
+                result = await catalogClient.authenticatedAction({ ...payload, accessToken });
+            }
+            if (payload.kind === 'operation-status' && ['active', 'failed'].includes(result.status)) {
+                storePending(accessToken, '', payload.operationId, true, result);
+            }
+            cachedItems = null;
+            return result;
+        } catch (error) { return { success: false, code: error?.response?.data?.code || 'refresh_failed' }; }
+    }
+
+    async function activateRemotely(appId, operationId, retryGrantId) {
         let accessToken = await getCatalogAccessToken();
 
+        storePending(accessToken, appId, operationId);
+        const localItems = cachedItems || catalogStore.list();
+        if (localItems.length) {
+            const marked = localItems.map(item => ({ ...item, viewer: { ...item.viewer,
+                pendingOperationId: item.appId === appId ? operationId : item.viewer.pendingOperationId || null } }));
+            cachedItems = marked;
+            catalogStore.replace(marked);
+        }
         try {
             return {
                 accessToken,
-                payload: await catalogClient.activate({ appId, accessToken })
+                payload: await catalogClient.activate({ appId, accessToken, operationId, retryGrantId })
             };
         } catch (error) {
             if (error?.response?.status !== 401) throw error;
@@ -238,7 +307,7 @@ function createPremiumService({
             accessToken = await getCatalogAccessToken();
             return {
                 accessToken,
-                payload: await catalogClient.activate({ appId, accessToken })
+                payload: await catalogClient.activate({ appId, accessToken, operationId, retryGrantId })
             };
         }
     }
@@ -565,7 +634,7 @@ function createPremiumService({
         fs.writeFileSync(targetPath, `[token]\ntoken=${token}\n`, 'utf8');
     }
 
-    async function activate(appId, operationId, onProgress = () => {}) {
+    async function runActivate(appId, operationId, onProgress = () => {}, { retryGrantId } = {}) {
         const start = beginOperation(operationId);
         if (!start.success) return start;
         const { operation } = start;
@@ -616,8 +685,12 @@ function createPremiumService({
                     stage: 'activating',
                     percent: 12
                 });
-                activationResult = await activateRemotely(item.appId);
+                activationResult = await activateRemotely(item.appId, operation.id, retryGrantId);
             } catch (error) {
+                if (error?.response?.status >= 400 && error.response.status < 500 && ![408, 429].includes(error.response.status)) {
+                    const token = await getCatalogAccessToken();
+                    storePending(token, item.appId, operation.id, true);
+                }
                 const mapped = mapActivationError(error);
                 return {
                     success: false,
@@ -812,13 +885,14 @@ function createPremiumService({
             });
 
             cachedItems = null;
+            storePending(activationResult.accessToken, item.appId, operation.id, true, { status: 'active', cooldownUntil: thirdPartyResult?.payload?.cooldownUntil || activationResult.payload.cooldownUntil || null });
 
             return {
                 success: true,
                 appId: item.appId,
                 gameName: item.gameName,
                 gamePath: installation.gamePath,
-                cooldownUntil: activationResult.payload.cooldownUntil || null,
+                cooldownUntil: thirdPartyResult?.payload?.cooldownUntil || activationResult.payload.cooldownUntil || null,
                 activationType,
                 launchExecutablePath: activation.launchExecutablePath || item.launchExecutablePath || null
             };
@@ -840,6 +914,11 @@ function createPremiumService({
         } finally {
             finishOperation(operationId);
         }
+    }
+
+    async function activate(appId, operationId, onProgress, options) {
+        const result = await runActivate(appId, operationId, onProgress, options);
+        return { ...result, statusRequired: (configStore.get().premiumPendingOperations || []).some(entry => entry.operationId === operationId) };
     }
 
     async function openGameFolder(appId) {
@@ -864,6 +943,7 @@ function createPremiumService({
     }
 
     return {
+        accountAction,
         activate,
         cancel,
         list,

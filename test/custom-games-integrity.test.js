@@ -8,6 +8,13 @@ const { createCustomGamesService } = require('../src/main/custom-games/custom-ga
 const { normalizeIntegrityManifest } = require('../src/main/custom-games/integrity');
 
 const hash = data => createHash('sha256').update(data).digest('hex');
+test('integrity validation accepts 200,000 distinct files and rejects a larger manifest', () => {
+    const id = '00000000-0000-4000-8000-000000000001';
+    const files = Array.from({ length: 200000 }, (_, index) => ({ path: `data/${index}.bin`, sizeBytes: 1, sha256: 'a'.repeat(64) }));
+    const manifest = { version: 1, gameId: id, archiveKey: 'package', totalSizeBytes: files.length, files };
+    assert.equal(normalizeIntegrityManifest(manifest, id, 'package', path.resolve('fixture')).files.length, 200000);
+    assert.throws(() => normalizeIntegrityManifest({ ...manifest, files: [...files, files[0]] }, id, 'package', path.resolve('fixture')), /invalid_integrity_manifest/);
+});
 function fixture() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-integrity-'));
     const disk = path.join(root, 'disk');

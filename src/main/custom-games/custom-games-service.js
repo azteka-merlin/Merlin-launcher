@@ -9,7 +9,7 @@ const { createUpdatePlan, stageUpdate, applyUpdate, recoverUpdate, removeWorkspa
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
-const MAX_FOLDER_MANIFEST_FILES = 100000;
+const MAX_FOLDER_MANIFEST_FILES = 200000;
 const MAX_FOLDER_BUNDLES = 2500;
 const MAX_BUNDLE_MEMBER_SIZE = 200 * 1024 * 1024;
 const DOWNLOAD_WORKERS = 4;

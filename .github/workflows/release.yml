@@ -116,4 +116,5 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           files: ${{ steps.release_files.outputs.files }}
+          body_path: docs/releases/${{ steps.version.outputs.version }}.md
           generate_release_notes: true
