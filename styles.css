@@ -3072,6 +3072,12 @@ webview {
     line-height: 1.5;
 }
 
+.premium-launch-notice-deadline {
+    margin-bottom: 0.7rem;
+    color: #ede9fe;
+    font-weight: 600;
+}
+
 .premium-launch-notice-path {
     display: block;
     margin-top: 0.7rem;

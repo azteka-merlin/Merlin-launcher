@@ -16,3 +16,7 @@ Home e changelog sao conteudo autenticado servido pela API. O launcher usa apena
 - Atualiza no login, na navegacao (respeitando intervalo minimo) e na troca de idioma.
 
 As rotas e a publicacao sao documentadas na API; o painel controla textos, ordem, tipo e arte.
+
+## Próximo changelog
+
+Antes de preparar uma nova versão, consultar [as alterações ainda não publicadas](../releases/UNRELEASED.md) e incluí-las nas notas do GitHub e no changelog do Admin.

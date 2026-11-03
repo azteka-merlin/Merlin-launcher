@@ -130,9 +130,10 @@ window.merlinI18n.register({
         premium_progress_cancel: 'Cancelar',
         premium_progress_done: 'Concluído',
         premium_progress_open_folder: 'Abrir pasta',
-        premium_success_activate: 'Ativação premium concluída com sucesso!',
-        premium_launch_notice_title: 'Como iniciar o jogo',
-        premium_launch_notice_steam: 'Alguns jogos podem ser iniciados diretamente pela Steam. Se este jogo pedir abertura manual, use o botão abaixo para abrir a pasta do jogo.',
+        premium_success_activate: 'Ativação Premium concluída com sucesso!',
+        premium_launch_notice_title: 'Abra o jogo agora',
+        premium_launch_notice_deadline: 'Inicie o jogo em até 15 minutos para concluir a ativação. Após esse prazo, ela pode expirar e exigir uma nova tentativa pelo suporte.',
+        premium_launch_notice_steam: 'Alguns jogos abrem diretamente pela Steam. Se este jogo exigir abertura manual, use o botão abaixo para abrir a pasta e iniciar o executável.',
         premium_launch_notice_manual: 'Alguns jogos precisam ser iniciados pelo executável na pasta do jogo. Para este jogo, use:',
         premium_duration_day: '{count}d',
         premium_duration_hour: '{count}h',
@@ -299,7 +300,8 @@ window.merlinI18n.register({
         premium_progress_done: 'Done',
         premium_progress_open_folder: 'Open folder',
         premium_success_activate: 'Premium activation completed successfully!',
-        premium_launch_notice_title: 'How to start the game',
+        premium_launch_notice_title: 'Start the game now',
+        premium_launch_notice_deadline: 'Start the game within 15 minutes to complete activation. After that, it may expire and require a new attempt through support.',
         premium_launch_notice_steam: 'Some games can be started directly from Steam. If this game requires manual launch, use the button below to open the game folder.',
         premium_launch_notice_manual: 'Some games must be started from the executable inside the game folder. For this game, use:',
         premium_duration_day: '{count}d',
@@ -467,7 +469,8 @@ window.merlinI18n.register({
         premium_progress_done: 'Hecho',
         premium_progress_open_folder: 'Abrir carpeta',
         premium_success_activate: '¡Activación premium completada correctamente!',
-        premium_launch_notice_title: 'Cómo iniciar el juego',
+        premium_launch_notice_title: 'Inicia el juego ahora',
+        premium_launch_notice_deadline: 'Inicia el juego en un plazo de 15 minutos para completar la activación. Después, puede caducar y requerir un nuevo intento a través del soporte.',
         premium_launch_notice_steam: 'Algunos juegos se pueden iniciar directamente desde Steam. Si este juego requiere inicio manual, usa el botón de abajo para abrir la carpeta del juego.',
         premium_launch_notice_manual: 'Algunos juegos deben iniciarse desde el ejecutable dentro de la carpeta del juego. Para este juego, usa:',
         premium_duration_day: '{count}d',
@@ -635,7 +638,8 @@ window.merlinI18n.register({
         premium_progress_done: 'Terminé',
         premium_progress_open_folder: 'Ouvrir le dossier',
         premium_success_activate: 'Activation premium terminée avec succès !',
-        premium_launch_notice_title: 'Comment lancer le jeu',
+        premium_launch_notice_title: 'Lancez le jeu maintenant',
+        premium_launch_notice_deadline: 'Lancez le jeu dans les 15 minutes pour terminer l’activation. Passé ce délai, elle peut expirer et nécessiter une nouvelle tentative avec l’assistance.',
         premium_launch_notice_steam: 'Certains jeux peuvent être lancés directement depuis Steam. Si ce jeu nécessite un lancement manuel, utilisez le bouton ci-dessous pour ouvrir le dossier du jeu.',
         premium_launch_notice_manual: 'Certains jeux doivent être lancés depuis l’exécutable dans le dossier du jeu. Pour ce jeu, utilisez :',
         premium_duration_day: '{count}j',
@@ -803,7 +807,8 @@ window.merlinI18n.register({
         premium_progress_done: 'Fertig',
         premium_progress_open_folder: 'Ordner öffnen',
         premium_success_activate: 'Premium-Aktivierung erfolgreich abgeschlossen!',
-        premium_launch_notice_title: 'So starten Sie das Spiel',
+        premium_launch_notice_title: 'Starte das Spiel jetzt',
+        premium_launch_notice_deadline: 'Starte das Spiel innerhalb von 15 Minuten, um die Aktivierung abzuschließen. Danach kann sie ablaufen und einen neuen Versuch über den Support erfordern.',
         premium_launch_notice_steam: 'Einige Spiele können direkt über Steam gestartet werden. Wenn dieses Spiel manuell gestartet werden muss, öffnen Sie den Spielordner über die Schaltfläche unten.',
         premium_launch_notice_manual: 'Einige Spiele müssen über die ausführbare Datei im Spielordner gestartet werden. Verwenden Sie für dieses Spiel:',
         premium_duration_day: '{count}t',
@@ -1132,6 +1137,10 @@ document.addEventListener('DOMContentLoaded', () => {
         title.className = 'premium-launch-notice-title';
         title.textContent = tr('premium_launch_notice_title');
 
+        const deadline = document.createElement('p');
+        deadline.className = 'premium-launch-notice-text premium-launch-notice-deadline';
+        deadline.textContent = tr('premium_launch_notice_deadline');
+
         const text = document.createElement('p');
         text.className = 'premium-launch-notice-text';
 
@@ -1144,10 +1153,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const pathNode = document.createElement('code');
             pathNode.className = 'premium-launch-notice-path';
             pathNode.textContent = buildExecutablePath(result?.gamePath, launchExecutablePath);
-            elements.progressLaunchNotice.append(title, text, pathNode);
+            elements.progressLaunchNotice.append(title, deadline, text, pathNode);
         } else {
             text.textContent = tr('premium_launch_notice_steam');
-            elements.progressLaunchNotice.append(title, text);
+            elements.progressLaunchNotice.append(title, deadline, text);
         }
 
         elements.progressLaunchNotice.hidden = false;
