@@ -8,7 +8,7 @@ function firstEligibleCorrection(fixes) {
         const badges = Array.isArray(fix.badges)
             ? fix.badges.map(value => String(value || '').trim().toLocaleLowerCase())
             : [];
-        if (badges.includes('hypervisor')) continue;
+        if (badges.includes('hypervisor') || badges.includes('online')) continue;
 
         const href = typeof fix.href === 'string' ? fix.href.trim() : '';
         const filename = typeof fix.filename === 'string' ? fix.filename.trim() : '';

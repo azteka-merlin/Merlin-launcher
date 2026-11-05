@@ -99,6 +99,12 @@ npm run build
 
 The installer is generated in `dist/`.
 
+After building on Windows, run `npm run test:installer`. This requires the real
+cached NSIS compiler and plugin and fails if they are unavailable. It checks
+installer/uninstaller compilation with electron-builder's include order, Steam
+shutdown decisions and DLL copying. It never runs the real installer or closes
+Steam. See [the installer regression record](INSTALLER_STEAM_SHUTDOWN_2026-11-03.md).
+
 `npm run build:release` increments the version in `package.json` before building; use `npm run build` when a version change is not intended.
 
 Full local release flow:
@@ -125,6 +131,8 @@ GitHub flow:
 - The repo has `.github/workflows/release.yml`.
 - On `master`, changing `package.json` version triggers the release workflow.
 - The workflow runs the regression tests before building a new version.
+- After the build populates the NSIS cache, `npm run test:installer` must pass
+  before creating the tag or publishing the release.
 - The workflow creates tag `v<version>` and publishes installer + `integrity.json` to GitHub Releases.
 
 ## Post-Build Checks

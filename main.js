@@ -72,6 +72,7 @@ const { migrateCloudDefault } = require('./src/main/cloud-sync/cloud-default');
 const { registerCloudSyncIpc } = require('./src/main/ipc/register-cloud-sync-ipc');
 const { createArchiveClient } = require('./src/main/network/archive-client');
 const { createApiAgent } = require('./src/main/network/api-agent');
+const { createSocialLinkOpener } = require('./src/main/network/social-link-opener');
 const { createDownloadManager } = require('./src/main/network/download-manager');
 const { createPremiumCatalogClient } = require('./src/main/premium/premium-catalog-client');
 const { createPremiumCatalogStore } = require('./src/main/premium/premium-catalog-store');
@@ -800,23 +801,21 @@ ipcMain.handle('app:download-update', (event, payload) => updateService.download
 ipcMain.handle('app:cancel-update-download', (_event, operationId) => updateService.cancelDownload(operationId));
 ipcMain.handle('app:open-downloaded-update', (_event, filePath) => updateService.openDownloadedFile(filePath));
 ipcMain.handle('app:open-downloaded-update-folder', (_event, folderPath) => updateService.openDownloadedFolder(folderPath));
-ipcMain.handle('app:open-discord-support', async () => {
+const openSocialLink = createSocialLinkOpener({ shell, getMainWindow: () => mainWindow });
+ipcMain.handle('app:open-discord-support', async event => {
     const url = 'https://discord.gg/6RKFKcGmQZ';
     if (!isAllowedDiscordUrl(url)) return { success: false };
-    await shell.openExternal(url);
-    return { success: true };
+    return openSocialLink(event, url);
 });
-ipcMain.handle('app:open-whatsapp-community', async () => {
+ipcMain.handle('app:open-whatsapp-community', async event => {
     const url = 'https://chat.whatsapp.com/Hl6fuEZfFBTBkoggTUTe87';
     if (!isAllowedWhatsAppCommunityUrl(url)) return { success: false };
-    await shell.openExternal(url);
-    return { success: true };
+    return openSocialLink(event, url);
 });
-ipcMain.handle('app:open-instagram', async () => {
+ipcMain.handle('app:open-instagram', async event => {
     const url = 'https://www.instagram.com/merlin.launcher/';
     if (!isAllowedInstagramUrl(url)) return { success: false };
-    await shell.openExternal(url);
-    return { success: true };
+    return openSocialLink(event, url);
 });
 
 app.on('web-contents-created', (_event, contents) => {

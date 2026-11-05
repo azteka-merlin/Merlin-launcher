@@ -510,6 +510,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     restart.success ? 'success' : 'error'
                 );
             }
+            await window.merlinPremiumOffer?.showForGames?.([result.item]);
             requestAnimationFrame(() => {
                 if (!linkInput.disabled) linkInput.focus();
             });
@@ -555,6 +556,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     restart.success ? 'success' : 'error'
                 );
             }
+            await window.merlinPremiumOffer?.showForGames?.(result.installed);
             requestAnimationFrame(() => {
                 if (!linkInput.disabled) linkInput.focus();
             });

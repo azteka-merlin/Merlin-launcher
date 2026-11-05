@@ -55,3 +55,15 @@ Scripts atuais da API: `deploy` e `deploy-stage` publicam o Worker com o dist Ad
 - Nao alterar formato de payload da API sem coordenar API, admin e launcher.
 - Nao mexer em arquivos do Steam sem preservar os checks atuais.
 - Nao commitar `node_modules`, `dist`, `.deps` ou `package-lock.json` neste projeto.
+
+## Regressao Do Instalador NSIS
+
+- O Electron Builder carrega includes customizados antes de registrar os plugins.
+  Funcoes que chamam nsProcess devem ser emitidas no hook `customHeader`, depois
+  desse registro. Nao mover a funcao para o corpo imediato do include.
+- Ao alterar instalacao, fechamento da Steam, includes ou plugins NSIS, executar
+  `npm run test:installer` no Windows depois do build. Essa validacao exige o
+  compilador e plugin reais; teste ignorado nao aprova a entrega.
+- Preservar a validacao obrigatoria depois do build e antes da tag/release no
+  workflow. Nao substituir compilacao real por mocks de consulta de processos.
+- Historico, causa e cenarios: `docs/INSTALLER_STEAM_SHUTDOWN_2026-11-03.md`.

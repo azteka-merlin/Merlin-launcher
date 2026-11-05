@@ -13,6 +13,7 @@
     "release:local": "npm run doctor -- --build && npm test && npm run build",
     "build:release": "npm version patch --no-git-tag-version && node build.js",
     "test": "node --test",
+    "test:installer": "node scripts/validate-installer.js",
     "metadata:opensteamtool": "node scripts/opensteamtool-metadata/cli.js"
   },
   "keywords": [

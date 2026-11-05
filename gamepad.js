@@ -4,6 +4,11 @@ class GamepadController {
         this.gamepad = null;
         this.previousButtons = {};
         this.animationFrameId = null;
+        this.inputReady = false;
+        this.resetInput = () => {
+            this.inputReady = false;
+            this.previousButtons = {};
+        };
         this.buttonMappings = {
             0: 'A',      // Button A (Xbox) / Cross (PS)
             1: 'B',      // Button B (Xbox) / Circle (PS)
@@ -29,8 +34,12 @@ class GamepadController {
 
     init() {
         // Écouter les événements de connexion/déconnexion
-        window.addEventListener('gamepadconnected', (e) => this.onGamepadConnected(e));
-        window.addEventListener('gamepaddisconnected', (e) => this.onGamepadDisconnected(e));
+        this.connectedListener = (e) => this.onGamepadConnected(e);
+        this.disconnectedListener = (e) => this.onGamepadDisconnected(e);
+        window.addEventListener('gamepadconnected', this.connectedListener);
+        window.addEventListener('gamepaddisconnected', this.disconnectedListener);
+        window.addEventListener('blur', this.resetInput);
+        document.addEventListener('visibilitychange', this.resetInput);
 
         // Démarrer la boucle de polling
         this.startPolling();
@@ -39,19 +48,24 @@ class GamepadController {
         this.updateFocusableElements();
 
         // Observer les changements dans le DOM
-        const observer = new MutationObserver(() => this.updateFocusableElements());
-        observer.observe(document.body, { childList: true, subtree: true });
+        this.observer = new MutationObserver(() => this.updateFocusableElements());
+        this.observer.observe(document.body, {
+            childList: true, subtree: true, attributes: true,
+            attributeFilter: ['hidden', 'disabled', 'inert', 'aria-hidden']
+        });
     }
 
     onGamepadConnected(event) {
         console.log('Gamepad connected:', event.gamepad);
         this.gamepad = event.gamepad;
+        this.resetInput();
         this.showGamepadIndicator();
     }
 
     onGamepadDisconnected(event) {
         console.log('Gamepad disconnected:', event.gamepad);
         this.gamepad = null;
+        this.resetInput();
         this.hideGamepadIndicator();
     }
 
@@ -78,20 +92,28 @@ class GamepadController {
     }
 
     updateGamepad() {
+        if (!this.canHandleInput()) {
+            this.resetInput();
+            return;
+        }
         // Récupérer l'état actuel des manettes
         const gamepads = navigator.getGamepads();
-
-        if (!gamepads || gamepads.length === 0) return;
-
-        // Utiliser la première manette connectée
-        for (let i = 0; i < gamepads.length; i++) {
-            if (gamepads[i]) {
-                this.gamepad = gamepads[i];
-                break;
-            }
+        const activeGamepad = Array.from(gamepads || []).find(Boolean);
+        if (!activeGamepad) {
+            this.gamepad = null;
+            this.resetInput();
+            return;
         }
-
-        if (!this.gamepad) return;
+        if (this.gamepad?.index !== activeGamepad.index || this.gamepad?.id !== activeGamepad.id) {
+            this.resetInput();
+        }
+        this.gamepad = activeGamepad;
+        // A button held in a game must be released before controlling Merlin again.
+        if (!this.inputReady) {
+            this.inputReady = this.gamepad.buttons.every(button => !button.pressed)
+                && this.gamepad.axes.every(axis => Math.abs(axis) <= 0.5);
+            return;
+        }
 
         // Traiter les boutons
         this.gamepad.buttons.forEach((button, index) => {
@@ -114,6 +136,7 @@ class GamepadController {
     }
 
     onButtonPressed(buttonName, index) {
+        if (!this.canHandleInput()) return;
         console.log(`Button pressed: ${buttonName} (${index})`);
 
         switch(buttonName) {
@@ -153,15 +176,29 @@ class GamepadController {
         }
     }
 
+    canHandleInput() {
+        return !document.hidden && document.hasFocus();
+    }
+
+    isElementVisible(element) {
+        if (!element || element.disabled || !element.isConnected
+            || element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && style.visibility !== 'hidden'
+            && element.getClientRects().length > 0;
+    }
+
     updateFocusableElements() {
+        const previous = this.focusableElements[this.currentFocusIndex];
+        const modals = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]'))
+            .filter(el => this.isElementVisible(el));
+        const scope = modals[modals.length - 1] || document;
         // Récupérer tous les éléments focusables
-        this.focusableElements = Array.from(document.querySelectorAll(
+        this.focusableElements = Array.from(scope.querySelectorAll(
             'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])'
-        )).filter(el => {
-            // Filtrer les éléments invisibles
-            const style = window.getComputedStyle(el);
-            return style.display !== 'none' && style.visibility !== 'hidden';
-        });
+        )).filter(el => this.isElementVisible(el));
+        const previousIndex = this.focusableElements.indexOf(previous);
+        this.currentFocusIndex = previousIndex >= 0 ? previousIndex : 0;
     }
 
     moveFocus(direction) {
@@ -184,6 +221,8 @@ class GamepadController {
     }
 
     pressCurrentElement() {
+        if (!this.canHandleInput()) return;
+        this.updateFocusableElements();
         const element = this.focusableElements[this.currentFocusIndex];
         if (element) {
             // Créer un effet visuel
@@ -266,8 +305,11 @@ class GamepadController {
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
         }
-        window.removeEventListener('gamepadconnected', this.onGamepadConnected);
-        window.removeEventListener('gamepaddisconnected', this.onGamepadDisconnected);
+        this.observer.disconnect();
+        window.removeEventListener('gamepadconnected', this.connectedListener);
+        window.removeEventListener('gamepaddisconnected', this.disconnectedListener);
+        window.removeEventListener('blur', this.resetInput);
+        document.removeEventListener('visibilitychange', this.resetInput);
     }
 }
 

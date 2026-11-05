@@ -52,3 +52,24 @@ Nao gravar arquivos em outros destinos. Temporarios devem ser limpos tambem em f
 Metodos: `games.resolveLink`, `games.search`, `games.listQueue`, `games.addToQueue`, `games.removeFromQueue`, `games.clearQueue`, `games.installNow`, `games.installAll`, `games.restartSteam`.
 
 Eventos: `games:queue-updated`, `games:install-progress`, `games:install-complete`. O fluxo legado tambem expoe `downloadGame` e `download-progress`.
+
+## Aviso de ativacao Premium ao adicionar
+
+- Depois de adicionar pelo launcher, o aviso consulta o catalogo Premium existente
+  para os App IDs que tiveram sucesso. Jogos sem entrada, desabilitados ou ainda
+  marcados como em breve nao geram aviso.
+- Preserva os avisos de Correcoes e de reinicio da Steam. A modal Premium vem
+  depois deles; para uma fila, lista todos os jogos correspondentes em uma unica
+  modal, sem incluir os que falharam na adicao.
+- Mostra capa/nome e explica que a ativacao depende do plano e das ativacoes
+  disponiveis. O aviso nao promete disponibilidade imediata.
+- "Ver na aba Premium" abre a aba com busca pelo nome quando ha um unico jogo;
+  para varios, limpa a busca anterior e abre o catalogo. "Fazer depois", Escape
+  e clique no fundo fecham o aviso.
+- O aviso nao reserva, ativa ou consome cota. Reutiliza `premium.list` e, quando
+  falta um jogo no cache, uma atualizacao do catalogo. Falha nessa consulta nao
+  transforma uma adicao concluida em erro.
+- Nao apresenta resposta de outra conta depois de logout. Suporta teclado,
+  foco contido na modal e os cinco idiomas do launcher.
+- Cobertura: `test/premium-offer-renderer.test.js` executa o controlador real e
+  o fluxo de adicao individual/em fila, com APIs simuladas e sem ativacoes reais.

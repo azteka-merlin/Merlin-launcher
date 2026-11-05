@@ -981,6 +981,25 @@
         </div>
     </div>
 
+    <div id="premiumAvailableModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="premiumAvailableTitle" aria-describedby="premiumAvailableDescription premiumAvailableAvailability" hidden>
+        <div class="library-modal-card correction-offer-card premium-offer-card">
+            <div class="corrections-progress-heading">
+                <span class="correction-offer-icon" aria-hidden="true"></span>
+                <div>
+                    <p class="corrections-progress-eyebrow" data-i18n="premium_offer_eyebrow">ATIVAÇÃO PREMIUM</p>
+                    <h2 id="premiumAvailableTitle" data-i18n="premium_offer_title">Este jogo possui ativação Premium</h2>
+                </div>
+            </div>
+            <ul id="premiumAvailableGames" class="premium-offer-games"></ul>
+            <p id="premiumAvailableDescription" class="correction-offer-description" data-i18n="premium_offer_description">Depois de instalar pela Steam, confira as instruções de ativação na aba Premium para jogar.</p>
+            <p id="premiumAvailableAvailability" class="correction-offer-hint" data-i18n="premium_offer_availability">A ativação depende do seu plano e das ativações disponíveis no momento.</p>
+            <div class="library-modal-actions correction-offer-actions">
+                <button id="premiumAvailableLaterBtn" class="btn btn-secondary" type="button" data-i18n="premium_offer_later">Fazer depois</button>
+                <button id="premiumAvailableOpenBtn" class="btn btn-primary" type="button" data-i18n="premium_offer_open">Ver na aba Premium</button>
+            </div>
+        </div>
+    </div>
+
     <div id="correctionsProgressModal" class="library-modal" role="dialog" aria-modal="true" aria-labelledby="correctionsProgressTitle" hidden>
         <div id="correctionsProgressCard" class="library-modal-card corrections-progress-card" data-state="progress">
             <div class="corrections-progress-heading">
@@ -1385,6 +1404,7 @@
     <script src="src/renderer/corrections/corrections.js"></script>
     <script src="src/renderer/custom-games/custom-games.js"></script>
     <script src="src/renderer/premium/premium.js"></script>
+    <script src="src/renderer/premium/premium-offer.js"></script>
     <script src="src/renderer/cloud-saves/cloud-saves.js"></script>
     <script src="src/renderer/access/access.js"></script>
     <script src="gamepad.js"></script>

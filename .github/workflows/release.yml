@@ -84,6 +84,10 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           MERLIN_CMAKE_GENERATOR: Visual Studio 17 2022
 
+      - name: Validate installer with the real NSIS toolchain
+        if: steps.tag_check.outputs.exists != 'true'
+        run: npm run test:installer
+
       - name: Create git tag
         if: steps.tag_check.outputs.exists != 'true'
         shell: pwsh

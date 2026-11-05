@@ -2,7 +2,11 @@
 Var pid
 !ifndef BUILD_UNINSTALLER
 Var steamInstallPath
+Var steamCopyFile
+Var steamCopyError
 !endif
+
+!include "${__FILEDIR__}\steam-shutdown.nsh"
 
 !macro customCheckAppRunning
   ${GetProcessInfo} 0 $pid $1 $2 $3 $4
@@ -83,41 +87,35 @@ Var steamInstallPath
     StrCpy $steamInstallPath "$PROGRAMFILES32\Steam"
   ${EndIf}
 
-  ; Shut down Steam before updating its DLLs. First let Steam exit normally,
-  ; then terminate it if it has not closed in time.
-  !insertmacro FIND_PROCESS "steam.exe" $R0
-  ${If} $R0 == 0
-    ${If} ${FileExists} "$steamInstallPath\steam.exe"
-      Exec '"$steamInstallPath\steam.exe" -shutdown'
-      Sleep 3000
-    ${EndIf}
-    !insertmacro FIND_PROCESS "steam.exe" $R0
-    ${If} $R0 == 0
-      nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM steam.exe'
-      Pop $2
-      Pop $3
-      Sleep 1500
-      !insertmacro FIND_PROCESS "steam.exe" $R0
-      ${If} $R0 == 0
-        DetailPrint 'Unable to close Steam; stopping installation.'
-        SetErrorLevel 1
-        Quit
-      ${EndIf}
-    ${EndIf}
+  Call MerlinEnsureSteamClosed
+  ${If} $steamCloseReady != "1"
+    MessageBox MB_ICONSTOP|MB_OK "Steam could not be closed. No Steam files were changed. $steamCloseError"
+    SetErrorLevel 1
+    Quit
   ${EndIf}
 !macroend
 
 !macro customInstall
+  ; Extraction and uninstall can take time. Steam may have reopened since .onInit.
+  ; Check again at the actual copy boundary, after the old Merlin has been closed.
+  Call MerlinEnsureSteamClosed
+  ${If} $steamCloseReady != "1"
+    MessageBox MB_ICONSTOP|MB_OK "Merlin was installed, but Steam could not be closed. No Steam files were changed. $steamCloseError"
+    SetErrorLevel 1
+    Quit
+  ${EndIf}
   StrCpy $0 "$steamInstallPath"
 
   ${If} ${FileExists} "$0\steam.exe"
     StrCpy $1 "0"
 
     ${If} $1 == "0"
+      StrCpy $steamCopyFile "OpenSteamTool.dll"
+      StrCpy $steamCopyError "2"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\OpenSteamTool.dll"
-        ClearErrors
-        CopyFiles /SILENT "$INSTDIR\resources\dlls\OpenSteamTool.dll" "$0\OpenSteamTool.dll"
-        ${If} ${Errors}
+        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\OpenSteamTool.dll", w "$0\OpenSteamTool.dll", i 0) i.r2 ?e'
+        Pop $steamCopyError
+        ${If} $2 == 0
           StrCpy $1 "1"
         ${EndIf}
       ${Else}
@@ -126,10 +124,12 @@ Var steamInstallPath
     ${EndIf}
 
     ${If} $1 == "0"
+      StrCpy $steamCopyFile "dwmapi.dll"
+      StrCpy $steamCopyError "2"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\dwmapi.dll"
-        ClearErrors
-        CopyFiles /SILENT "$INSTDIR\resources\dlls\dwmapi.dll" "$0\dwmapi.dll"
-        ${If} ${Errors}
+        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\dwmapi.dll", w "$0\dwmapi.dll", i 0) i.r2 ?e'
+        Pop $steamCopyError
+        ${If} $2 == 0
           StrCpy $1 "1"
         ${EndIf}
       ${Else}
@@ -138,10 +138,12 @@ Var steamInstallPath
     ${EndIf}
 
     ${If} $1 == "0"
+      StrCpy $steamCopyFile "xinput1_4.dll"
+      StrCpy $steamCopyError "2"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\xinput1_4.dll"
-        ClearErrors
-        CopyFiles /SILENT "$INSTDIR\resources\dlls\xinput1_4.dll" "$0\xinput1_4.dll"
-        ${If} ${Errors}
+        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\xinput1_4.dll", w "$0\xinput1_4.dll", i 0) i.r2 ?e'
+        Pop $steamCopyError
+        ${If} $2 == 0
           StrCpy $1 "1"
         ${EndIf}
       ${Else}
@@ -150,10 +152,12 @@ Var steamInstallPath
     ${EndIf}
 
     ${If} $1 == "0"
+      StrCpy $steamCopyFile "merlin_cloud_redirect.dll"
+      StrCpy $steamCopyError "2"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll"
-        ClearErrors
-        CopyFiles /SILENT "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll" "$0\merlin_cloud_redirect.dll"
-        ${If} ${Errors}
+        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll", w "$0\merlin_cloud_redirect.dll", i 0) i.r2 ?e'
+        Pop $steamCopyError
+        ${If} $2 == 0
           StrCpy $1 "1"
         ${EndIf}
       ${Else}
@@ -162,10 +166,12 @@ Var steamInstallPath
     ${EndIf}
 
     ${If} $1 == "0"
+      StrCpy $steamCopyFile "merlin-helper.dll"
+      StrCpy $steamCopyError "2"
       ${If} ${FileExists} "$INSTDIR\resources\dlls\merlin-helper.dll"
-        ClearErrors
-        CopyFiles /SILENT "$INSTDIR\resources\dlls\merlin-helper.dll" "$0\merlin-helper.dll"
-        ${If} ${Errors}
+        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\merlin-helper.dll", w "$0\merlin-helper.dll", i 0) i.r2 ?e'
+        Pop $steamCopyError
+        ${If} $2 == 0
           StrCpy $1 "1"
         ${EndIf}
       ${Else}
@@ -174,7 +180,10 @@ Var steamInstallPath
     ${EndIf}
 
     ${If} $1 == "1"
-      MessageBox MB_ICONEXCLAMATION|MB_OK "Merlin was installed, but the files could not be copied to the Steam folder. Make sure Steam is closed and use Repair inside Merlin."
+      FileOpen $2 "$INSTDIR\merlin-steam-install.log" w
+      FileWrite $2 "File: $steamCopyFile$\r$\nWindows error: $steamCopyError$\r$\nSteam: $steamInstallPath$\r$\n"
+      FileClose $2
+      MessageBox MB_ICONEXCLAMATION|MB_OK "Merlin could not copy $steamCopyFile to Steam. Windows error: $steamCopyError.$\r$\nDetails: $INSTDIR\merlin-steam-install.log$\r$\nUse Repair inside Merlin after resolving the error."
     ${EndIf}
   ${EndIf}
 !macroend

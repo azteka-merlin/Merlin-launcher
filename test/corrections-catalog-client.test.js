@@ -84,6 +84,21 @@ test('preserves special correction metadata from the API', async () => {
     assert.equal(result.items[0].imageUrl, 'https://generator.ryuu.lol/files/images/4080220.jpg');
 });
 
+test('excludes Online fixes and retains another eligible file for the same game', async () => {
+    const online = { href: 'https://example.com/online.zip', filename: 'online.zip', badges: ['Tested', ' oNLiNe '] };
+    const regular = { href: 'https://example.com/regular.zip', filename: 'regular.zip' };
+    const client = createCorrectionsCatalogClient({
+        axios: { get: async () => ({ data: [
+            { appid: 10, name: 'Online only', fixes: [online] },
+            { appid: 20, name: 'Alternative correction', fixes: [online, regular] },
+            { appid: 30, name: 'Regular correction', fixes: [regular] }
+        ] }) }
+    });
+    const result = await client.download();
+    assert.deepEqual(result.items.map(item => item.appId), ['20', '30']);
+    assert.equal(result.items[0].correction.filename, 'regular.zip');
+});
+
 test('keeps corrections without catalog metadata sortable after a cache refresh', async () => {
     const client = createCorrectionsCatalogClient({
         axios: {
