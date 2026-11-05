@@ -40,3 +40,7 @@ A prévia foi conferida no Merlin Test com uma ativação simulada.
 - A lista de correções filtra itens classificados como Online, mantendo outras correções elegíveis.
 
 Registrar esses itens no changelog quando a próxima versão for preparada.
+
+## Correções: abertura da lista
+
+- Corrigida a exibição da aba quando o catálogo de correções já foi carregado em segundo plano após adicionar um jogo. A lista passa a aparecer ao abrir a aba, sem precisar atualizar manualmente.

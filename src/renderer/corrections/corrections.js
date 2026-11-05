@@ -945,6 +945,10 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.button.setAttribute('aria-pressed', String(isActive));
         if (isActive && !loaded) {
             loadCorrections(true);
+        } else if (isActive && loaded) {
+            // A background correction offer can load the catalog while this
+            // view is hidden; render it when the user opens the tab.
+            render();
         }
         if (isActive) {
             void showCorrectionsDisclaimerIfNeeded();
