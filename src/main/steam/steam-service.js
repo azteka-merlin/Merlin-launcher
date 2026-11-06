@@ -164,7 +164,39 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
         });
     }
 
-    function getActiveAccountId({ liveOnly = false } = {}) {
+    function accountFromCurrentSteamLog(steamPath) {
+        if (!steamPath) return Promise.resolve(null);
+        return new Promise(resolve => {
+            const command = `powershell.exe -NoProfile -NonInteractive -Command "$p = @(Get-Process -Name steam -ErrorAction SilentlyContinue); if ($p.Count -eq 1) { $p[0].StartTime.ToUniversalTime().ToString('o') }"`;
+            exec(command, (error, stdout) => {
+                const start = Date.parse(String(stdout || '').trim());
+                if (error || !Number.isFinite(start)) return resolve(null);
+                try {
+                    const loginUsers = safeReadVdf(path.join(steamPath, 'config', 'loginusers.vdf'));
+                    const users = loginUsers?.users;
+                    if (!users || typeof users !== 'object') return resolve(null);
+                    const log = fs.readFileSync(path.join(steamPath, 'logs', 'connection_log.txt'), 'utf8');
+                    let account = null;
+                    for (const line of String(log).split(/\r?\n/)) {
+                        const match = line.match(/^\[(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)\] \[([^\]]+)\] \[U:1:(\d+)\] (.*)$/);
+                        if (!match) continue;
+                        const when = Date.parse(`${match[1]}T${match[2]}`);
+                        if (!Number.isFinite(when) || when < start - 2000) continue;
+                        const status = match[3], id = match[4], message = match[5];
+                        if (/^Logged Off|^Logging On/.test(status) || /\bLogOn\(\) called|\bLogOff\b/i.test(message)) account = null;
+                        if (/^Logged On/.test(status) && /RecvMsgClientLogOnResponse\(\) : processing complete/.test(message)) {
+                            const value = Number(id);
+                            const steamId = Number.isSafeInteger(value) && value > 0 ? (76561197960265728n + BigInt(value)).toString() : '';
+                            account = steamId && Object.hasOwn(users, steamId) ? id : null;
+                        }
+                    }
+                    resolve(account);
+                } catch (_) { resolve(null); }
+            });
+        });
+    }
+
+    function getActiveAccountId({ liveOnly = false, steamPath = null } = {}) {
         if (platform !== 'win32') return Promise.resolve(null);
         return new Promise(resolve => {
             exec('reg query "HKCU\\Software\\Valve\\Steam\\ActiveProcess" /v ActiveUser', (error, stdout) => {
@@ -172,13 +204,36 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
                 const raw = match?.[1]?.replace(/^0x/i, '');
                 const value = raw ? (/^0x/i.test(match[1]) ? Number.parseInt(raw, 16) : Number.parseInt(raw, 10)) : 0;
                 if (Number.isSafeInteger(value) && value > 0) {
+                    // Steam can briefly expose a placeholder ActiveUser while switching
+                    // accounts. Do not turn that into a valid but empty cloud list.
+                    // Only use loginusers to validate the live ID, never to guess one.
+                    if (steamPath) {
+                        const loginUsers = safeReadVdf(path.join(steamPath, 'config', 'loginusers.vdf'));
+                        const users = loginUsers?.users;
+                        const ids = users && typeof users === 'object'
+                            ? Object.keys(users).filter(id => /^\d{17}$/.test(id)) : [];
+                        if (ids.length) {
+                            const steamId = (76561197960265728n + BigInt(value)).toString();
+                            if (!ids.includes(steamId)) {
+                                accountFromCurrentSteamLog(steamPath).then(account => {
+                                    if (account) lastActiveAccountId = account;
+                                    resolve(account);
+                                });
+                                return;
+                            }
+                        }
+                    }
                     lastActiveAccountId = String(value);
                     resolve(lastActiveAccountId);
                 } else {
                     // After Steam exits, ActiveUser becomes zero. Keep only the
                     // account observed in this Merlin process; loginusers.vdf
                     // cannot tell which profile the user will choose next.
-                    resolve(liveOnly ? null : lastActiveAccountId);
+                    if (!liveOnly) return resolve(lastActiveAccountId);
+                    accountFromCurrentSteamLog(steamPath).then(account => {
+                        if (account) lastActiveAccountId = account;
+                        resolve(account);
+                    });
                 }
             });
         });

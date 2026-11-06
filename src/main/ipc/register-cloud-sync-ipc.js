@@ -8,7 +8,7 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
     ipcMain.handle('cloud-sync:account-status', async () => {
         const steamRunning = await isSteamRunning();
         const accountId = steamRunning ? await getSteamAccountId?.({ liveOnly: true }) : null;
-        return { steamRunning, accountAvailable: Boolean(accountId) };
+        return { steamRunning, accountAvailable: Boolean(accountId), accountId: accountId || null };
     });
     ipcMain.handle('cloud-sync:enable', async () => {
         if (busy) return { success: false, code: 'busy' };
@@ -79,7 +79,15 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
     ipcMain.handle('cloud-sync:list-games', async () => {
         if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
         if (!await isSteamRunning()) return { success: false, code: 'steam_closed' };
-        const accountId = await getSteamAccountId?.({ liveOnly: true });
+        let accountId = await getSteamAccountId?.({ liveOnly: true });
+        // Steam may publish its live account a moment after the process starts.
+        // Retry briefly instead of treating that transition as an empty library.
+        for (let attempt = 0; !accountId && attempt < 2; attempt += 1) {
+            await new Promise(resolve => setTimeout(resolve, 400));
+            if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
+            if (!await isSteamRunning()) return { success: false, code: 'steam_closed' };
+            accountId = await getSteamAccountId?.({ liveOnly: true });
+        }
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         try {
             const result = await cloudSyncService.listGames(accountId);

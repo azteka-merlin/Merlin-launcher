@@ -14,6 +14,7 @@ build.ps1
 ui/Resources/cloud_redirect_cli.exe
 tests/*
 !tests/pending_ops_journal_tests.cpp
+!tests/merlin_save_path_tests.cpp
 ui/CloudRedirect.Tests/
 src/testutil/
 docs/

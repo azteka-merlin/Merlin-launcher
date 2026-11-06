@@ -71,7 +71,7 @@ std::vector<uint8_t> TestReadAndHashFile(const std::string& path,
 #ifdef _WIN32
 AutoCloudUtil::AutoCloudRuleNative TestResolveMerlinSavePathAlias(
     uint32_t accountId, uint32_t appId, AutoCloudUtil::AutoCloudRuleNative rule,
-    const std::string& rootDirectory);
+    const std::string& rootDirectory, const std::string& rootName = "");
 #endif
 #endif
 

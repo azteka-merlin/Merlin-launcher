@@ -92,6 +92,41 @@ test('remembers the observed Steam account only during the same Merlin process',
     assert.equal(await service.getActiveAccountId({ liveOnly: true }), null);
 });
 
+test('does not mistake an interim Steam account for a valid empty cloud account', async () => {
+    let active = '0x1';
+    const loginPath = path.join('C:\\Steam', 'config', 'loginusers.vdf');
+    const service = createSteamService({
+        fs: { existsSync: file => file === loginPath,
+            readFileSync: () => '"users" { "76561199202663240" { "AccountName" "player" } }' },
+        path, platform: 'win32', userProfile: '',
+        exec: (_command, callback) => callback(null, `ActiveUser    REG_DWORD    ${active}`)
+    });
+    assert.equal(await service.getActiveAccountId({ liveOnly: true, steamPath: 'C:\\Steam' }), null);
+    active = '0x4a0d7b48';
+    assert.equal(await service.getActiveAccountId({ liveOnly: true, steamPath: 'C:\\Steam' }), '1242397512');
+});
+
+test('uses a confirmed login from the current Steam process when the registry is unavailable', async () => {
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    let log = `[${stamp}] [Logged On, 4, 7] [U:1:1242397512] RecvMsgClientLogOnResponse() : processing complete`;
+    let processStart = new Date(now.getTime() - 10000).toISOString();
+    const service = createSteamService({
+        fs: { existsSync: () => true, readFileSync: file => file.endsWith('loginusers.vdf')
+            ? '"users" { "76561199202663240" { "AccountName" "player" } }' : log },
+        path, platform: 'win32', userProfile: '',
+        exec: (command, callback) => command.startsWith('reg query')
+            ? callback(null, 'ActiveUser    REG_DWORD    0x0')
+            : callback(null, processStart)
+    });
+    assert.equal(await service.getActiveAccountId({ liveOnly: true, steamPath: 'C:\\Steam' }), '1242397512');
+    processStart = new Date(now.getTime() + 10000).toISOString();
+    assert.equal(await service.getActiveAccountId({ liveOnly: true, steamPath: 'C:\\Steam' }), null);
+    processStart = new Date(now.getTime() - 10000).toISOString();
+    log += `\n[${stamp}] [Logged Off, 0, 0] [U:1:1242397512] CCMInterface::SetSteamID( [U:1:1242397512] )`;
+    assert.equal(await service.getActiveAccountId({ liveOnly: true, steamPath: 'C:\\Steam' }), null);
+});
+
 
 test('finds an installed game by validating libraryfolders and the appmanifest', () => {
     const root = path.normalize('C:\\Steam');

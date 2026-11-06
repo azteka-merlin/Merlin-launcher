@@ -735,7 +735,7 @@ std::string UniqueRemoteSteamIdHint(uint32_t accountId, uint32_t appId,
         const size_t rootEnd = name.find('%', 1);
         if (!name.empty() && name.front() == '%' && rootEnd != std::string::npos) {
             const std::string expectedRoot = "%" + (rule.cloudRoot.empty() ? rule.root : rule.cloudRoot) + "%";
-            if (name.substr(0, rootEnd + 1) != expectedRoot) continue;
+            if (ToLowerAscii(name.substr(0, rootEnd + 1)) != ToLowerAscii(expectedRoot)) continue;
             name.erase(0, rootEnd + 1);
         }
         while (!name.empty() && name.front() == '/') name.erase(0, 1);
@@ -787,7 +787,9 @@ void ResolveMerlinSavePathAlias(uint32_t accountId, uint32_t appId,
         rule.path.find(token) == std::string::npos) return;
 
     const std::string rootToken = "%" + rule.root + "%";
-    const auto rootIt = roots.find(rootToken);
+    const auto rootIt = std::find_if(roots.begin(), roots.end(), [&](const auto& entry) {
+        return ToLowerAscii(entry.first) == ToLowerAscii(rootToken);
+    });
     if (rootIt == roots.end()) return;
     std::string prefix = rule.resolvedPath.substr(0, pos);
     std::string suffix = rule.resolvedPath.substr(pos + token.size());
@@ -1719,9 +1721,9 @@ std::vector<uint8_t> TestReadAndHashFile(const std::string& path,
 #ifdef _WIN32
 AutoCloudRuleNative TestResolveMerlinSavePathAlias(
     uint32_t accountId, uint32_t appId, AutoCloudRuleNative rule,
-    const std::string& rootDirectory) {
+    const std::string& rootDirectory, const std::string& rootName) {
     ResolveMerlinSavePathAlias(accountId, appId, rule,
-        {{"%" + rule.root + "%", rootDirectory}});
+        {{"%" + (rootName.empty() ? rule.root : rootName) + "%", rootDirectory}});
     return rule;
 }
 #endif

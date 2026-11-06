@@ -117,8 +117,33 @@
         const notify = (message, type = 'info') => window.showNotification?.(message, type);
         const plural = (count, one, many) => tr(count === 1 ? one : many, { count });
         const fileSummary = (count, size) => tr(count === 1 ? 'cloud_saves_file_one' : 'cloud_saves_file_many', { count, size: bytes(size) });
-        const state = { games: [], selected: null, loading: false, error: false, cached: false, cachedAccountId: null, detailRequestId: 0, listRequestId: 0 };
+        const state = { games: [], selected: null, loading: false, error: false, cached: false, cachedAccountId: null, accountId: null, detailRequestId: 0, listRequestId: 0 };
         let wasActive = false;
+        let accountMonitor = null;
+        let observedAccountId = null;
+
+        async function checkSteamAccount() {
+            if (window.merlinView?.get?.() !== 'cloud-saves' || state.loading || !window.electronAPI.cloudSync.accountStatus) return;
+            const status = await window.electronAPI.cloudSync.accountStatus().catch(() => null);
+            if (window.merlinView?.get?.() !== 'cloud-saves' || state.loading || !status) return;
+            const current = status.steamRunning && status.accountAvailable ? status.accountId : null;
+            if (current === observedAccountId) return;
+            observedAccountId = current;
+            state.listRequestId += 1;
+            state.detailRequestId += 1;
+            state.accountId = null;
+            state.selected = null;
+            state.games = [];
+            state.cached = false;
+            state.cachedAccountId = null;
+            state.error = !current;
+            elements.detailsState.hidden = true;
+            elements.detailsLoading.hidden = true;
+            elements.listState.hidden = false;
+            renderBreadcrumb();
+            renderList();
+            if (current) void loadGames();
+        }
 
         function errorMessage(code) {
             if (code === 'game_active') return tr('cloud_saves_error_game_active');
@@ -141,6 +166,11 @@
                 elements.listState.hidden = false;
                 renderBreadcrumb();
                 void loadGames();
+                if (window.electronAPI.cloudSync.accountStatus) accountMonitor = window.setInterval(() => void checkSteamAccount(), 3000);
+            }
+            if (!active && wasActive && accountMonitor !== null) {
+                window.clearInterval(accountMonitor);
+                accountMonitor = null;
             }
             wasActive = active;
         }
@@ -276,6 +306,7 @@
                     if (requestId !== state.listRequestId) return;
                     if (cached?.success && Array.isArray(cached.games)) {
                         state.cachedAccountId = cached.accountId;
+                        state.accountId = cached.accountId;
                         state.games = cached.games;
                         state.cached = true;
                         renderList();
@@ -283,8 +314,10 @@
                 }
                 const result = await window.electronAPI.cloudSync.listGames();
                 if (requestId !== state.listRequestId) return;
-                if (!result?.success) throw new Error(result?.code || 'cloud_games_failed');
-                state.games = Array.isArray(result.games) ? result.games : [];
+                if (!result?.success || !Array.isArray(result.games)) throw new Error(result?.code || 'cloud_games_failed');
+                state.games = result.games;
+                state.accountId = result.accountId || null;
+                observedAccountId = state.accountId;
                 state.error = false;
                 state.cached = false;
                 state.cachedAccountId = null;

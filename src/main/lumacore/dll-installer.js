@@ -3,31 +3,36 @@ const crypto = require('crypto');
 const MESSAGES = {
     ptbr: {
         msg: 'Arquivos necessários não encontrados. Deseja instalá-los agora?',
-        detail: 'Apenas no primeiro uso',
+        detail: 'Se a Steam estiver aberta, ela será fechada antes da instalação.',
+        closeFailed: 'Não foi possível fechar a Steam. Feche-a e tente novamente.',
         yes: 'Sim',
         no: 'Não'
     },
     en: {
         msg: 'Required files not found. Would you like to install them now?',
-        detail: 'First use only',
+        detail: 'If Steam is open, it will be closed before installation.',
+        closeFailed: 'Steam could not be closed. Close Steam and try again.',
         yes: 'Yes',
         no: 'No'
     },
     es: {
         msg: 'Archivos necesarios no encontrados. ¿Desea instalarlos ahora?',
-        detail: 'Solo en el primer uso',
+        detail: 'Si Steam está abierto, se cerrará antes de la instalación.',
+        closeFailed: 'No se pudo cerrar Steam. Ciérralo e inténtalo de nuevo.',
         yes: 'Sí',
         no: 'No'
     },
     fr: {
         msg: 'Fichiers requis introuvables. Voulez-vous les installer maintenant ?',
-        detail: 'Premier démarrage uniquement',
+        detail: 'Si Steam est ouvert, il sera fermé avant l’installation.',
+        closeFailed: 'Impossible de fermer Steam. Fermez-le et réessayez.',
         yes: 'Oui',
         no: 'Non'
     },
     de: {
         msg: 'Erforderliche Dateien nicht gefunden. Möchten Sie diese jetzt installieren?',
-        detail: 'Nur bei der ersten Nutzung',
+        detail: 'Falls Steam geöffnet ist, wird es vor der Installation geschlossen.',
+        closeFailed: 'Steam konnte nicht geschlossen werden. Schließe Steam und versuche es erneut.',
         yes: 'Ja',
         no: 'Nein'
     }
@@ -35,7 +40,7 @@ const MESSAGES = {
 
 const LEGACY_DLLS = ['LumaCore.dll'];
 
-function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, getMainWindow }) {
+function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, getMainWindow, isSteamRunning = async () => false, closeSteam = async () => false }) {
     const cloudRuntimeNames = new Set(['OpenSteamTool.dll', 'merlin_cloud_redirect.dll']);
 
     function sameContents(source, destination) {
@@ -134,7 +139,8 @@ function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, ge
         });
 
         if (missing.length === 0) {
-            removeLegacyDlls(steamPath);
+            // A read-only check must not close Steam or try to remove a loaded DLL.
+            if (!await isSteamRunning()) removeLegacyDlls(steamPath);
             notify(true);
             return { installed: false, alreadyInstalled: true, cancelled: false };
         }
@@ -153,6 +159,14 @@ function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, ge
                 const srcPath = getSourcePath(file);
                 if (!fs.existsSync(srcPath)) {
                     throw new Error(`Native DLL build output not found: ${srcPath}`);
+                }
+            }
+
+            if (await isSteamRunning()) {
+                if (!await closeSteam(steamPath) || await isSteamRunning()) {
+                    const error = new Error(message.closeFailed);
+                    error.code = 'steam_close_failed';
+                    throw error;
                 }
             }
 

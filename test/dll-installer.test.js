@@ -65,7 +65,7 @@ test('Repair replaces an existing CloudRedirect DLL with a different hash', asyn
     }
 });
 
-function createFixture({ existing = [], dialogResponse = 0 } = {}) {
+function createFixture({ existing = [], dialogResponse = 0, isSteamRunning, closeSteam } = {}) {
     const existingPaths = new Set(existing.map(item => path.normalize(item)));
     const copied = [];
     const removed = [];
@@ -116,11 +116,45 @@ function createFixture({ existing = [], dialogResponse = 0 } = {}) {
             { name: 'merlin-helper.dll', sourceName: 'merlin-helper.dll', relativeDestination: 'merlin-helper.dll' }
         ],
         getSourcePath: file => path.join('C:\\bundle', file.sourceName),
-        getMainWindow: () => mainWindow
+        getMainWindow: () => mainWindow,
+        ...(isSteamRunning ? { isSteamRunning } : {}),
+        ...(closeSteam ? { closeSteam } : {})
     });
 
     return { installer, copied, removed, notifications, existingPaths };
 }
+
+test('confirmed installation closes Steam before copying any files', async () => {
+    const steamRoot = path.normalize('C:\\Steam');
+    let running = true;
+    let fixture;
+    const sources = ['OpenSteamTool.dll', 'dwmapi.dll', 'xinput1_4.dll', 'merlin-helper.dll'].map(name => path.join('C:\\bundle', name));
+    fixture = createFixture({ existing: sources, isSteamRunning: async () => running,
+        closeSteam: async steamPath => {
+            assert.equal(steamPath, steamRoot);
+            assert.equal(fixture.copied.length, 0);
+            running = false;
+            return true;
+        } });
+    assert.equal((await fixture.installer.checkAndInstall(steamRoot, 'ptbr')).installed, true);
+    assert.equal(fixture.copied.length, 4);
+});
+
+test('cancelled installation never closes Steam or copies files', async () => {
+    let stopped = false;
+    const fixture = createFixture({ dialogResponse: 1, isSteamRunning: async () => true,
+        closeSteam: async () => { stopped = true; return true; } });
+    assert.equal((await fixture.installer.checkAndInstall('C:\\Steam')).cancelled, true);
+    assert.equal(stopped, false);
+    assert.equal(fixture.copied.length, 0);
+});
+
+test('does not copy files when Steam fails to close', async () => {
+    const sources = ['OpenSteamTool.dll', 'dwmapi.dll', 'xinput1_4.dll', 'merlin-helper.dll'].map(name => path.join('C:\\bundle', name));
+    const fixture = createFixture({ existing: sources, isSteamRunning: async () => true, closeSteam: async () => false });
+    await assert.rejects(fixture.installer.checkAndInstall('C:\\Steam'), { code: 'steam_close_failed' });
+    assert.equal(fixture.copied.length, 0);
+});
 
 test('removes legacy LumaCore.dll when the new DLLs are already present', async () => {
     const steamRoot = path.normalize('C:\\Steam');

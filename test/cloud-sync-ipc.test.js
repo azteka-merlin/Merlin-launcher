@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { registerCloudSyncIpc } = require('../src/main/ipc/register-cloud-sync-ipc');
 
-function fixture({ running = true, connected = true, installError = null, startEnabled = false, accountId = '123456' } = {}) {
+function fixture({ running = true, connected = true, installError = null, startEnabled = false, accountId = '123456', getAccountId = null } = {}) {
     const handlers = new Map();
     const events = [];
     let enabled = startEnabled;
@@ -20,6 +20,7 @@ function fixture({ running = true, connected = true, installError = null, startE
             events.push(['getGame', account, appId]);
             return { success: true, game: { appId } };
         },
+        async listGames(account) { events.push(['listGames', account]); return { success: true, games: [] }; },
         cachedGames(account) { events.push(['cachedGames', account]); return { success: true, accountId: account, games: [] }; }
     };
     registerCloudSyncIpc({
@@ -35,7 +36,7 @@ function fixture({ running = true, connected = true, installError = null, startE
         },
         getSteamPath: () => 'C:\\Steam',
         getSteamReadiness: () => ({ ok: true, reason: 'required_files_missing' }),
-        getSteamAccountId: async () => accountId,
+        getSteamAccountId: getAccountId || (async () => accountId),
         isSteamRunning: async () => running,
         stopSteam: async () => { events.push('stopSteam'); return true; },
         onStateChanged: () => events.push('stateChanged')
@@ -51,6 +52,14 @@ test('activation connects, stops Steam and installs required files without Repai
     assert.equal(result.filesReady, true);
     assert.equal(result.steamWasRunning, true);
     assert.deepEqual(events, ['connect', 'stopSteam', 'install', 'stateChanged']);
+});
+
+test('retries a temporarily unavailable Steam account before loading the games list', async () => {
+    let reads = 0;
+    const { invoke, events } = fixture({ startEnabled: true,
+        getAccountId: async () => ++reads === 1 ? null : '123456' });
+    assert.deepEqual(await invoke('cloud-sync:list-games'), { success: true, games: [], accountId: '123456' });
+    assert.deepEqual(events, [['listGames', '123456']]);
 });
 
 test('retry reconnects without toggling cloud sync off or restarting Steam', async () => {
@@ -115,7 +124,7 @@ test('restore works with Steam closed using the account observed earlier in this
 
 test('the games list is unavailable while Steam is closed, even with a cached account', async () => {
     const { invoke, events } = fixture({ startEnabled: true, running: false, accountId: '987654' });
-    assert.deepEqual(await invoke('cloud-sync:account-status'), { steamRunning: false, accountAvailable: false });
+    assert.deepEqual(await invoke('cloud-sync:account-status'), { steamRunning: false, accountAvailable: false, accountId: null });
     assert.equal((await invoke('cloud-sync:list-games')).code, 'steam_closed');
     assert.deepEqual(events, []);
 });

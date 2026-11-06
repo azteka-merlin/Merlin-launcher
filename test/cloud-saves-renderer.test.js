@@ -35,12 +35,15 @@ function renderer(getGame, options = {}) {
     };
     const window = {
         electronAPI: { cloudSync: {
+            ...(options.accountStatus ? { accountStatus: options.accountStatus } : {}),
             async cachedGames() { return options.cachedGames ? options.cachedGames() : null; },
             async listGames() { return options.listGames ? options.listGames() : { success: true, games: [{ appId: '4231820', name: 'Castlevania', backupCount: 0 }] }; },
             getGame,
         } },
         merlinI18n: { register() {}, t: key => key, current: () => 'ptbr' },
         merlinView: { get: () => view, set(value) { view = value; events.get('merlin-view-changed')(); } },
+        setInterval(handler) { events.set('account-monitor', handler); return 1; },
+        clearInterval() { events.delete('account-monitor'); },
         addEventListener(name, handler) { events.set(name, handler); },
     };
     vm.runInNewContext(script, { window, document });
@@ -126,4 +129,37 @@ test('does not keep cached games if the live Steam account changes during refres
     await settle();
     assert.equal(ui.get('cloudSavesGameList').children.length, 0);
     assert.equal(ui.get('cloudSavesErrorState').hidden, false);
+});
+
+test('does not show an empty library when the server response has no games array', async () => {
+    const ui = renderer(async () => ({ success: true, game: {} }), {
+        listGames: async () => ({ success: true }),
+    });
+    ui.window.merlinView.set('cloud-saves');
+    await settle();
+    assert.equal(ui.get('cloudSavesEmptyState').hidden, true);
+    assert.equal(ui.get('cloudSavesErrorState').hidden, false);
+});
+
+test('refreshes automatically for the new Steam account and clears the old list', async () => {
+    let account = '123456';
+    let finishSecond;
+    const ui = renderer(async () => ({ success: true, game: {} }), {
+        accountStatus: async () => ({ steamRunning: true, accountAvailable: true, accountId: account }),
+        listGames: () => account === '123456'
+            ? Promise.resolve({ success: true, accountId: account, games: [{ appId: '730', name: 'Old' }] })
+            : new Promise(resolve => { finishSecond = resolve; }),
+    });
+    ui.window.merlinView.set('cloud-saves');
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 1);
+    account = '654321';
+    ui.events.get('account-monitor')();
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 0);
+    finishSecond({ success: true, accountId: account, games: [{ appId: '440', name: 'New' }] });
+    await settle();
+    assert.equal(ui.get('cloudSavesGameList').children.length, 1);
+    ui.window.merlinView.set('settings');
+    assert.equal(ui.events.has('account-monitor'), false);
 });

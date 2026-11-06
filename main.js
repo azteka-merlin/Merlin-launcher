@@ -556,7 +556,9 @@ const dllInstaller = createDllInstaller({
     dialog,
     requiredFiles: REQUIRED_STEAM_FILES,
     getSourcePath: getBundledSteamRuntimePath,
-    getMainWindow: () => mainWindow
+    getMainWindow: () => mainWindow,
+    isSteamRunning: () => steamService.isRunning(),
+    closeSteam: steamPath => steamService.close(steamPath)
 });
 
 let preparingCloudRuntime = false;
@@ -756,7 +758,7 @@ registerCloudSyncIpc({
     dllInstaller,
     getSteamPath: () => configStore.get().steamPath,
     getSteamReadiness: () => steamService.getActivationReadiness(configStore.get().steamPath),
-    getSteamAccountId: options => steamService.getActiveAccountId(options),
+    getSteamAccountId: options => steamService.getActiveAccountId({ ...options, steamPath: configStore.get().steamPath }),
     isSteamRunning: () => steamService.isRunning(),
     stopSteam: () => steamService.close(configStore.get().steamPath),
     onStateChanged: () => { applyLoginItemSettings(); updateTray(); }
