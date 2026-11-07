@@ -106,11 +106,11 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return catalogStore.upsertMany(entries);
     }
 
-    async function searchRemoteWithStatus(query, { limit = 4 } = {}) {
+    async function searchRemoteWithStatus(query, { limit = 4, metadataOnly = false } = {}) {
         if (!searchClient?.search) return { items: [], online: false };
 
         try {
-            const items = (await searchClient.search(query, { limit }))
+            const items = (await searchClient.search(query, { limit, ...(metadataOnly ? { metadataOnly: true } : {}) }))
                 .map(normalizeRemoteGame)
                 .filter(Boolean);
             rememberEntries(items);
@@ -125,7 +125,7 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return (await searchRemoteWithStatus(query, options)).items;
     }
 
-    async function enrichAppIds(appIds, { allowCatalogRefresh = true } = {}) {
+    async function enrichAppIds(appIds, { allowCatalogRefresh = true, metadataOnly = false } = {}) {
         const normalizedAppIds = [...new Set(
             (appIds || [])
                 .map(appId => String(appId || '').trim())
@@ -138,7 +138,7 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
 
         for (const appId of normalizedAppIds) {
             const localMatch = findByAppId(appId);
-            if (localMatch?.coverUrl) {
+            if (localMatch?.coverUrl || (metadataOnly && localMatch?.name)) {
                 resolved.set(appId, localMatch);
             } else if (localMatch) {
                 localFallbacks.set(appId, localMatch);
@@ -151,7 +151,7 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         if (unresolved.length > 0) {
             const remoteMatches = await Promise.all(
                 unresolved.map(async appId => {
-                    const remoteMatch = (await searchRemote(appId, { limit: 4 }))
+                    const remoteMatch = (await searchRemote(appId, { limit: 4, metadataOnly }))
                         .find(item => item.appId === appId) || null;
                     return [appId, remoteMatch];
                 })
@@ -164,7 +164,7 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
             }
         }
 
-        if (allowCatalogRefresh) {
+        if (allowCatalogRefresh && !metadataOnly) {
             const stillMissing = normalizedAppIds.filter(appId => !resolved.has(appId));
             if (stillMissing.length > 0) {
                 await refresh();

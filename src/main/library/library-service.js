@@ -15,8 +15,11 @@ function createLibraryService({
     shell
 }) {
     let cachedItems = null;
+    let metadataRefresh = null;
+    let metadataGeneration = 0;
 
     function invalidate() {
+        metadataGeneration += 1;
         cachedItems = null;
     }
 
@@ -47,12 +50,10 @@ function createLibraryService({
             }));
     }
 
-    function shouldResolveFromRemote(entry, forceRefresh) {
-        if (!entry) return true;
-        if (!entry.name) return true;
-        if (entry.coverUrl) return false;
-        if (forceRefresh) return true;
-        return !entry.notFoundInCatalog;
+    function shouldResolveFromRemote(entry) {
+        // The metadata-only API supplies names; photo loading is independent.
+        // An absent photo is never a reason to query names again.
+        return !entry?.name;
     }
 
     function needsMetadata(entry) {
@@ -63,13 +64,15 @@ function createLibraryService({
         if (!catalogEntry) return false;
         return cacheStore.merge(appId, {
             name: catalogEntry.name,
-            coverUrl: catalogEntry.coverUrl,
-            coverSource: catalogEntry.coverSource,
+            ...(catalogEntry.coverUrl ? {
+                coverUrl: catalogEntry.coverUrl,
+                coverSource: catalogEntry.coverSource
+            } : {}),
             notFoundInCatalog: false
         });
     }
 
-    async function resolveMetadata(appIds, { forceCatalogRefresh = false } = {}) {
+    async function resolveMetadata(appIds, { force = false, generation = metadataGeneration } = {}) {
         cacheStore.load();
         catalogStore.load();
         const unresolved = new Set();
@@ -79,38 +82,39 @@ function createLibraryService({
             const localCatalogEntry = catalogStore.get(appId);
             if (localCatalogEntry && needsMetadata(entry)) {
                 applyCatalogData(appId, localCatalogEntry);
-                continue;
             }
-            if (!shouldResolveFromRemote(entry, forceCatalogRefresh)) continue;
+            if (!shouldResolveFromRemote(cacheStore.get(appId))) continue;
             unresolved.add(appId);
         }
 
         if (unresolved.size > 0 && appIds.length > 0) {
             const enrichedEntries = await catalogService.enrichAppIds([...unresolved], {
-                allowCatalogRefresh: forceCatalogRefresh || catalogStore.needsBootstrap()
+                allowCatalogRefresh: false,
+                metadataOnly: true
             });
+            if (generation !== metadataGeneration) return;
 
             for (const appId of unresolved) {
                 const resolvedEntry = enrichedEntries.get(appId) || catalogStore.get(appId);
                 if (resolvedEntry) {
                     applyCatalogData(appId, resolvedEntry);
-                } else {
-                    cacheStore.merge(appId, { notFoundInCatalog: true });
                 }
             }
         }
     }
 
-    async function buildItems(paths, { forceCatalogRefresh = false } = {}) {
-        const luaFiles = managedLuaFiles(paths.luaDirectory);
-        const appIdsNeedingMetadata = luaFiles
-            .map(file => file.appId)
-            .filter(appId => forceCatalogRefresh || needsMetadata(cacheStore.get(appId)));
+    function coverForLibrary(appId, value) {
+        if (typeof value === 'string' && value && !value.includes('/api/game-covers/')) return value;
+        return /^\d+$/.test(String(appId)) ? `https://generator.ryuu.lol/files/images/${appId}.jpg` : null;
+    }
 
-        if (appIdsNeedingMetadata.length > 0 && (catalogStore.needsBootstrap() || forceCatalogRefresh)) {
-            await resolveMetadata(luaFiles.map(file => file.appId), { forceCatalogRefresh: true });
-        } else if (appIdsNeedingMetadata.length > 0) {
-            await resolveMetadata(appIdsNeedingMetadata, { forceCatalogRefresh: false });
+    function buildItems(paths) {
+        cacheStore.load();
+        catalogStore.load();
+        const luaFiles = managedLuaFiles(paths.luaDirectory);
+        for (const file of luaFiles) {
+            const localEntry = catalogStore.get(file.appId);
+            if (localEntry && needsMetadata(cacheStore.get(file.appId))) applyCatalogData(file.appId, localEntry);
         }
 
         return luaFiles
@@ -119,7 +123,7 @@ function createLibraryService({
                 return {
                     appId: file.appId,
                     gameName: metadata?.name || '',
-                    coverUrl: metadata?.coverUrl || null
+                    coverUrl: coverForLibrary(file.appId, metadata?.coverUrl)
                 };
             })
             .sort((left, right) =>
@@ -133,12 +137,41 @@ function createLibraryService({
             if (!force && cachedItems) {
                 return { success: true, items: cachedItems.map(item => ({ ...item })) };
             }
-            cachedItems = await buildItems(paths, { forceCatalogRefresh: force });
+            cachedItems = buildItems(paths);
             return { success: true, items: cachedItems.map(item => ({ ...item })) };
         } catch (error) {
             console.error('Unable to load Library:', error);
             return { success: false, code: 'load_failed' };
         }
+    }
+
+    function refreshMetadata({ force = false } = {}) {
+        if (metadataRefresh) return metadataRefresh;
+        const generation = metadataGeneration;
+        const task = (async () => {
+            const paths = steamPaths();
+            if (!paths.success) return paths;
+            const before = JSON.stringify(cachedItems || []);
+            const appIds = managedLuaFiles(paths.luaDirectory).map(file => file.appId);
+            // Small batches avoid a request burst for a newly created cache.
+            for (let offset = 0; offset < appIds.length; offset += 4) {
+                if (generation !== metadataGeneration) return { success: false, code: 'superseded' };
+                await resolveMetadata(appIds.slice(offset, offset + 4), { force, generation });
+            }
+            const currentPaths = steamPaths();
+            if (generation !== metadataGeneration || currentPaths.steamPath !== paths.steamPath) {
+                return { success: false, code: 'superseded' };
+            }
+            if (!currentPaths.success) return currentPaths;
+            // Read the current files again: a game may have been removed during the request.
+            cachedItems = buildItems(currentPaths);
+            return { success: true, items: cachedItems.map(item => ({ ...item })), changed: before !== JSON.stringify(cachedItems) };
+        })().catch(error => {
+            console.warn('Unable to update Library metadata:', error.message);
+            return { success: false, code: 'metadata_unavailable' };
+        });
+        metadataRefresh = task.finally(() => { metadataRefresh = null; });
+        return metadataRefresh;
     }
 
     function recordName(appId, gameNameOrMetadata) {
@@ -281,7 +314,7 @@ function createLibraryService({
         }
     }
 
-    return { invalidate, list, openGameFolder, recordName, remove, restartSteam };
+    return { invalidate, list, refreshMetadata, openGameFolder, recordName, remove, restartSteam };
 }
 
 module.exports = { createLibraryService };

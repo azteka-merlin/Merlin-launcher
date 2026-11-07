@@ -667,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fallbackCoverUrl(appId) {
         return /^\d+$/.test(String(appId || '').trim())
-            ? `https://generator.ryuu.lol/files/images/${appId}.jpg`
+            ? (window.merlinGameCovers?.url?.(appId) || `https://generator.ryuu.lol/files/images/${appId}.jpg`)
             : null;
     }
 
@@ -812,7 +812,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    function coverElement(item) {
+    function coverElement(item, retainedImage) {
+        if (retainedImage) return retainedImage;
         const initialImageUrl = item.imageUrl || fallbackCoverUrl(item.appId);
         const hasImage = Boolean(initialImageUrl);
         const cover = document.createElement(hasImage ? 'img' : 'div');
@@ -820,21 +821,16 @@ document.addEventListener('DOMContentLoaded', () => {
         cover.setAttribute('aria-hidden', 'true');
 
         if (hasImage) {
-            cover.src = initialImageUrl;
             cover.alt = '';
             cover.loading = 'lazy';
             cover.decoding = 'async';
             cover.addEventListener('error', () => {
-                const fallback = fallbackCoverUrl(item.appId);
-                if (fallback && !cover.dataset.ryuuFallbackApplied && cover.src !== fallback) {
-                    cover.dataset.ryuuFallbackApplied = 'true';
-                    cover.src = fallback;
-                    return;
-                }
                 const placeholder = document.createElement('div');
                 placeholder.className = 'correction-card-cover correction-card-cover-placeholder';
                 cover.replaceWith(placeholder);
             });
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, initialImageUrl);
+            else cover.src = initialImageUrl;
         } else {
             cover.classList.add('correction-card-cover-placeholder');
         }
@@ -843,6 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCards(visibleItems) {
+        const retainedCovers = window.merlinGameCovers?.retain?.(elements.grid) || new Map();
         elements.grid.replaceChildren();
 
         for (const item of visibleItems) {
@@ -862,7 +859,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const imageWrap = document.createElement('div');
             imageWrap.className = 'correction-card-image-wrap';
-            imageWrap.append(coverElement(item));
+            imageWrap.append(coverElement(item, retainedCovers.get(String(item.appId))));
 
             const title = document.createElement('h3');
             title.className = 'correction-card-title';
@@ -986,7 +983,6 @@ document.addEventListener('DOMContentLoaded', () => {
             items = sortItems(result.items);
             loaded = true;
             currentPage = 1;
-            render();
 
             if (result.stale) {
                 notify(tr('corrections_refresh_stale'));
@@ -1036,7 +1032,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cover.hidden = true;
                 return;
             }
-            cover.src = url;
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, url);
+            else cover.src = url;
         };
 
         cover.onload = () => {

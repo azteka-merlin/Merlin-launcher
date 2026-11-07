@@ -1051,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fallbackCoverUrl(appId) {
         return /^\d+$/.test(String(appId || ''))
-            ? `https://generator.ryuu.lol/files/images/${appId}.jpg`
+            ? (window.merlinGameCovers?.url?.(appId) || `https://generator.ryuu.lol/files/images/${appId}.jpg`)
             : null;
     }
 
@@ -1384,27 +1384,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function coverElement(item) {
+    function coverElement(item, retainedImage) {
+        if (retainedImage) return retainedImage;
+        item = {...item,imageUrl:item.imageUrl || fallbackCoverUrl(item.appId)};
         const image = document.createElement(item.imageUrl ? 'img' : 'div');
         image.className = 'correction-card-cover';
         image.setAttribute('aria-hidden', 'true');
 
         if (item.imageUrl) {
-            image.src = item.imageUrl;
             image.alt = '';
             image.loading = 'lazy';
             image.decoding = 'async';
             image.addEventListener('error', () => {
-                const fallbackUrl = fallbackCoverUrl(item.appId);
-                if (fallbackUrl && image.src !== fallbackUrl) {
-                    image.src = fallbackUrl;
-                    return;
-                }
                 const placeholder = document.createElement('div');
                 placeholder.className = 'correction-card-cover correction-card-cover-placeholder';
                 placeholder.setAttribute('aria-hidden', 'true');
                 image.replaceWith(placeholder);
             });
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(image, item.appId, item.imageUrl);
+            else image.src = item.imageUrl;
             return image;
         }
 
@@ -1572,6 +1570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.noResults.hidden = items.length === 0 || filtered.length !== 0;
         elements.gridWrap.hidden = visible.length === 0;
         elements.footer.hidden = visible.length === 0;
+        const retainedCovers = window.merlinGameCovers?.retain?.(elements.grid) || new Map();
         elements.grid.replaceChildren();
 
         visible.forEach(item => {
@@ -1581,7 +1580,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const imageWrap = document.createElement('div');
             imageWrap.className = 'correction-card-image-wrap';
-            imageWrap.append(coverElement(item));
+            imageWrap.append(coverElement(item, retainedCovers.get(String(item.appId))));
 
             const title = document.createElement('strong');
             title.className = 'correction-card-title';
@@ -1781,7 +1780,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             loaded = true;
             currentPage = 1;
-            render();
 
             if (result.stale) {
                 notify(tr('premium_refresh_stale'));
@@ -2069,13 +2067,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderWishlist() {
         if (!wishlist.grid) return;
+        const retainedCovers = window.merlinGameCovers?.retain?.(wishlist.grid) || new Map();
         wishlist.grid.replaceChildren();
         const wished = items.filter(item => item.viewer.wishlisted);
         wishlist.empty.hidden = wished.length > 0;
         wishlist.empty.textContent = tr(!loaded && loading ? 'premium_loading' : 'premium_wishlist_empty');
         for (const item of wished) {
             const card = document.createElement('article'); card.className = 'correction-card premium-entry-card';
-            const image = document.createElement('div'); image.className = 'correction-card-image-wrap'; image.append(coverElement(item));
+            const image = document.createElement('div'); image.className = 'correction-card-image-wrap'; image.append(coverElement(item, retainedCovers.get(String(item.appId))));
             const title = document.createElement('strong'); title.className = 'correction-card-title'; title.textContent = displayName(item);
             const status = document.createElement('p'); status.className = 'premium-wishlist-meta'; status.textContent = tr(item.comingSoon ? 'premium_wishlist_soon' : 'premium_wishlist_available');
             const actions = document.createElement('div'); actions.className = 'correction-card-actions';

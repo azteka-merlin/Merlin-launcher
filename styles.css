@@ -2590,15 +2590,22 @@ webview {
 .correction-card-image-wrap {
     overflow: hidden;
     border-radius: 8px;
+    background: rgba(148, 163, 184, 0.06);
 }
 
 .correction-card-cover {
+    display: block;
     width: 100%;
     aspect-ratio: 460 / 215;
     object-fit: cover;
     border: 1px solid rgba(148, 163, 184, 0.14);
     border-radius: 8px;
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(139, 92, 246, 0.14));
+}
+
+/* Keep the reserved image space without painting an empty native <img> frame. */
+img.merlin-game-cover-pending {
+    opacity: 0;
 }
 
 .correction-card-cover-placeholder {
@@ -2611,19 +2618,23 @@ webview {
     position: absolute;
     inset: 50%;
     transform: translate(-50%, -50%);
-    border-radius: 999px;
 }
 
 .correction-card-cover-placeholder::before {
-    width: 34px;
-    height: 34px;
-    background: rgba(148, 163, 184, 0.14);
+    width: 36px;
+    height: 28px;
+    border: 2px solid rgba(148, 163, 184, 0.35);
+    border-radius: 5px;
+    background: none;
 }
 
 .correction-card-cover-placeholder::after {
-    width: 14px;
-    height: 14px;
-    background: rgba(226, 232, 240, 0.34);
+    width: 17px;
+    height: 12px;
+    border-left: 2px solid rgba(148, 163, 184, 0.35);
+    border-top: 2px solid rgba(148, 163, 184, 0.35);
+    transform: translate(-50%, -20%) rotate(45deg);
+    background: none;
 }
 
 .correction-card-title {
@@ -5082,6 +5093,20 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
     border-color: rgba(107, 114, 137, 0.28);
 }
 
+#serviceStatusCloseBtn {
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+}
+
+#serviceStatusCloseBtn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
 .service-status-image {
     display: block;
     width: min(100%, 420px);
@@ -5091,6 +5116,7 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
     object-position: center center;
     background: transparent;
     filter: drop-shadow(0 24px 36px rgba(0, 0, 0, 0.28));
+    pointer-events: none;
 }
 
 .service-status-hint {

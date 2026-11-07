@@ -57,6 +57,8 @@ const { registerHomeIpc } = require('./src/main/ipc/register-home-ipc');
 const { registerReleaseNotesIpc } = require('./src/main/ipc/register-release-notes-ipc');
 const { registerGamesIpc } = require('./src/main/ipc/register-games-ipc');
 const { registerLibraryIpc } = require('./src/main/ipc/register-library-ipc');
+const { registerGameCoversIpc } = require('./src/main/ipc/register-game-covers-ipc');
+const { createGameCoverService } = require('./src/main/games/game-cover-service');
 const { registerPremiumIpc } = require('./src/main/ipc/register-premium-ipc');
 const { registerPollsIpc } = require('./src/main/ipc/register-polls-ipc');
 const { registerSteamPluginIpc } = require('./src/main/ipc/register-steam-plugin-ipc');
@@ -354,7 +356,7 @@ const libraryCatalogStore = createLibraryCatalogStore({
 });
 const libraryCatalogService = createLibraryCatalogService({
     catalogStore: libraryCatalogStore,
-    catalogClient: createLibraryCatalogClient({ axios }),
+    catalogClient: createLibraryCatalogClient({ axios, authSession, httpsAgent: apiAgent, url: `${apiBaseUrl}/games/catalog-cache` }),
     searchClient: createGameSearchClient({
         axios,
         authSession,
@@ -733,6 +735,7 @@ registerSupportLogIpc({
 
 registerGamesIpc({ ipcMain, addGamesService });
 registerLibraryIpc({ ipcMain, libraryService });
+registerGameCoversIpc({ ipcMain, gameCoverService: createGameCoverService({ axios, cacheDirectory: () => path.join(app.getPath('userData'),'cache','game-covers'), simulateRyuuFailure: !app.isPackaged && process.env.MERLIN_SIMULATE_RYUU_FAILURE === '1' }) });
 registerCorrectionsIpc({ ipcMain, correctionsService });
 registerCustomGamesIpc({ ipcMain, service: customGamesService, getMainWindow: () => mainWindow });
 registerPremiumIpc({ ipcMain, premiumService });

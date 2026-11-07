@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function fallbackCoverUrl(appId) {
         const normalizedAppId = String(appId || '').trim();
         return /^\d+$/.test(normalizedAppId)
-            ? `https://generator.ryuu.lol/files/images/${normalizedAppId}.jpg`
+            ? (window.merlinGameCovers?.url?.(normalizedAppId) || `https://generator.ryuu.lol/files/images/${normalizedAppId}.jpg`)
             : null;
     }
 
@@ -222,24 +222,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function queueCoverElement(game) {
+        game = {...game,coverUrl:game.coverUrl || fallbackCoverUrl(game.appId)};
         if (game.coverUrl) {
             const image = document.createElement('img');
             image.className = 'game-queue-cover';
-            image.src = game.coverUrl;
             image.alt = '';
             image.loading = 'lazy';
             image.decoding = 'async';
             image.addEventListener('error', () => {
-                const fallbackUrl = fallbackCoverUrl(game.appId);
-                if (fallbackUrl && !image.dataset.ryuuFallbackApplied && image.src !== fallbackUrl) {
-                    image.dataset.ryuuFallbackApplied = 'true';
-                    image.src = fallbackUrl;
-                    return;
-                }
                 const placeholder = document.createElement('div');
                 placeholder.className = 'game-queue-cover game-queue-cover-placeholder';
                 image.replaceWith(placeholder);
             });
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(image, game.appId, game.coverUrl);
+            else image.src = game.coverUrl;
             return image;
         }
         const placeholder = document.createElement('div');

@@ -65,10 +65,9 @@ function serviceFor(fixture, download, overrides = {}) {
         catalogStore: fixture.catalogStore,
         catalogService: {
             enrichAppIds: async (appIds, { allowCatalogRefresh = true } = {}) => {
-                if (allowCatalogRefresh) {
-                    const downloaded = await download();
-                    fixture.catalogStore.replace(downloaded.games);
-                }
+                assert.equal(allowCatalogRefresh, false, 'Library must never download the Ryuu catalog');
+                const downloaded = await download();
+                Object.assign(fixture.catalog, downloaded.games);
 
                 const resolved = new Map();
                 for (const appId of appIds) {
@@ -143,7 +142,7 @@ test('uses the local catalog before downloading the remote catalog', async t => 
     assert.equal(fixture.cache['2'].coverUrl, 'https://example.com/catalog.jpg');
 });
 
-test('downloads the remote catalog when metadata is missing locally', async t => {
+test('returns the local library first and enriches missing metadata separately', async t => {
     const fixture = createFixture();
     t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
     fs.writeFileSync(path.join(fixture.luaDirectory, '3.lua'), 'addappid(3)');
@@ -165,12 +164,15 @@ test('downloads the remote catalog when metadata is missing locally', async t =>
     const result = await service.list();
 
     assert.equal(result.success, true);
+    assert.equal(downloads, 0);
+    assert.equal(result.items[0].gameName, '');
+    const enriched = await service.refreshMetadata();
     assert.equal(downloads, 1);
-    assert.equal(result.items[0].gameName, 'Remote Game');
-    assert.equal(result.items[0].coverUrl, 'https://example.com/remote.jpg');
+    assert.equal(enriched.items[0].gameName, 'Remote Game');
+    assert.equal(enriched.items[0].coverUrl, 'https://example.com/remote.jpg');
 });
 
-test('marks missing catalog entries during normal loads and retries them on refresh', async t => {
+test('does not poison missing metadata and allows a later explicit retry', async t => {
     const fixture = createFixture();
     t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
     fs.writeFileSync(path.join(fixture.luaDirectory, '4.lua'), 'addappid(4)');
@@ -196,16 +198,17 @@ test('marks missing catalog entries during normal loads and retries them on refr
 
     assert.equal(first.success, true);
     assert.equal(first.items[0].gameName, '');
-    assert.equal(first.items[0].coverUrl, null);
-    assert.equal(downloads, 1);
+    assert.equal(first.items[0].coverUrl, 'https://generator.ryuu.lol/files/images/4.jpg');
+    assert.equal(downloads, 0);
+    await service.refreshMetadata();
 
     const second = await service.list();
 
     assert.equal(second.success, true);
-    assert.equal(fixture.cache['4'].notFoundInCatalog, true);
+    assert.notEqual(fixture.cache['4']?.notFoundInCatalog, true);
     assert.equal(downloads, 1);
 
-    const refreshed = await service.list({ force: true });
+    const refreshed = await service.refreshMetadata({ force: true });
 
     assert.equal(refreshed.success, true);
     assert.equal(downloads, 2);
@@ -214,7 +217,7 @@ test('marks missing catalog entries during normal loads and retries them on refr
     assert.equal(fixture.cache['4'].notFoundInCatalog, false);
 });
 
-test('reuses a local catalog fallback image even when the cache was previously marked as not found', async t => {
+test('keeps original local photo hints for the persistent cover service', async t => {
     const fixture = createFixture();
     t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
     fs.writeFileSync(path.join(fixture.luaDirectory, '1736800.lua'), 'addappid(1736800)');
@@ -242,6 +245,91 @@ test('reuses a local catalog fallback image even when the cache was previously m
     assert.equal(result.items[0].coverUrl, 'https://generator.ryuu.lol/files/images/1736800.jpg');
     assert.equal(fixture.cache['1736800'].coverUrl, 'https://generator.ryuu.lol/files/images/1736800.jpg');
     assert.equal(fixture.cache['1736800'].notFoundInCatalog, false);
+});
+
+test('a hanging metadata provider never blocks list or refresh and concurrent lookups are coalesced', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(fixture.luaDirectory, '3.lua'), 'addappid(3)');
+    let finish;
+    const service = serviceFor(fixture, () => new Promise(resolve => { finish = resolve; }));
+    const pending = service.refreshMetadata();
+    assert.equal(service.refreshMetadata(), pending);
+    const result = await Promise.race([service.list({ force: true }), new Promise(resolve => setImmediate(() => resolve('blocked')))]);
+    assert.notEqual(result, 'blocked');
+    assert.equal(result.success, true); assert.equal(result.items[0].appId, '3');
+    finish({ games: {} }); await pending;
+});
+
+test('a known name without a photo needs no network lookup even while the provider is offline', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(fixture.luaDirectory, '3.lua'), 'addappid(3)');
+    fixture.cache['3'] = { name: 'Local name', coverUrl: null };
+    const service = serviceFor(fixture, async () => { assert.fail('Photo absence must not trigger name lookups'); });
+    const initial = await service.list();
+    assert.equal(initial.items[0].gameName, 'Local name');
+    const background = await service.refreshMetadata();
+    assert.equal(background.success, true);
+    const after = await service.list();
+    assert.equal(after.success, true); assert.equal(after.items[0].gameName, 'Local name');
+    assert.notEqual(fixture.cache['3'].notFoundInCatalog, true);
+});
+
+test('a local catalog name without a cover is complete for metadata-only mode', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(fixture.luaDirectory, '3.lua'), 'addappid(3)');
+    fixture.catalog['3'] = { name: 'Local name', coverUrl: null };
+    let lookups = 0;
+    const service = serviceFor(fixture, async () => {
+        lookups++;
+        return { games: { '3': { name: 'Local name', coverUrl: 'https://example.test/cover.jpg' } } };
+    });
+    assert.equal((await service.list()).items[0].gameName, 'Local name');
+    assert.equal(lookups, 0);
+    const result = await service.refreshMetadata();
+    assert.equal(lookups, 0); assert.equal(result.items[0].coverUrl, 'https://generator.ryuu.lol/files/images/3.jpg');
+});
+
+test('a game removed during enrichment does not reappear in the result', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(fixture.luaDirectory, '3.lua'), 'addappid(3)');
+    let finish;
+    const service = serviceFor(fixture, () => new Promise(resolve => { finish = resolve; }));
+    await service.list(); const pending = service.refreshMetadata();
+    await service.remove('3');
+    finish({ games: { '3': { name: 'Old response', coverUrl: null } } });
+    const result = await pending;
+    assert.equal(result.items.length, 0);
+});
+
+test('name-only catalog metadata preserves a photo already stored locally and does not repeat name queries',async t=>{
+    const fixture=createFixture();
+    t.after(()=>fs.rmSync(fixture.root,{recursive:true,force:true}));
+    fs.writeFileSync(path.join(fixture.luaDirectory,'3.lua'),'addappid(3)');
+    fixture.cache['3']={name:'',coverUrl:'https://shared.fastly.steamstatic.com/steam/apps/3/header.jpg',coverSource:'header_image'};
+    fixture.catalog['3']={name:'Known game',coverUrl:null,coverSource:null};
+    const service=serviceFor(fixture,async()=>assert.fail('The name is already known'));
+    const first=await service.list();
+    assert.equal(first.items[0].gameName,'Known game');
+    assert.equal(first.items[0].coverUrl,'https://shared.fastly.steamstatic.com/steam/apps/3/header.jpg');
+    await service.refreshMetadata();await service.refreshMetadata({force:true});
+    assert.equal(fixture.cache['3'].coverUrl,'https://shared.fastly.steamstatic.com/steam/apps/3/header.jpg');
+});
+
+test('old metadata cannot overwrite a newly remembered game name', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(fixture.luaDirectory, '3.lua'), 'addappid(3)');
+    let finish;
+    const service = serviceFor(fixture, () => new Promise(resolve => { finish = resolve; }));
+    const pending = service.refreshMetadata();
+    service.recordName('3', { name: 'New name', coverUrl: 'https://example.test/cover.jpg' });
+    finish({ games: { '3': { name: 'Old name', coverUrl: null } } });
+    assert.equal((await pending).code, 'superseded');
+    assert.equal((await service.list()).items[0].gameName, 'New name');
 });
 
 test('removes the Lua and exclusive manifests but preserves shared manifests', async t => {

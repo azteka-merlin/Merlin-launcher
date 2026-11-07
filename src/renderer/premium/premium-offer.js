@@ -76,15 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const image = document.createElement('img');
             image.alt = '';
             image.hidden = true;
-            const fallback = `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
-            let cover = fallback;
-            try { if (new URL(game.imageUrl).protocol === 'https:') cover = game.imageUrl; } catch (_) { /* Use the Steam cover. */ }
+            const fallback = window.merlinGameCovers?.url?.(game.appId) || `https://generator.ryuu.lol/files/images/${game.appId}.jpg`;
+            const cover = game.coverUrl || game.imageUrl || fallback;
             image.onload = () => { image.hidden = false; };
             image.onerror = () => {
-                if (image.src !== fallback) image.src = fallback;
-                else { image.hidden = true; image.onload = null; image.onerror = null; }
+                image.hidden = true; image.onload = null; image.onerror = null;
             };
-            image.src = cover;
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(image, game.appId, cover);
+            else image.src = cover;
             const name = document.createElement('strong');
             name.textContent = game.gameName;
             row.append(image, name);

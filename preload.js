@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // direct APIs to renderer in a secure way
 contextBridge.exposeInMainWorld('electronAPI', {
+    gameCovers: {
+        load: (appId, sourceUrl) => ipcRenderer.invoke('game-covers:load', appId, sourceUrl)
+    },
     // Development-only QA switches. They are unset in packaged builds and
     // allow staging to reproduce transient UI states without changing APIs.
     qa: {

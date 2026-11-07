@@ -1,20 +1,13 @@
-const DEFAULT_GAMES_CATALOG_URL = 'https://generator.ryuu.lol/files/games.json';
-const RYUU_IMAGE_URL_TEMPLATE = 'https://generator.ryuu.lol/files/images/{appid}.jpg';
+const DEFAULT_GAMES_CATALOG_URL = 'https://api-merlin.com/api/games/catalog-cache';
 
 function normalizeRemoteGame(entry) {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
     const appId = String(entry.appid || '').trim();
     if (!/^\d+$/.test(appId)) return null;
     const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-    const capsuleImage = typeof entry.capsule_image === 'string' ? entry.capsule_image.trim() : '';
-    const headerImage = typeof entry.header_image === 'string' ? entry.header_image.trim() : '';
-    const fallbackImage = RYUU_IMAGE_URL_TEMPLATE.replace('{appid}', appId);
-    const coverUrl = capsuleImage || headerImage || fallbackImage;
-    const coverSource = capsuleImage
-        ? 'capsule_image'
-        : headerImage
-            ? 'header_image'
-            : 'ryuu_image';
+    const fallbackImage = fallbackCoverForAppId(appId);
+    const coverUrl = entry.header_image || fallbackImage;
+    const coverSource = entry.header_image ? 'catalog_image' : 'ryuu_image';
 
     return {
         appId,
@@ -24,14 +17,15 @@ function normalizeRemoteGame(entry) {
     };
 }
 
-function createLibraryCatalogClient({ axios, url = DEFAULT_GAMES_CATALOG_URL, timeout = 20000 }) {
+function createLibraryCatalogClient({ axios, authSession, httpsAgent, url = DEFAULT_GAMES_CATALOG_URL, timeout = 10000 }) {
     async function download() {
-        const response = await axios.get(url, { timeout });
-        if (!Array.isArray(response.data)) {
+        const token = await authSession.getAccessToken();
+        const response = await axios.get(url, { timeout, httpsAgent, headers: { Authorization: `Bearer ${token}` } });
+        if (!Array.isArray(response.data?.games)) {
             throw new Error('Invalid games catalog payload');
         }
         const games = {};
-        for (const entry of response.data) {
+        for (const entry of response.data.games) {
             const normalized = normalizeRemoteGame(entry);
             if (!normalized) continue;
             games[normalized.appId] = {
@@ -52,13 +46,12 @@ function createLibraryCatalogClient({ axios, url = DEFAULT_GAMES_CATALOG_URL, ti
 function fallbackCoverForAppId(appId) {
     appId = String(appId || '').trim();
     return /^\d+$/.test(appId)
-        ? RYUU_IMAGE_URL_TEMPLATE.replace('{appid}', appId)
+        ? `https://generator.ryuu.lol/files/images/${appId}.jpg`
         : null;
 }
 
 module.exports = {
     DEFAULT_GAMES_CATALOG_URL,
-    RYUU_IMAGE_URL_TEMPLATE,
     createLibraryCatalogClient,
     fallbackCoverForAppId
 };

@@ -99,7 +99,7 @@
         const locale = () => ({ ptbr: 'pt-BR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE' }[window.merlinI18n.current()] || 'en-US');
         const date = value => value ? new Intl.DateTimeFormat(locale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—';
         const fallbackCoverUrl = appId => /^\d+$/.test(String(appId || '').trim())
-            ? `https://generator.ryuu.lol/files/images/${String(appId).trim()}.jpg`
+            ? (window.merlinGameCovers?.url?.(appId) || `https://generator.ryuu.lol/files/images/${appId}.jpg`)
             : null;
         const coverCandidates = game => [...new Set([game?.coverUrl, fallbackCoverUrl(game?.appId)].filter(Boolean))];
         const bytes = value => {
@@ -213,7 +213,10 @@
                     image.loading = 'lazy';
                     const loadNext = () => {
                         const url = candidates.shift();
-                        if (url) image.src = url;
+                        if (url) {
+                            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(image, game.appId, url);
+                            else image.src = url;
+                        }
                         else { image.remove(); cover.classList.add('is-fallback'); }
                     };
                     image.addEventListener('error', loadNext);
@@ -253,7 +256,8 @@
             const loadNext = () => {
                 const url = candidates.shift();
                 if (url) {
-                    elements.cover.src = url;
+                    if (window.merlinGameCovers?.load) window.merlinGameCovers.load(elements.cover, game.appId, url);
+                    else elements.cover.src = url;
                     elements.cover.hidden = false;
                     elements.coverFallback.hidden = true;
                 } else {

@@ -25,10 +25,10 @@ function createGameSearchClient({
     url = DEFAULT_GAMES_SEARCH_URL,
     timeout = 10000
 }) {
-    async function execute(accessToken, query, limit) {
+    async function execute(accessToken, query, limit, metadataOnly) {
         return axios.post(
             url,
-            { searchTerm: query, limit },
+            { searchTerm: query, limit, ...(metadataOnly ? { metadataOnly: true } : {}) },
             {
                 timeout,
                 httpsAgent,
@@ -42,7 +42,7 @@ function createGameSearchClient({
         );
     }
 
-    async function search(query, { limit = 4 } = {}) {
+    async function search(query, { limit = 4, metadataOnly = false } = {}) {
         const normalizedQuery = String(query || '').trim();
         if (!normalizedQuery) return [];
 
@@ -50,11 +50,11 @@ function createGameSearchClient({
         let response;
 
         try {
-            response = await execute(accessToken, normalizedQuery, limit);
+            response = await execute(accessToken, normalizedQuery, limit, metadataOnly);
         } catch (error) {
             if (error?.response?.status === 401) {
                 await authSession.handleUnauthorized();
-                response = await execute(await authSession.getAccessToken(), normalizedQuery, limit);
+                response = await execute(await authSession.getAccessToken(), normalizedQuery, limit, metadataOnly);
             } else {
                 throw error;
             }

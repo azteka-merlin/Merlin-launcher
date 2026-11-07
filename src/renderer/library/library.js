@@ -250,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let loading = false;
     let currentPage = 1;
     let pendingRemoval = null;
+    let updateVersion = 0;
 
     function tr(key, values = {}) {
         const template = window.merlinI18n.t(key);
@@ -271,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fallbackCoverUrl(appId) {
         return /^\d+$/.test(String(appId || ''))
-            ? `https://generator.ryuu.lol/files/images/${appId}.jpg`
+            ? (window.merlinGameCovers?.url?.(appId) || `https://generator.ryuu.lol/files/images/${appId}.jpg`)
             : null;
     }
 
@@ -279,26 +280,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const wrap = document.createElement('div');
         wrap.className = 'library-game-cell';
 
-        const cover = document.createElement(item.coverUrl ? 'img' : 'div');
+        const coverUrl = item.coverUrl || fallbackCoverUrl(item.appId);
+        const cover = document.createElement(coverUrl ? 'img' : 'div');
         cover.className = 'library-game-cover';
         cover.setAttribute('aria-hidden', 'true');
 
-        if (item.coverUrl) {
-            cover.src = item.coverUrl;
+        if (coverUrl) {
             cover.alt = '';
             cover.loading = 'lazy';
             cover.decoding = 'async';
             cover.addEventListener('error', () => {
-                const fallbackUrl = fallbackCoverUrl(item.appId);
-                if (fallbackUrl && cover.src !== fallbackUrl) {
-                    cover.src = fallbackUrl;
-                    return;
-                }
                 const fallback = document.createElement('div');
                 fallback.className = 'library-game-cover library-game-cover-placeholder';
                 fallback.setAttribute('aria-hidden', 'true');
                 cover.replaceWith(fallback);
             });
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, coverUrl);
+            else cover.src = coverUrl;
         } else {
             cover.classList.add('library-game-cover-placeholder');
         }
@@ -433,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadLibrary(force = false) {
         if (loading) return;
         loading = true;
+        const version = updateVersion;
         elements.refresh.disabled = true;
         elements.refresh.classList.toggle('loading', force);
         elements.refreshLabel.textContent = tr(force ? 'library_refreshing' : 'library_refresh');
@@ -447,6 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? new Promise(resolve => setTimeout(resolve, 500))
                 : Promise.resolve();
             const [result] = await Promise.all([request, minimumLoadingTime]);
+            if (version !== updateVersion) return;
             if (!result.success) {
                 showError(result.code);
                 return;
@@ -555,6 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         render();
     });
     api.onUpdated(updatedItems => {
+        updateVersion += 1;
         items = updatedItems;
         loaded = true;
         render();

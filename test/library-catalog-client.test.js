@@ -1,53 +1,19 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-
-const {
-    createLibraryCatalogClient,
-    RYUU_IMAGE_URL_TEMPLATE,
-    fallbackCoverForAppId
-} = require('../src/main/library/library-catalog-client');
-
-test('uses capsule_image first, then header_image, then the ryuu fallback image', async () => {
-    const client = createLibraryCatalogClient({
-        axios: {
-            get: async () => ({
-                data: [
-                    {
-                        appid: 10,
-                        name: 'Capsule Game',
-                        capsule_image: 'https://example.com/capsule-10.jpg',
-                        header_image: 'https://example.com/header-10.jpg'
-                    },
-                    {
-                        appid: 20,
-                        name: 'Header Game',
-                        header_image: 'https://example.com/header-20.jpg'
-                    },
-                    {
-                        appid: 30,
-                        name: 'Fallback Game'
-                    }
-                ]
-            })
-        }
-    });
-
-    const result = await client.download();
-
-    assert.equal(result.games['10'].coverUrl, 'https://example.com/capsule-10.jpg');
-    assert.equal(result.games['10'].coverSource, 'capsule_image');
-
-    assert.equal(result.games['20'].coverUrl, 'https://example.com/header-20.jpg');
-    assert.equal(result.games['20'].coverSource, 'header_image');
-
-    assert.equal(result.games['30'].coverUrl, RYUU_IMAGE_URL_TEMPLATE.replace('{appid}', '30'));
-    assert.equal(result.games['30'].coverSource, 'ryuu_image');
+const { createLibraryCatalogClient, fallbackCoverForAppId } = require('../src/main/library/library-catalog-client');
+test('the catalog goes through authenticated Merlin and caps its request at ten seconds', async () => {
+  const calls=[];
+  const client=createLibraryCatalogClient({authSession:{getAccessToken:async()=>'private-test-token'},axios:{get:async(url,options)=>{
+    calls.push({url,options});return {data:{games:[{appid:10,name:'Game',header_image:'https://generator.ryuu.lol/files/images/10.jpg'}]}};
+  }}});
+  const result=await client.download();
+  assert.equal(calls[0].url,'https://api-merlin.com/api/games/catalog-cache');
+  assert.equal(calls[0].options.timeout,10000);
+  assert.equal(calls[0].options.headers.Authorization,'Bearer private-test-token');
+  assert.equal(result.games['10'].coverUrl,'https://generator.ryuu.lol/files/images/10.jpg');
+  assert.equal(result.games['10'].coverSource,'catalog_image');
 });
-
-test('builds the ryuu fallback image url for numeric app ids', () => {
-    assert.equal(
-        fallbackCoverForAppId('1736800'),
-        'https://generator.ryuu.lol/files/images/1736800.jpg'
-    );
-    assert.equal(fallbackCoverForAppId('abc'), null);
+test('numeric games keep their original Ryuu photo hint and invalid IDs have no image',()=>{
+  assert.equal(fallbackCoverForAppId('1736800'),'https://generator.ryuu.lol/files/images/1736800.jpg');
+  assert.equal(fallbackCoverForAppId('abc'),null);
 });

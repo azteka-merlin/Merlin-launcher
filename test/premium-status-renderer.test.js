@@ -19,7 +19,7 @@ function element() {
         setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; },
     };
 }
-function harness(api) {
+function harness(api, covers) {
     const nodes = new Map();
     const events = new Map();
     const get = id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); };
@@ -27,6 +27,7 @@ function harness(api) {
     const document = { getElementById: get, querySelector: get, createElement: element,
         addEventListener(name, fn) { events.set(`document:${name}`, fn); } };
     const window = {
+        merlinGameCovers: covers,
         electronAPI: { premium: { onProgress() {}, ...api }, getConfig: async () => ({ premiumIntroSeen: true }) },
         merlinI18n: { register() {}, t: key => key, current: () => 'ptbr' },
         libraryModel: { filterItems: items => items, paginate: items => ({ visible: items, totalPages: 1, currentPage: 1 }) },
@@ -40,6 +41,22 @@ function harness(api) {
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const item = status => ({ appId: '123', gameName: 'Jogo', archiveAvailable: true, activationLimit: 2,
     availability: { availableSlots: 2, cooldownEntries: [] }, viewer: { status, cooldownUntil: '2099-01-01T00:00:00Z' } });
+
+test('catalog refresh changes availability without reloading or replacing the displayed cover', async () => {
+    let imageLoads=0;
+    const original=item('available'); const updated=item('cooldown');
+    const covers={url:id=>`https://staging.api-merlin.com/api/game-covers/${id}`,
+        load:(image,id)=>{imageLoads++;image.dataset.merlinCoverAppId=String(id);},
+        retain:container=>new Map(container.children.map(card=>card.children[0]?.children[0]).filter(image=>image?.dataset.merlinCoverAppId).map(image=>[image.dataset.merlinCoverAppId,image]))};
+    const ui=harness({list:async()=>({success:true,online:true,items:[original]}),refresh:async()=>({success:true,online:true,items:[updated]})},covers);
+    ui.window.merlinView.set('premium');await settle();
+    const before=ui.get('premiumGrid').children[0].children[0].children[0];
+    assert.equal(imageLoads,1);
+    ui.get('premiumRefreshBtn').click();await settle();
+    assert.equal(ui.get('premiumGrid').children[0].children[0].children[0],before);
+    assert.equal(imageLoads,1);
+    assert.equal(ui.button().textContent,'premium_in_cooldown');
+});
 
 test('refresh after a failed activation shows the server cooldown', async () => {
     const ui = harness({ list: async () => ({ success: true, online: true, items: [item('available')] }),

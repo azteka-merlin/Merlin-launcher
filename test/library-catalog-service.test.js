@@ -131,3 +131,20 @@ test('reuses old local catalog entries and strips the ryuu fallback image', asyn
     assert.equal(results[0].coverUrl, null);
     assert.equal(results[0].coverSource, null);
 });
+
+test('library metadata mode bypasses the Ryuu catalog when Merlin has no result or fails', async () => {
+    for (const offline of [false, true]) {
+        const fixture = createFixture();
+        const service = createLibraryCatalogService({
+            catalogStore: fixture.catalogStore,
+            catalogClient: { download: async () => { assert.fail('Ryuu must never be called by the library'); } },
+            searchClient: { search: async (_query, options) => {
+                assert.equal(options.metadataOnly, true);
+                if (offline) throw new Error('offline');
+                return [];
+            } }
+        });
+        const items = await service.enrichAppIds(['10'], { allowCatalogRefresh: false, metadataOnly: true });
+        assert.equal(items.size, 0);
+    }
+});
