@@ -26,6 +26,11 @@
                     </button>
                 </div>
                 <div class="header-controls">
+                    <span id="statusV1Live" class="sr-only" aria-live="polite" aria-atomic="true"></span>
+                    <div class="status-v1" id="statusV1Root" hidden>
+                        <button id="statusV1Badge" class="service-status-badge has-issues" type="button" aria-expanded="false" aria-controls="statusV1Panel"><span class="service-status-dot" aria-hidden="true"></span><span id="statusV1BadgeText"></span><span class="status-v1-chevron" aria-hidden="true"></span></button>
+                        <section id="statusV1Panel" class="status-v1-panel" aria-labelledby="statusV1Title" aria-live="polite" hidden><h2 id="statusV1Title"></h2><div id="statusV1Items"></div></section>
+                    </div>
                     <button id="pollNoticeBadge" class="poll-notice-badge" type="button" hidden>
                         <span class="poll-notice-dot" aria-hidden="true"></span>
                         <span id="pollNoticeBadgeText" data-i18n="poll_badge_new">Nova enquete</span>
@@ -1396,6 +1401,7 @@
     <script src="src/renderer/shared/faq.js"></script>
     <script src="src/renderer/shared/update-checker.js"></script>
     <script src="src/renderer/shared/brand-version.js"></script>
+    <script src="src/renderer/shared/service-status-v1.js"></script>
     <script src="src/renderer/shared/service-status.js"></script>
     <script src="src/renderer/shared/polls.js"></script>
     <script src="src/renderer/shared/announcements.js"></script>

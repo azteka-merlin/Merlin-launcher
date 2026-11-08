@@ -221,10 +221,9 @@ function createAddGamesService({
             const searchResult = catalogService.searchWithStatus
                 ? await catalogService.searchWithStatus(term, { limit: 4 })
                 : { items: await catalogService.search(term, { limit: 4 }), online: false };
-            const items = await Promise.all(
-                searchResult.items
-                    .map(item => applyManifestPolicy(item))
-            );
+            const items = manifestOverrideService?.decorateGames
+                ? await manifestOverrideService.decorateGames(searchResult.items)
+                : await Promise.all(searchResult.items.map(item => applyManifestPolicy(item)));
             return {
                 success: true,
                 items,

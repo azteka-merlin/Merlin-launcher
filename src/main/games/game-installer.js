@@ -25,7 +25,8 @@ function createGameInstaller({
                     Authorization: `Bearer ${await authSession.getAccessToken()}`
                 }),
                 onUnauthorized: () => authSession.handleUnauthorized(),
-                retries: 2
+                timeout: 30000,
+                retries: 1
             }
         ];
     }

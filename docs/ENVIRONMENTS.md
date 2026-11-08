@@ -64,7 +64,8 @@ Nao assumir local HTTP como suficiente para ativacao real. Para ativacao/downloa
 Comandos:
 
 - `npm start`: comportamento atual.
-- `npm run start:stage`: abre Electron apontando para staging.
+- `npm run start:stage`: abre Electron apontando para staging com Merlin Status V1.
+- `npm start` e builds publicados usam Merlin Status V1 na API de producao; `MERLIN_STATUS_V1=0` desativa o monitor novo localmente.
 - `npm run start:prod`: abre Electron apontando explicitamente para producao.
 
 Variavel principal:

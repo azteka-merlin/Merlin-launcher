@@ -47,7 +47,7 @@ test('the renderer loads only the local IPC result and passes the preferred sour
     h.covers.load(image,400,'https://shared.fastly.steamstatic.com/a.jpg');
     assert.equal(image.src,'');await settle();
     assert.equal(image.src,'file:///cache/400.jpg');
-    assert.deepEqual(h.calls,[['400','https://shared.fastly.steamstatic.com/a.jpg']]);
+    assert.deepEqual(h.calls,[['400','https://shared.fastly.steamstatic.com/a.jpg',true]]);
     assert.equal(image.classList.contains('merlin-game-cover-pending'),true);
     image.naturalWidth=460;image.dispatchEvent(new Event('load'));
     assert.equal(image.classList.contains('merlin-game-cover-pending'),false);

@@ -12,6 +12,7 @@ function createCorrectionsService({
     catalogStore,
     catalogClient,
     apiBaseUrl,
+    reportStatusEvidence,
     libraryCatalogService,
     downloadManager,
     specialCorrection,
@@ -25,7 +26,7 @@ function createCorrectionsService({
 
     function fallbackCoverUrl(appId) {
         return /^\d+$/.test(String(appId || '').trim())
-            ? `https://generator.ryuu.lol/files/images/${appId}.jpg`
+            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`
             : null;
     }
 
@@ -594,7 +595,18 @@ function createCorrectionsService({
             }
         }
 
-        if (!result.success) return result;
+        if (!result.success) {
+            const status = Number(result.status);
+            if (!operation.cancelled && (status === 429 || (status >= 500 && status <= 599))) {
+                try {
+                    const url = new URL(item.correction.href);
+                    if (url.origin === 'https://generator.ryuu.lol' && url.pathname.startsWith('/fixes/')) {
+                        reportStatusEvidence?.({ appId: item.appId, operation: operation.id, status });
+                    }
+                } catch (_) { /* Invalid URLs and reporting failures never affect the download result. */ }
+            }
+            return result;
+        }
         return result;
     }
 

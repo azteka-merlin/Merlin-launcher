@@ -57,7 +57,7 @@ function createArchiveClient({ axios, httpsAgent }) {
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             const requestOptions = {
                 responseType: 'arraybuffer',
-                timeout: 60000,
+                timeout: source.timeout || 60000,
                 httpsAgent,
                 headers: { ...(source.headers || {}) },
                 params: { ...(source.params || {}) }

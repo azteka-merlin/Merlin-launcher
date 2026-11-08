@@ -3,12 +3,16 @@ const { contextBridge, ipcRenderer } = require('electron');
 // direct APIs to renderer in a secure way
 contextBridge.exposeInMainWorld('electronAPI', {
     gameCovers: {
-        load: (appId, sourceUrl) => ipcRenderer.invoke('game-covers:load', appId, sourceUrl)
+        load: (appId, sourceUrl, allowRyuu = true) => ipcRenderer.invoke('game-covers:load', appId, sourceUrl, allowRyuu)
     },
     // Development-only QA switches. They are unset in packaged builds and
     // allow staging to reproduce transient UI states without changing APIs.
     qa: {
         simulateServiceIssue: process.env.MERLIN_SIMULATE_SERVICE_ISSUE === '1'
+    },
+    serviceStatusV1: {
+        enabled: process.env.MERLIN_STATUS_V1 !== '0',
+        apiBaseUrl: process.env.MERLIN_API_BASE_URL || 'https://api-merlin.com/api'
     },
     // settings
     getConfig: () => ipcRenderer.invoke('get-config'),

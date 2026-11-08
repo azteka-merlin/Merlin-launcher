@@ -417,6 +417,12 @@ const correctionsService = createCorrectionsService({
         voteUrl: correctionsVoteUrl
     }),
     apiBaseUrl,
+    reportStatusEvidence: ({ appId, operation, status }) => {
+        if (process.env.MERLIN_STATUS_V1 === '0') return;
+        void authSession.getAccessToken().then(token => axios.post(`${apiBaseUrl}/service-status/evidence`, { appId: String(appId), operation, status }, {
+            headers: { Authorization: `Bearer ${token}` }, httpsAgent: apiAgent, timeout: 10000
+        })).catch(() => {});
+    },
     libraryCatalogService,
     downloadManager,
     specialCorrection,

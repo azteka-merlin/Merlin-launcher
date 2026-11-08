@@ -13,7 +13,7 @@
             }
         }).observe(document.documentElement, {childList:true,subtree:true});
     }
-    function load(image, appId, sourceUrl) {
+    function load(image, appId, sourceUrl, options = {}) {
         const src = url(appId);
         if (!src) return;
         const previous = loads.get(image);
@@ -45,7 +45,7 @@
                 if (image.getAttribute('src') === src) image.removeAttribute('src');
             }, 10000);
             try {
-                const result = await window.electronAPI?.gameCovers?.load?.(String(appId).trim(), sourceUrl);
+                const result = await window.electronAPI?.gameCovers?.load?.(String(appId).trim(), sourceUrl, options.allowRyuu !== false);
                 if (state.done || loads.get(image) !== state) return;
                 if (result?.url) image.src = result.url;
                 else image.dispatchEvent(new Event('error'));

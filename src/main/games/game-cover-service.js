@@ -6,6 +6,7 @@ const { createCircuitBreaker } = require('../network/circuit-breaker');
 const MAX_BYTES = 5 * 1024 * 1024;
 const DAY_MS = 24 * 60 * 60 * 1000;
 function ryuuCover(appId) { return `https://generator.ryuu.lol/files/images/${appId}.jpg`; }
+function steamCover(appId) { return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`; }
 function preferredCover(appId, value) {
     try {
         const url = new URL(value);
@@ -41,11 +42,12 @@ function createGameCoverService({ axios, cacheDirectory, now = Date.now, circuit
             return { url: pathToFileURL(file).href, file, stale: now()-stat.mtimeMs > DAY_MS };
         } catch { return null; }
     }
-    function refresh(appId, sourceUrl) {
+    function refresh(appId, sourceUrl, { allowRyuu = true } = {}) {
         if (pending.has(appId)) return pending.get(appId);
         const task = limited(async () => {
             const preferred = preferredCover(appId,sourceUrl);
-            const urls = [...new Set([preferred,ryuuCover(appId)])];
+            const urls = [...new Set(allowRyuu ? [preferred, ryuuCover(appId)] : [preferred, steamCover(appId)])]
+                .filter(url => allowRyuu || new URL(url).hostname !== 'generator.ryuu.lol');
             for (const url of urls) {
                 const ryuu = new URL(url).hostname === 'generator.ryuu.lol';
                 // A Ryuu outage must not block an already known Steam/Merlin
@@ -82,14 +84,14 @@ function createGameCoverService({ axios, cacheDirectory, now = Date.now, circuit
         void task.finally(()=>pending.delete(appId)).catch(()=>{});
         return task;
     }
-    async function load(appId, sourceUrl) {
+    async function load(appId, sourceUrl, options = {}) {
         if (typeof appId !== 'string' || !/^\d{1,12}$/.test(appId)) throw new Error('Invalid App ID');
         const local = await cached(appId);
         if (local) {
-            if (local.stale) void refresh(appId,sourceUrl).catch(()=>{});
+            if (local.stale) void refresh(appId,sourceUrl,options).catch(()=>{});
             return {url:local.url,cached:true};
         }
-        return refresh(appId,sourceUrl);
+        return refresh(appId,sourceUrl,options);
     }
     return { load, state: circuit.state };
 }

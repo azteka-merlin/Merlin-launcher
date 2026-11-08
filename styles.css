@@ -5063,6 +5063,22 @@ h1,h2,h3,.side-nav-btn,.btn,.config-kicker,.access-eyebrow,.access-label { font-
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
+.status-v1 { position: relative; flex: 0 0 auto; }
+.status-v1[hidden], .status-v1-panel[hidden] { display: none; }
+.status-v1 .service-status-badge { min-height: 28px; padding: .32rem .62rem; gap: .43rem; border-color: rgba(185, 151, 102, .32); background: rgba(160, 119, 66, .1); color: #e7c895; font-family: inherit; font-size: .72rem; font-weight: 550; line-height: 1; white-space: nowrap; transform: none; }
+.status-v1 .service-status-dot { width: .34rem; height: .34rem; box-shadow: none; }
+.status-v1 .service-status-badge:hover, .status-v1 .service-status-badge[aria-expanded="true"] { border-color: rgba(204, 169, 117, .5); background: rgba(160, 119, 66, .16); color: #f0d8ae; transform: none; }
+.status-v1 .service-status-badge:focus-visible { outline-color: var(--merlin-violet); }
+.status-v1-chevron { width: .36rem; height: .36rem; margin: -.14rem .06rem 0 .1rem; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); transition: transform var(--merlin-transition); }
+.status-v1 .service-status-badge[aria-expanded="true"] .status-v1-chevron { margin-top: .14rem; transform: rotate(225deg); }
+.status-v1-panel { position: absolute; right: 0; top: calc(100% + .5rem); z-index: 100; box-sizing: border-box; width: min(320px, calc(100vw - 2rem)); max-height: min(360px, calc(100vh - 6rem)); overflow-y: auto; padding: .9rem 1rem; border: 1px solid var(--merlin-border); border-radius: 11px; background: #101727; color: var(--merlin-text); box-shadow: 0 16px 36px rgba(0, 0, 0, .3); }
+.status-v1-panel h2 { margin: 0 0 .45rem; color: var(--merlin-text); font-size: .88rem; font-weight: 650; line-height: 1.3; }
+.status-v1-panel h3 { margin: 0 0 .25rem; color: var(--merlin-text); font-size: .8rem; font-weight: 600; line-height: 1.35; }
+.status-v1-panel p { margin: 0; color: var(--merlin-muted); font-size: .78rem; line-height: 1.55; }
+.status-v1-item + .status-v1-item { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--merlin-border); }
+.status-v1 .service-status-badge.is-critical { color: #efb9bd; border-color: rgba(202, 120, 129, .38); background: rgba(165, 78, 91, .12); }
+.status-v1 .service-status-badge.is-critical:hover, .status-v1 .service-status-badge.is-critical[aria-expanded="true"] { color: #f4cdd0; border-color: rgba(216, 145, 153, .54); background: rgba(165, 78, 91, .18); }
+
 .service-status-badge:hover {
     border-color: rgba(253, 224, 71, 0.62);
     background: rgba(245, 158, 11, 0.2);

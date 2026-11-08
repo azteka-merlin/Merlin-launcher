@@ -168,7 +168,7 @@
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function startLegacyMonitor() {
         render();
         document.getElementById('serviceStatusBadge')?.addEventListener('click', openModal);
         document.getElementById('serviceStatusAcknowledgeBtn')?.addEventListener('click', closeModal);
@@ -189,5 +189,13 @@
         window.setInterval(() => {
             if (!window.electronAPI?.qa?.simulateServiceIssue) void checkHealth();
         }, HEALTH_CHECK_INTERVAL_MS);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.electronAPI?.serviceStatusV1?.enabled && window.merlinStatusV1) {
+            void window.merlinStatusV1.start(window.electronAPI.serviceStatusV1.apiBaseUrl).then(started => {
+                if (!started) startLegacyMonitor();
+            }).catch(startLegacyMonitor);
+        } else startLegacyMonitor();
     });
 })();

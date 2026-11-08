@@ -16,7 +16,7 @@ function response(status, body) {
     };
 }
 
-function createHarness(outcomes) {
+function createHarness(outcomes, options = {}) {
     const elements = new Map();
     const documentListeners = new Map();
     const intervalCallbacks = [];
@@ -42,7 +42,7 @@ function createHarness(outcomes) {
     };
     const window = {
         merlinI18n: { register() {}, t: key => key },
-        electronAPI: { qa: { simulateServiceIssue: false } },
+        electronAPI: { qa: { simulateServiceIssue: false }, serviceStatusV1: options.v1Enabled ? { enabled: true, apiBaseUrl: 'https://staging.example/api' } : undefined },
         setTimeout(callback, delay) {
             timeouts.push({ callback, delay });
             return timeouts.length;
@@ -54,6 +54,8 @@ function createHarness(outcomes) {
         },
         addEventListener() {}
     };
+
+    if (options.v1Enabled) window.merlinStatusV1 = { start: options.startV1 };
 
     vm.runInNewContext(source, {
         window,
@@ -141,4 +143,15 @@ test('a successful online feature request clears the service warning immediately
 
     assert.equal(harness.elements.get('serviceStatusBadge').hidden, true);
     assert.equal(harness.elements.get('serviceStatusModal').hidden, true);
+});
+
+test('V1 staging starts the new monitor without the old health checks or modal', async () => {
+    const calls = [];
+    const harness = createHarness([], { v1Enabled: true, startV1: async url => { calls.push(url); return true; } });
+    harness.start();
+    await flushPromises();
+    assert.deepEqual(calls, ['https://staging.example/api']);
+    assert.equal(harness.intervalCallbacks.length, 0);
+    assert.equal(harness.timeouts.length, 0);
+    assert.equal(harness.elements.has('serviceStatusModal'), false);
 });

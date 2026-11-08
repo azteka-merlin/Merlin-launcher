@@ -67,6 +67,43 @@ function createManifestOverrideService({
         };
     }
 
+    async function decorateGames(games) {
+        const items = Array.isArray(games) ? games : [];
+        const ids = [...new Set(items.map(game => String(game?.appId || '').trim()).filter(id => /^\d+$/.test(id) && !cache.has(id)))];
+        if (ids.length) {
+            let fallback = false;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const response = await axios.post(`${statusUrl}-batch`, { appIds: ids }, {
+                        timeout: 10000, httpsAgent,
+                        headers: { Authorization: `Bearer ${await authSession.getAccessToken()}`, 'User-Agent': 'Merlin/2.0' }
+                    });
+                    const entries = response?.data?.items;
+                    if (!Array.isArray(entries) || ids.some(id => !entries.some(item => item?.appId === id && typeof item.requiresVersionPin === 'boolean'))) {
+                        throw new Error('Invalid manifest policy batch response');
+                    }
+                    for (const entry of entries) if (ids.includes(entry.appId)) cache.set(entry.appId, entry.requiresVersionPin);
+                    break;
+                } catch (error) {
+                    if (error?.response?.status === 401 && attempt === 0) {
+                        try { await authSession.handleUnauthorized(); continue; } catch (authError) {
+                            if (authError?.code !== 'expired') console.warn('[manifest-override] Unable to refresh session:', authError?.message || 'unknown error');
+                        }
+                    } else if ([404, 405].includes(error?.response?.status)) fallback = true;
+                    else console.warn('[manifest-override] Unable to resolve batch policy:', error?.message || 'unknown error');
+                    break;
+                }
+            }
+            // Older API versions still support the existing per-game endpoint.
+            if (fallback) return Promise.all(items.map(game => decorateGame(game)));
+        }
+        return items.map(game => {
+            if (!game || !/^\d+$/.test(String(game.appId || '').trim())) return game;
+            const pinned = cache.get(String(game.appId).trim()) === true;
+            return { ...game, requiresVersionPin: pinned, autoUpdate: pinned ? false : game.autoUpdate !== false };
+        });
+    }
+
     function clearCache(appId) {
         if (appId) {
             cache.delete(String(appId).trim());
@@ -75,7 +112,7 @@ function createManifestOverrideService({
         cache.clear();
     }
 
-    return { requiresVersionPin, decorateGame, clearCache };
+    return { requiresVersionPin, decorateGame, decorateGames, clearCache };
 }
 
 module.exports = { createManifestOverrideService };

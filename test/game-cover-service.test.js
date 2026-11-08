@@ -68,6 +68,14 @@ test('known Steam and Merlin photos load with an empty cache while the Ryuu circ
     assert.equal((await service.load('600')).url,null);
     assert.equal(requests.length,2,'No Ryuu request should escape the open circuit');
 });
+test('paused corrections keep cached covers and use Steam without contacting Ryuu', async t => {
+    const dir=await directory(t), requests=[];
+    await fs.writeFile(path.join(dir,'400.jpg'),jpeg().data);
+    const service=createGameCoverService({cacheDirectory:()=>dir,axios:{get:async url=>{requests.push(url);return jpeg();}}});
+    assert.equal((await service.load('400',undefined,{allowRyuu:false})).cached,true);
+    assert.match((await service.load('500',undefined,{allowRyuu:false})).url,/^file:/);
+    assert.deepEqual(requests,['https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/500/header.jpg']);
+});
 
 test('a failed Steam photo does not fall through to a paused Ryuu or extend its pause',async t=>{
     const dir=await directory(t);const requests=[];

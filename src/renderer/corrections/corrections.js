@@ -558,6 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let items = [];
     let loaded = false;
     let loading = false;
+    let sourceRefreshPending = false;
+    let ryuuCorrectionsEnabled = true;
     let currentPage = 1;
     let pendingInstall = null;
     let pendingOffer = null;
@@ -667,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fallbackCoverUrl(appId) {
         return /^\d+$/.test(String(appId || '').trim())
-            ? (window.merlinGameCovers?.url?.(appId) || `https://generator.ryuu.lol/files/images/${appId}.jpg`)
+            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`
             : null;
     }
 
@@ -829,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 placeholder.className = 'correction-card-cover correction-card-cover-placeholder';
                 cover.replaceWith(placeholder);
             });
-            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, initialImageUrl);
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, initialImageUrl, { allowRyuu: ryuuCorrectionsEnabled });
             else cover.src = initialImageUrl;
         } else {
             cover.classList.add('correction-card-cover-placeholder');
@@ -999,6 +1001,10 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.refresh.classList.remove('loading');
             elements.refreshLabel.textContent = tr('corrections_refresh');
             render();
+            if (sourceRefreshPending && currentView() === 'corrections') {
+                sourceRefreshPending = false;
+                void loadCorrections(true);
+            }
         }
     }
 
@@ -1019,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadOfferCover(item) {
         const cover = elements.offerCover;
         const fallback = fallbackCoverUrl(item.appId);
-        const candidates = [...new Set([item.imageUrl, fallback].filter(Boolean))];
+        const candidates = [...new Set([item.imageUrl, fallback].filter(url => url && (ryuuCorrectionsEnabled || !url.startsWith('https://generator.ryuu.lol/'))))];
 
         cover.hidden = true;
         cover.removeAttribute('src');
@@ -1346,6 +1352,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         void showCorrectionsDisclaimerIfNeeded();
     });
+    function onRyuuSourceChanged(enabled) {
+        ryuuCorrectionsEnabled = enabled !== false;
+        loaded = false;
+        if (loading) sourceRefreshPending = true;
+        else if (currentView() === 'corrections') void loadCorrections(true);
+    }
     elements.disclaimerAcknowledge.addEventListener('click', acknowledgeCorrectionsDisclaimer);
     elements.adminNoteClose.addEventListener('click', closeAdminNoteModal);
     elements.adminNoteDone.addEventListener('click', closeAdminNoteModal);
@@ -1422,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     api.onProgress(updateProgress);
 
-    window.merlinCorrections = Object.freeze({ offerFor });
+    window.merlinCorrections = Object.freeze({ offerFor, onRyuuSourceChanged });
 
     syncVisibility();
 });
