@@ -24,3 +24,6 @@ vendor/CloudRedirect/build/
 
 # Manifesto de integridade gerado durante o build
 dist/integrity.json
+
+# Rascunhos locais para preenchimento do changelog no Admin
+/docs/releases/*-admin-draft.json
