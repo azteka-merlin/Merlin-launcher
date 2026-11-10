@@ -317,10 +317,14 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const drives = listDrives();
         const merged = [...catalog];
         for (const [id, record] of Object.entries(registry)) {
-            if (!merged.some(item => item.id === id)) merged.push({
+            if (merged.some(item => item.id === id)) continue;
+            const orphan = {
                 id, name: record.name || record.installName, installName: record.installName,
                 executablePath: record.executablePath || null, imageUrl: null, archiveSize: 0,
-            });
+            };
+            // Keep games removed from the catalog only while their Merlin marker
+            // still exists. A stale registry entry alone is not a downloadable game.
+            if (installed(orphan, drives)) merged.push(orphan);
         }
         return { success: true, games: merged.map(item => {
             const found = installed(item, drives);

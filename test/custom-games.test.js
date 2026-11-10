@@ -64,6 +64,33 @@ test('a stale install record on a removed drive does not hide the catalog', asyn
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('removed catalog games appear only while their installation marker still exists', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-games-orphans-'));
+    try {
+        const disk = path.join(root, 'disk');
+        const installedId = '8a2d27b1-d6db-4ae2-8315-1d2f9c265011';
+        const removedId = 'a5fbb284-03d2-4340-8852-717dc81b398e';
+        const installedName = 'Still installed';
+        fs.mkdirSync(path.join(disk, 'Merlin-games', installedName), { recursive: true });
+        fs.writeFileSync(path.join(disk, 'Merlin-games', installedName, '.merlin-install.json'), JSON.stringify({ id: installedId }));
+        fs.writeFileSync(path.join(root, 'custom-games-installs-api-merlin.com.json'), JSON.stringify({
+            [installedId]: { drive: 'X', installName: installedName, name: installedName },
+            [removedId]: { drive: 'X', installName: 'Deleted game', name: 'Deleted game' },
+        }));
+        const service = createCustomGamesService({
+            app: { getPath: () => root },
+            axios: { get: async () => ({ data: { games: [] } }) },
+            authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://api-merlin.com/api', shell: { openPath: async () => '' },
+            testDriveRoot: () => disk,
+        });
+        const result = await service.list();
+        assert.equal(result.success, true);
+        assert.deepEqual(result.games.map(game => game.id), [installedId]);
+        assert.equal(result.games[0].installed.path, path.join(disk, 'Merlin-games', installedName));
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('folder manifest safety ceiling accepts up to 200,000 files', () => {
     assert.equal(validFolderManifestFileCount(new Array(11_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(20_000)), true);
