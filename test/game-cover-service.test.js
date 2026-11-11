@@ -43,6 +43,7 @@ test('Hubcap, arbitrary hosts, HTTP, credentials and local paths cannot become c
         assert.equal(preferredCover('400',input),'https://generator.ryuu.lol/files/images/400.jpg');
     assert.equal(preferredCover('400','https://shared.fastly.steamstatic.com/steam/apps/400/header.jpg'),'https://shared.fastly.steamstatic.com/steam/apps/400/header.jpg');
     assert.equal(preferredCover('400','https://api-merlin.com/api/premium/games/400/cover'),'https://api-merlin.com/api/premium/games/400/cover');
+    assert.equal(preferredCover('4407750','https://generator.ryuu.lol/files/images/4080220.jpg'),'https://generator.ryuu.lol/files/images/4080220.jpg');
 });
 
 test('trusted Merlin cover URLs are downloaded and persisted without contacting Ryuu',async t=>{

@@ -18,12 +18,8 @@ function normalizeRemoteGame(entry) {
 }
 
 function createLibraryCatalogClient({ axios, authSession, httpsAgent, url = DEFAULT_GAMES_CATALOG_URL, timeout = 10000 }) {
-    async function download() {
-        const token = await authSession.getAccessToken();
-        const response = await axios.get(url, { timeout, httpsAgent, headers: { Authorization: `Bearer ${token}` } });
-        if (!Array.isArray(response.data?.games)) {
-            throw new Error('Invalid games catalog payload');
-        }
+    function readGames(response) {
+        if (!Array.isArray(response.data?.games)) throw new Error('Invalid games catalog payload');
         const games = {};
         for (const entry of response.data.games) {
             const normalized = normalizeRemoteGame(entry);
@@ -34,13 +30,31 @@ function createLibraryCatalogClient({ axios, authSession, httpsAgent, url = DEFA
                 coverSource: normalized.coverSource
             };
         }
+        return games;
+    }
+    async function download() {
+        const token = await authSession.getAccessToken();
+        const response = await axios.get(url, { timeout, httpsAgent, headers: { Authorization: `Bearer ${token}` } });
         return {
-            games,
+            games: readGames(response),
             syncedAt: new Date().toISOString()
         };
     }
 
-    return { download };
+    async function downloadForAppIds(appIds) {
+        const games = {};
+        for (let offset = 0; offset < appIds.length; offset += 100) {
+            const ids = appIds.slice(offset, offset + 100);
+            const token = await authSession.getAccessToken();
+            const response = await axios.get(`${url}?appIds=${ids.join(',')}`, {
+                timeout, httpsAgent, headers: { Authorization: `Bearer ${token}` }
+            });
+            Object.assign(games, readGames(response));
+        }
+        return games;
+    }
+
+    return { download, downloadForAppIds };
 }
 
 function fallbackCoverForAppId(appId) {

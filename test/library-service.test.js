@@ -64,6 +64,7 @@ function serviceFor(fixture, download, overrides = {}) {
         cacheStore: fixture.cacheStore,
         catalogStore: fixture.catalogStore,
         catalogService: {
+            ...(overrides.lookupMetadata ? { lookupMetadata: overrides.lookupMetadata } : {}),
             enrichAppIds: async (appIds, { allowCatalogRefresh = true } = {}) => {
                 assert.equal(allowCatalogRefresh, false, 'Library must never download the Ryuu catalog');
                 const downloaded = await download();
@@ -170,6 +171,33 @@ test('returns the local library first and enriches missing metadata separately',
     assert.equal(downloads, 1);
     assert.equal(enriched.items[0].gameName, 'Remote Game');
     assert.equal(enriched.items[0].coverUrl, 'https://example.com/remote.jpg');
+});
+
+test('library fills missing covers with one catalog lookup even when names are already cached', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    for (const appId of ['916440', '3652570']) {
+        fs.writeFileSync(path.join(fixture.luaDirectory, `${appId}.lua`), `addappid(${appId})`);
+        fixture.cache[appId] = { name: `Game ${appId}`, coverUrl: null, coverSource: null };
+        fixture.catalog[appId] = { name: `Game ${appId}`, coverUrl: null, coverSource: null };
+    }
+    let lookups = 0;
+    const service = serviceFor(fixture, async () => { throw new Error('No per-game lookup expected'); }, {
+        lookupMetadata: async appIds => {
+            lookups++;
+            assert.deepEqual(appIds.sort(), ['3652570', '916440']);
+            fixture.catalog['916440'].coverUrl = 'https://cdn.akamai.steamstatic.com/steam/apps/916440/header.jpg';
+            fixture.catalog['916440'].coverSource = 'catalog_image';
+            fixture.catalog['3652570'].coverUrl = 'https://shared.akamai.steamstatic.com/steam/apps/3652570/capsule.jpg';
+            fixture.catalog['3652570'].coverSource = 'catalog_image';
+        }
+    });
+    const result = await service.refreshMetadata();
+    assert.equal(lookups, 1);
+    assert.equal(result.items.length, 2);
+    assert.ok(result.items.every(item => item.coverUrl?.includes(item.appId)));
+    await service.refreshMetadata();
+    assert.equal(lookups, 1);
 });
 
 test('does not poison missing metadata and allows a later explicit retry', async t => {

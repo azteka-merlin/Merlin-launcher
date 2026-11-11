@@ -14,7 +14,7 @@ function preferredCover(appId, value) {
         if (url.protocol !== 'https:' || url.username || url.password || url.port) return ryuuCover(appId);
         if (host.endsWith('.steamstatic.com') || host === 'steamstatic.com' || host === 'steamcdn-a.akamaihd.net') return url.href;
         if (host === 'api-merlin.com' || host === 'staging.api-merlin.com') return url.href;
-        if (host === 'generator.ryuu.lol' && url.pathname === `/files/images/${appId}.jpg`) return url.href;
+        if (host === 'generator.ryuu.lol' && /^\/files\/images\/\d{1,12}\.jpg$/.test(url.pathname)) return url.href;
     } catch { /* Missing/retired cover URL uses the original Ryuu fallback. */ }
     return ryuuCover(appId);
 }

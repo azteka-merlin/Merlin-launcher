@@ -53,9 +53,7 @@ function createSpecialCorrection({
     eaAppGamePath = DEFAULT_EA_APP_GAME_PATH
 }) {
     function appliesTo(item) {
-        // AppID is the authoritative local guard so an old/stale catalog cache
-        // can never install the unprepared templates.
-        return item?.appId === SPECIAL_CORRECTION_APP_ID;
+        return item?.appId === SPECIAL_CORRECTION_APP_ID && item?.activationType !== 'standard';
     }
 
     function findInstallations({ item, steamInstallation = null }) {

@@ -40,6 +40,7 @@ test('generates a token and fills anadius.cfg without requiring token.ini', asyn
     const item = { appId: '4407750', activationType: 'license_token' };
     assert.equal(special.appliesTo(item), true);
     assert.equal(special.appliesTo({ appId: '4407750' }), true);
+    assert.equal(special.appliesTo({ appId: '4407750', activationType: 'standard' }), false);
     assert.equal(special.appliesTo({ appId: '123', activationType: 'license_token' }), false);
     await special.prepare({ item, extractedPath: fixture.extractedPath });
 

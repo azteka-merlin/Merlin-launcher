@@ -17,6 +17,7 @@ function createLibraryService({
     let cachedItems = null;
     let metadataRefresh = null;
     let metadataGeneration = 0;
+    const coverLookupAttempted = new Set();
 
     function invalidate() {
         metadataGeneration += 1;
@@ -153,6 +154,17 @@ function createLibraryService({
             if (!paths.success) return paths;
             const before = JSON.stringify(cachedItems || []);
             const appIds = managedLuaFiles(paths.luaDirectory).map(file => file.appId);
+            if (typeof catalogService.lookupMetadata === 'function') {
+                const missingCovers = [...new Set(appIds)].filter(appId =>
+                    !cacheStore.get(appId)?.coverUrl && !catalogStore.get(appId)?.coverUrl
+                    && (force || !coverLookupAttempted.has(appId)));
+                if (missingCovers.length > 0) {
+                    try {
+                        await catalogService.lookupMetadata(missingCovers);
+                        missingCovers.forEach(appId => coverLookupAttempted.add(appId));
+                    } catch (error) { console.warn('Unable to refresh Library cover metadata:', error.message); }
+                }
+            }
             // Small batches avoid a request burst for a newly created cache.
             for (let offset = 0; offset < appIds.length; offset += 4) {
                 if (generation !== metadataGeneration) return { success: false, code: 'superseded' };

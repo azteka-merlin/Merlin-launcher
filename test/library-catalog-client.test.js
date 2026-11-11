@@ -17,3 +17,16 @@ test('numeric games keep their original Ryuu photo hint and invalid IDs have no 
   assert.equal(fallbackCoverForAppId('1736800'),'https://generator.ryuu.lol/files/images/1736800.jpg');
   assert.equal(fallbackCoverForAppId('abc'),null);
 });
+
+test('installed App IDs fetch their stored covers together instead of downloading per game', async () => {
+  const calls=[];
+  const client=createLibraryCatalogClient({authSession:{getAccessToken:async()=>'token'},axios:{get:async(url,options)=>{
+    calls.push({url,options});
+    return {data:{games:[{appid:'916440',name:'Anno 1800',header_image:'https://cdn.akamai.steamstatic.com/steam/apps/916440/header.jpg'}]}};
+  }}});
+  const games=await client.downloadForAppIds(['916440','3652570']);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].url,'https://api-merlin.com/api/games/catalog-cache?appIds=916440,3652570');
+  assert.equal(calls[0].options.headers.Authorization,'Bearer token');
+  assert.match(games['916440'].coverUrl,/916440\/header\.jpg$/);
+});

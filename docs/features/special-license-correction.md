@@ -4,12 +4,16 @@ Este fluxo existe apenas para o AppID `4407750`. Ele esta separado de Premium: n
 
 ## Jornada do usuario
 
-1. O catalogo informa `activationType: "license_token"`, versao minima `1.6.8` e, quando configurada no override, `imageUrl`.
+1. Com o modo especial ativo no Admin, o catalogo informa `activationType: "license_token"`, versao minima `1.6.8` e, quando configurada no override, `imageUrl`. Com o modo desativado, informa `activationType: "standard"`.
 2. **Baixar** salva o ZIP original e nao tenta gerar token.
 3. **Baixar e instalar** detecta o jogo pela Steam e/ou em `C:\Program Files\EA Games\EA SPORTS FC 27`, baixa/extrai o ZIP em diretorio temporario e le `%ProgramData%\Electronic Arts\EA Services\License\16425884_sc.dlf`.
 4. O launcher envia apenas esse `.dlf` autenticado para `/fixes/license-token?appid=4407750` com `X-Merlin-Version`.
 5. Antes de copiar qualquer arquivo para o jogo, exige exatamente um `anadius.cfg` com uma ocorrencia de `RETORNO_TOKEN_MERLIN`. `token.ini` nao e necessario.
 6. O token substitui somente esse placeholder no `anadius.cfg`; depois os arquivos extraidos sao copiados para todas as instalacoes detectadas (Steam, EA App ou ambas) e os temporarios sao removidos.
+
+No modo comum, "Baixar e instalar" usa o fluxo padrao de fix override: exige a instalacao Steam e copia o conteudo do ZIP apenas para ela, sem chamar a rota de token ou validar o template especial. Antes de instalar, o Launcher atualiza o catalogo para confirmar o modo vigente; se nao conseguir confirmar, nao instala esse AppID a partir do cache.
+
+O manifest override e configurado separadamente; a opcao de token nao altera a instalacao de Lua ou manifests.
 7. No EA App, arquivos originais instalados sob `Program Files` podem exigir permissao administrativa para sobrescrita. O Launcher tenta a copia normal primeiro e solicita elevacao somente quando o Windows retorna `EPERM`/`EACCES` nesse destino.
 
 ## Regras e protecoes

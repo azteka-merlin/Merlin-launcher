@@ -8,7 +8,7 @@ const AdmZip = require('adm-zip');
 const { createCorrectionsService } = require('../src/main/corrections/corrections-service');
 const { createSpecialCorrection } = require('../src/main/corrections/special-correction');
 
-function createFixture() {
+function createFixture({ plainArchive = false } = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-correction-destinations-'));
     const archivePath = path.join(root, 'source.zip');
     const programDataPath = path.join(root, 'ProgramData');
@@ -22,7 +22,7 @@ function createFixture() {
     fs.writeFileSync(path.join(licenseDirectory, '16425884_sc.dlf'), 'license');
 
     const archive = new AdmZip();
-    archive.addFile('anadius.cfg', Buffer.from('"Token" "RETORNO_TOKEN_MERLIN"\n'));
+    if (!plainArchive) archive.addFile('anadius.cfg', Buffer.from('"Token" "RETORNO_TOKEN_MERLIN"\n'));
     archive.addFile('data/content.bin', Buffer.from('shared-content'));
     archive.writeZip(archivePath);
 
@@ -35,11 +35,11 @@ function createFixture() {
     };
 }
 
-function createService(fixture, { steamReady = true } = {}) {
+function createService(fixture, { steamReady = true, activationType = 'license_token' } = {}) {
     const item = {
         appId: '4407750',
         gameName: 'EA SPORTS FC 27',
-        activationType: 'license_token',
+        activationType,
         correction: {
             href: 'https://files.example/fc27.zip',
             filename: 'fc27.zip'
@@ -127,6 +127,18 @@ test('allows FC 27 installed only through EA App when Steam is not configured', 
     assert.equal(prepared.success, true);
     assert.deepEqual(prepared.gamePaths, [fixture.eaAppGamePath]);
     assert.equal(prepared.installations[0].platform, 'ea_app');
+});
+
+test('installs a standard FC 27 archive without requesting or preparing a license token', async t => {
+    const fixture = createFixture({ plainArchive: true });
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    const service = createService(fixture, { activationType: 'standard' });
+    const result = await service.install('4407750', 'operation-standard');
+    assert.equal(result.success, true);
+    assert.deepEqual(result.gamePaths, [fixture.steamGamePath]);
+    assert.equal(fs.existsSync(path.join(fixture.steamGamePath, 'anadius.cfg')), false);
+    assert.equal(fs.readFileSync(path.join(fixture.steamGamePath, 'data', 'content.bin'), 'utf8'), 'shared-content');
+    assert.equal(fs.existsSync(path.join(fixture.eaAppGamePath, 'data', 'content.bin')), false);
 });
 
 test('cached correction catalogs do not count as a successful online response', async t => {

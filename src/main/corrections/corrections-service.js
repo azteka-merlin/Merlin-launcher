@@ -305,6 +305,10 @@ function createCorrectionsService({
     }
 
     async function prepareInstall(appId) {
+        if (String(appId) === '4407750' && typeof catalogClient?.download === 'function') {
+            const current = await refresh();
+            if (!current.success || current.stale) return { success: false, code: 'refresh_failed' };
+        }
         const item = await findItem(appId);
         if (!item) return { success: false, code: 'not_found' };
 

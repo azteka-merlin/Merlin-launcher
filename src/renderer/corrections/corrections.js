@@ -831,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 placeholder.className = 'correction-card-cover correction-card-cover-placeholder';
                 cover.replaceWith(placeholder);
             });
-            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, initialImageUrl, { allowRyuu: ryuuCorrectionsEnabled });
+            if (window.merlinGameCovers?.load) window.merlinGameCovers.load(cover, item.appId, initialImageUrl);
             else cover.src = initialImageUrl;
         } else {
             cover.classList.add('correction-card-cover-placeholder');
@@ -1025,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadOfferCover(item) {
         const cover = elements.offerCover;
         const fallback = fallbackCoverUrl(item.appId);
-        const candidates = [...new Set([item.imageUrl, fallback].filter(url => url && (ryuuCorrectionsEnabled || !url.startsWith('https://generator.ryuu.lol/'))))];
+        const candidates = [...new Set([item.imageUrl, fallback].filter(Boolean))];
 
         cover.hidden = true;
         cover.removeAttribute('src');

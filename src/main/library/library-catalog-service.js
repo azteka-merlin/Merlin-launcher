@@ -44,6 +44,13 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return catalogStore.load().games;
     }
 
+    async function lookupMetadata(appIds) {
+        const games = await catalogClient.downloadForAppIds(appIds);
+        const withCovers = Object.fromEntries(Object.entries(games).filter(([, game]) => game.coverSource !== 'ryuu_image' && game.coverUrl));
+        if (Object.keys(withCovers).length > 0) catalogStore.upsertMany(withCovers);
+        return withCovers;
+    }
+
     function findByAppId(appId) {
         const entry = normalizeEntry(appId, catalogStore.get(appId));
         if (!entry) return null;
@@ -239,7 +246,7 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return (await searchWithStatus(query, options)).items;
     }
 
-    return { ensureLoaded, enrichAppIds, findByAppId, refresh, rememberEntries, resolveByAppId, search, searchWithStatus };
+    return { ensureLoaded, enrichAppIds, findByAppId, lookupMetadata, refresh, rememberEntries, resolveByAppId, search, searchWithStatus };
 }
 
 module.exports = { createLibraryCatalogService };
