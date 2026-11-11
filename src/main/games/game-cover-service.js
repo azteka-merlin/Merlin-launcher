@@ -70,7 +70,13 @@ function createGameCoverService({ axios, cacheDirectory, now = Date.now, circuit
                     try {
                         await fs.mkdir(directory,{recursive:true});
                         await fs.writeFile(temporary,image.bytes);
-                        await fs.rename(temporary,file);
+                        try {
+                            await fs.rename(temporary,file);
+                        } catch {
+                            // Windows may reject renaming over a cached image that is in use.
+                            await fs.copyFile(temporary,file);
+                            await fs.unlink(temporary);
+                        }
                         return {url:pathToFileURL(file).href,cached:false};
                     } catch {
                         await fs.unlink(temporary).catch(()=>{});
