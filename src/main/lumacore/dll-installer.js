@@ -134,8 +134,7 @@ function createDllInstaller({ fs, path, dialog, requiredFiles, getSourcePath, ge
         const message = MESSAGES[lang] || MESSAGES.en;
         const missing = requiredFiles.filter(file => {
             const destination = path.join(steamPath, file.relativeDestination);
-            return !fs.existsSync(destination)
-                || (cloudRuntimeNames.has(file.name) && !sameContents(getSourcePath(file), destination));
+            return !sameContents(getSourcePath(file), destination);
         });
 
         if (missing.length === 0) {

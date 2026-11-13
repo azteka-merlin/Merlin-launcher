@@ -65,6 +65,38 @@ test('Repair replaces an existing CloudRedirect DLL with a different hash', asyn
     }
 });
 
+test('Repair detects a stale helper even when every required DLL exists', async () => {
+    const root = nativeFs.mkdtempSync(nativePath.join(os.tmpdir(), 'merlin-helper-repair-'));
+    try {
+        const bundle = nativePath.join(root, 'bundle');
+        const steam = nativePath.join(root, 'steam');
+        nativeFs.mkdirSync(bundle);
+        nativeFs.mkdirSync(steam);
+        nativeFs.writeFileSync(nativePath.join(steam, 'steam.exe'), 'steam');
+        for (const name of ['OpenSteamTool.dll', 'merlin-helper.dll']) {
+            nativeFs.writeFileSync(nativePath.join(bundle, name), `current ${name}`);
+            nativeFs.writeFileSync(nativePath.join(steam, name),
+                name === 'merlin-helper.dll' ? 'old helper' : `current ${name}`);
+        }
+        const installer = createDllInstaller({
+            fs: nativeFs, path: nativePath,
+            dialog: { async showMessageBox() { return { response: 0 }; } },
+            requiredFiles: ['OpenSteamTool.dll', 'merlin-helper.dll']
+                .map(name => ({ name, relativeDestination: name })),
+            getSourcePath: file => nativePath.join(bundle, file.name),
+            getMainWindow: () => null,
+        });
+
+        assert.deepEqual(await installer.checkAndInstall(steam), {
+            installed: true, alreadyInstalled: false, cancelled: false,
+        });
+        assert.equal(nativeFs.readFileSync(nativePath.join(steam, 'merlin-helper.dll'), 'utf8'),
+            'current merlin-helper.dll');
+    } finally {
+        nativeFs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 function createFixture({ existing = [], dialogResponse = 0, isSteamRunning, closeSteam } = {}) {
     const existingPaths = new Set(existing.map(item => path.normalize(item)));
     const copied = [];
