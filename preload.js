@@ -47,6 +47,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
             : ipcRenderer.invoke('auth:status'),
         login: (licenseKey, rememberKey) => ipcRenderer.invoke('auth:login', licenseKey, rememberKey),
         resetHwid: (licenseKey) => ipcRenderer.invoke('auth:reset-hwid', licenseKey),
+        getProfile: () => ipcRenderer.invoke('auth:profile-get'),
+        startProfileEmailVerification: (email) => ipcRenderer.invoke('auth:profile-email-start', email),
+        updateProfile: (profile) => ipcRenderer.invoke('auth:profile-update', profile),
         logout: () => ipcRenderer.invoke('auth:logout'),
         manageSubscription: () => ipcRenderer.invoke('auth:manage-subscription'),
     openSignup: () => ipcRenderer.invoke('auth:open-signup'),
@@ -86,6 +89,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         cachedGames: () => ipcRenderer.invoke('cloud-sync:cached-games'),
         listGames: () => ipcRenderer.invoke('cloud-sync:list-games'),
         getGame: (appId) => ipcRenderer.invoke('cloud-sync:get-game', appId),
+        export: (appId, versionId, gameName) => ipcRenderer.invoke('cloud-sync:export', appId, versionId, gameName),
+        openSaveFolder: (appId) => ipcRenderer.invoke('cloud-sync:open-save-folder', appId),
         restore: (appId, recoveryId) => ipcRenderer.invoke('cloud-sync:restore', appId, recoveryId),
         acknowledgeSteamRestart: () => ipcRenderer.invoke('cloud-sync:ack-steam-restart'),
         onResumed: callback => ipcRenderer.on('cloud-sync:resumed', () => callback())

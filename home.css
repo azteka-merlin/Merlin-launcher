@@ -1271,3 +1271,23 @@ width: auto; max-width: 74px; margin-left: 0.45rem; padding: 0.18rem 0.38rem; op
 display: inline-block;
 }
 }
+
+/* These three catalog views scroll within their own panels. Match Meu acesso. */
+#libraryView.library-view,
+#correctionsView.corrections-view,
+#premiumView.library-view {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(155, 112, 220, .68) transparent;
+}
+#libraryView::-webkit-scrollbar,
+#correctionsView::-webkit-scrollbar,
+#premiumView::-webkit-scrollbar { width: 8px; }
+#libraryView::-webkit-scrollbar-track,
+#correctionsView::-webkit-scrollbar-track,
+#premiumView::-webkit-scrollbar-track { background: transparent; }
+#libraryView::-webkit-scrollbar-thumb,
+#correctionsView::-webkit-scrollbar-thumb,
+#premiumView::-webkit-scrollbar-thumb {
+    border-radius: 8px;
+    background: rgba(155, 112, 220, .58);
+}

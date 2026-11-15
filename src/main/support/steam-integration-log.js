@@ -1,5 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { LOG_NAME: GAME_ADD_LOG_NAME } = require('./game-add-log');
 
 const LOG_NAME = 'merlin_steam_integration.log';
 const LOG_FILES = [`${LOG_NAME}.1`, LOG_NAME];
@@ -54,4 +55,25 @@ async function collectRecentSteamIntegrationLog({ localAppData, now = Date.now()
     return `${redactSecrets(entries.map(entry => entry.text).join('\n\n'))}\n`;
 }
 
-module.exports = { collectRecentSteamIntegrationLog };
+async function collectRecentGameAddLog({ localAppData, now = Date.now(), fileSystem = fs }) {
+    if (!localAppData || !Number.isFinite(now)) return null;
+    const logDirectory = path.join(localAppData, 'Merlin', 'logs');
+    const entries = [];
+    for (const fileName of [`${GAME_ADD_LOG_NAME}.1`, GAME_ADD_LOG_NAME]) {
+        const content = await readKnownLog(path.join(logDirectory, fileName), fileSystem);
+        for (const line of content.split('\n')) {
+            if (!line.trim()) continue;
+            let entry;
+            try { entry = JSON.parse(line); } catch { continue; }
+            const timestamp = entry && typeof entry.at === 'string' ? Date.parse(entry.at) : NaN;
+            if (Number.isFinite(timestamp) && timestamp >= now - ONE_DAY_MS && timestamp <= now) {
+                entries.push({ timestamp, entry });
+            }
+        }
+    }
+    if (entries.length === 0) return null;
+    entries.sort((left, right) => left.timestamp - right.timestamp);
+    return `${redactSecrets(entries.map(({ entry }) => JSON.stringify(entry)).join('\n'))}\n`;
+}
+
+module.exports = { collectRecentSteamIntegrationLog, collectRecentGameAddLog };

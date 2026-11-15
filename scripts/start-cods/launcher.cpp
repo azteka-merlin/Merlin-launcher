@@ -16,7 +16,7 @@
 #include <vector>
 
 #ifndef COD_GAME
-#error COD_GAME must be 22 or 23
+#error COD_GAME must be 19, 22 or 23
 #endif
 #ifndef COD_SP
 #error COD_SP must be 0 or 1
@@ -24,7 +24,12 @@
 
 namespace fs = std::filesystem;
 
-#if COD_GAME == 22
+#if COD_GAME == 19
+constexpr wchar_t kServiceName[] = L"atvi-brynhildr_steam_iw8";
+constexpr wchar_t kFixConsoleTitle[] = L"IW8";
+constexpr wchar_t kWindowTitle[] = L"MW - Iniciador";
+constexpr wchar_t kMpExe[] = L"ModernWarfare.exe";
+#elif COD_GAME == 22
 constexpr wchar_t kServiceName[] = L"atvi-hrist_sr_offline";
 constexpr wchar_t kFixConsoleTitle[] = L"IW9 (Cortez)";
 #if COD_SP
@@ -387,7 +392,9 @@ DWORD RunBootstrapper(const fs::path& executable, const fs::path& working,
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     HANDLE mutex = CreateMutexW(nullptr, FALSE,
-#if COD_GAME == 22
+#if COD_GAME == 19
+                                L"Local\\MerlinCod19Launcher"
+#elif COD_GAME == 22
                                 L"Local\\MerlinCod22Launcher"
 #else
                                 L"Local\\MerlinCod23Launcher"
@@ -405,7 +412,12 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     std::vector<fs::path> copiedFiles;
     try {
         fs::path root(ExeFolder());
-        fs::path driver = root / L"Randgrid.sys";
+        fs::path driver = root /
+#if COD_GAME == 19
+            L"brynhildr.sys";
+#else
+            L"Randgrid.sys";
+#endif
         fs::path rootBootstrapper = root / L"bootstrapper.exe";
         fs::path rootCrashHandler = root / L"bootstrapperCrashHandler.exe";
         RequireFile(driver);

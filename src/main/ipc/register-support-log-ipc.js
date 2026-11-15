@@ -1,12 +1,19 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { collectRecentSteamIntegrationLog } = require('../support/steam-integration-log');
+const { collectRecentSteamIntegrationLog, collectRecentGameAddLog } = require('../support/steam-integration-log');
 
 function registerSupportLogIpc({ ipcMain, clipboard, dialog, getMainWindow, getDownloadsPath, localAppData }) {
     ipcMain.handle('support:export-steam-log', async () => {
         let content;
         try {
-            content = await collectRecentSteamIntegrationLog({ localAppData });
+            const [steamLog, gameAddLog] = await Promise.all([
+                collectRecentSteamIntegrationLog({ localAppData }),
+                collectRecentGameAddLog({ localAppData })
+            ]);
+            content = [
+                steamLog && `=== Integração com a Steam ===\n${steamLog}`,
+                gameAddLog && `=== Adicionar jogos (reconhecimento pela Steam não verificado) ===\n${gameAddLog}`
+            ].filter(Boolean).join('\n');
         } catch {
             return { status: 'read_failed' };
         }
@@ -32,7 +39,8 @@ function registerSupportLogIpc({ ipcMain, clipboard, dialog, getMainWindow, getD
 
         const logDirectory = path.join(localAppData, 'Merlin', 'logs');
         const destination = path.resolve(saveResult.filePath).toLowerCase();
-        const sourceFiles = ['merlin_steam_integration.log', 'merlin_steam_integration.log.1'];
+        const sourceFiles = ['merlin_steam_integration.log', 'merlin_steam_integration.log.1',
+            'merlin_game_add.log', 'merlin_game_add.log.1'];
         if (sourceFiles.some(name => destination === path.resolve(logDirectory, name).toLowerCase())) {
             return { status: 'save_failed' };
         }

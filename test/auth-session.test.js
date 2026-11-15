@@ -95,6 +95,23 @@ test('auth session allows retry after transient server validation failure', asyn
     assert.equal(attempts, 2);
 });
 
+test('profile email validation error is returned as invalid_email', async () => {
+    const axios = async () => {
+        const error = new Error('invalid profile email');
+        error.response = { status: 400, data: { error: 'Invalid request payload' } };
+        throw error;
+    };
+    axios.post = async () => ({ data: { accessToken: 'test-token', expiresIn: 3600,
+        license: { name: 'Test user', expiresAt: '2026-12-31', status: 'active' } } });
+    const session = createAuthSession({
+        app: { getPath: () => 'memory-profile-test' }, safeStorage: createSafeStorage(),
+        fs: createMemoryFs(), path, axios, httpsAgent: {},
+        machineIdentity: { getHwid: async () => 'test-hwid' }, baseUrl: 'https://example.invalid/api'
+    });
+    await session.login('MERLIN-TEST-TEST-TEST');
+    assert.deepEqual(await session.startProfileEmailVerification('invalid@example.a'), { ok: false, code: 'invalid_email' });
+});
+
 test('auth status validates once per Merlin process and reuses a valid session afterwards', async () => {
     let loginAttempts = 0;
     const fs = createMemoryFs();

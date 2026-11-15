@@ -774,6 +774,23 @@ std::filesystem::path AliasRecord(uint32_t accountId, uint32_t appId,
         (std::to_wstring(RuleHash(rule)) + L".txt");
 }
 
+void WriteMerlinSaveFolders(uint32_t accountId, uint32_t appId,
+                            const std::vector<std::string>& folders) {
+    wchar_t buffer[32768]{};
+    DWORD len = GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, 32768);
+    if (!len || len >= 32768 || !accountId || !appId) return;
+    const auto record = std::filesystem::path(buffer) / L"Merlin" / L"cloud" /
+        L"save-folders" / std::to_wstring(accountId) /
+        (std::to_wstring(appId) + L".txt");
+    std::error_code ec;
+    std::filesystem::create_directories(record.parent_path(), ec);
+    if (ec) return;
+    std::string contents = "merlin-save-folders-v1\n";
+    for (const auto& folder : folders) contents += folder + "\n";
+    if (!FileUtil::AtomicWriteText(FileUtil::PathToUtf8(record), contents))
+        LOG("Merlin save path: could not persist save folders for app=%u", appId);
+}
+
 void ResolveMerlinSavePathAlias(uint32_t accountId, uint32_t appId,
                                 AutoCloudRuleNative& rule,
                                 const std::unordered_map<std::string, std::string>& roots) {
@@ -931,6 +948,9 @@ ScanResult GetFileList(const std::string& steamPath,
     if (rules.empty()) {
         LOG("GetAutoCloudFileList: no appinfo UFS save rules for app %u", appId);
         outResult.complete = true; // no rules = nothing to scan, trivially complete
+#ifdef _WIN32
+        WriteMerlinSaveFolders(accountId, appId, {});
+#endif
         return outResult;
     }
     outResult.hasRules = true;
@@ -1197,6 +1217,7 @@ ScanResult GetFileList(const std::string& steamPath,
         }
         return false;
     };
+    std::vector<std::string> merlinSaveFolders;
     for (const auto& rule : rules) {
         if (!AutoCloudRuleMatchesPlatform(rule.platforms, effectivePlatform)) {
             LOG("GetAutoCloudFileList: skipping app %u rule root='%s' path='%s' (platforms mask=0x%x excludes effective platform)",
@@ -1275,6 +1296,9 @@ ScanResult GetFileList(const std::string& steamPath,
                 appId, rule.root.c_str(), rule.path.c_str(), scanRootUtf8.c_str());
             continue;
         }
+
+        if (std::find(merlinSaveFolders.begin(), merlinSaveFolders.end(), scanRootUtf8) == merlinSaveFolders.end()
+            && merlinSaveFolders.size() < 32) merlinSaveFolders.push_back(scanRootUtf8);
 
         LOG("GetAutoCloudFileList: app %u rule root='%s' path='%s' resolvedPath='%s' pattern='%s' recursive=%u resolved='%s'",
             appId, rule.root.c_str(), rule.path.c_str(), rule.resolvedPath.c_str(),
@@ -1403,6 +1427,9 @@ ScanResult GetFileList(const std::string& steamPath,
         outResult.files.clear();
         LOG("GetAutoCloudFileList: aborting app %u bootstrap due to root/path collision", appId);
     }
+#ifdef _WIN32
+    if (outResult.complete) WriteMerlinSaveFolders(accountId, appId, merlinSaveFolders);
+#endif
 
     LOG("GetAutoCloudFileList: found %zu rule-matched Auto-Cloud files for app %u (scanLimitHit=%d, hasRootCollision=%d)",
         outResult.files.size(), appId, (int)scanLimitHit, (int)hasRootCollision);

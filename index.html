@@ -540,7 +540,7 @@
                                     <circle cx="12" cy="12" r="9"></circle>
                                     <path d="M12 11v5M12 8h.01"></path>
                                 </svg>
-                                <p data-i18n="premium_notice">Each activation occupies one slot for 24 hours.</p>
+                                <p data-i18n="premium_notice">Após uma ativação, aquela disponibilidade fica ocupada por 24 horas.</p>
                             </div>
 
                             <div id="premiumGlobalCooldownNotice" class="premium-global-cooldown" hidden>
@@ -665,10 +665,14 @@
                                 <div id="cloudSavesDetailsContent" class="cloud-saves-details-content" hidden>
                                     <div class="cloud-saves-game-heading">
                                         <div class="cloud-saves-game-cover-wrap"><img id="cloudSavesGameCover" class="cloud-saves-game-cover" alt="" hidden><span class="cloud-saves-game-cover-fallback" aria-hidden="true">✦</span></div>
-                                        <div><h3 id="cloudSavesGameName">—</h3><p id="cloudSavesGameMeta"></p></div>
+                                        <div class="cloud-saves-game-copy"><h3 id="cloudSavesGameName">—</h3><p id="cloudSavesGameMeta"></p></div>
+                                        <div class="cloud-saves-game-actions">
+                                            <button id="cloudSavesDetailsRefreshBtn" class="library-refresh-btn cloud-saves-details-refresh-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5M20 4v7h-7"></path></svg><span data-i18n="cloud_saves_refresh_details">Atualizar</span></button>
+                                            <button id="cloudSavesOpenFolder" class="btn btn-secondary cloud-saves-folder-btn" type="button" title="Abrir pasta do save" aria-label="Abrir pasta do save" hidden><img src="node_modules/lucide-static/icons/folder-open.svg" alt="" aria-hidden="true"></button>
+                                        </div>
                                     </div>
                                     <section class="cloud-saves-version-card" aria-labelledby="cloudSavesCurrentTitle">
-                                        <div class="cloud-saves-section-heading"><h4 id="cloudSavesCurrentTitle" data-i18n="cloud_saves_current_title">Versão atual</h4><span id="cloudSavesCurrentStatus" data-i18n="cloud_saves_synced">Sincronizada</span></div>
+                                        <div class="cloud-saves-section-heading"><h4 id="cloudSavesCurrentTitle" data-i18n="cloud_saves_current_title">Versão atual</h4><div class="cloud-saves-card-actions"><button id="cloudSavesCurrentExport" class="btn btn-secondary cloud-saves-export-btn" type="button" hidden>Baixar</button><span id="cloudSavesCurrentStatus" data-i18n="cloud_saves_synced">Sincronizada</span></div></div>
                                         <p id="cloudSavesCurrentDate"></p>
                                         <p id="cloudSavesCurrentSummary"></p>
                                     </section>
@@ -722,7 +726,17 @@
                                     </div>
                                 </div>
                             </div>
-                            <aside id="accessArtwork" class="access-artwork" aria-hidden="true"><img id="accessArtworkImage" class="access-artwork-image" alt="" hidden></aside>
+                            <aside class="access-profile-side">
+                                <div id="accessArtwork" class="access-artwork" aria-hidden="true"><img id="accessArtworkImage" class="access-artwork-image" alt="" hidden></div>
+                                <section id="accessProfileCard" class="access-profile-card" aria-labelledby="accessProfileTitle" hidden>
+                                    <div class="access-profile-heading"><h3 id="accessProfileTitle">Dados da licença</h3><button id="accessProfileEdit" type="button"><img src="node_modules/lucide-static/icons/pencil.svg" alt="" aria-hidden="true"><span id="accessProfileEditText">Editar dados</span></button></div>
+                                    <div class="access-profile-summary-row"><span class="access-profile-summary-icon"><img src="node_modules/lucide-static/icons/key-round.svg" alt=""></span><div class="access-profile-summary-copy"><span id="accessProfileSummaryKeyLabel">Chave da licença</span><div class="access-profile-summary-key"><input id="accessProfileKey" type="password" readonly autocomplete="off" aria-label="Chave da licença"><button id="accessProfileEye" type="button" aria-label="Mostrar chave" aria-pressed="false"><img src="node_modules/lucide-static/icons/eye.svg" alt=""></button></div></div></div>
+                                    <div class="access-profile-summary-row"><span class="access-profile-summary-icon"><img src="node_modules/lucide-static/icons/user-round.svg" alt=""></span><div class="access-profile-summary-copy"><span id="accessProfileSummaryNameLabel">Nome</span><strong id="accessProfileSummaryName"></strong></div></div>
+                                    <div class="access-profile-summary-row"><span class="access-profile-summary-icon"><img src="node_modules/lucide-static/icons/mail.svg" alt=""></span><div class="access-profile-summary-copy"><span id="accessProfileSummaryEmailLabel">E-mail</span><strong id="accessProfileSummaryEmail"></strong></div></div>
+                                    <div class="access-profile-summary-row"><span class="access-profile-summary-icon"><img src="node_modules/lucide-static/icons/phone.svg" alt=""></span><div class="access-profile-summary-copy"><span id="accessProfileSummaryPhoneLabel">Telefone</span><strong id="accessProfileSummaryPhone"></strong></div></div>
+                                    <p id="accessProfileCardFeedback" class="access-profile-card-feedback" role="status" aria-live="polite" hidden></p>
+                                </section>
+                            </aside>
                         </div>
                     </section>
                     <section id="settingsMainView" class="settings-main-view" aria-label="Configurações" hidden></section>
@@ -1158,8 +1172,8 @@
                         <p data-i18n="premium_intro_availability_text">Alguns jogos são liberados em momentos diferentes conforme o plano.</p>
                     </article>
                     <article class="premium-intro-feature">
-                        <strong data-i18n="premium_intro_slots_title">Vagas temporárias</strong>
-                        <p data-i18n="premium_intro_slots_text">Cada ativação ocupa uma vaga por 24 horas.</p>
+                        <strong data-i18n="premium_intro_slots_title">Ativações temporárias</strong>
+                        <p data-i18n="premium_intro_slots_text">Após uma ativação, aquela disponibilidade fica ocupada por 24 horas.</p>
                     </article>
                     <article class="premium-intro-feature">
                         <strong data-i18n="premium_intro_wait_title">Ative uma vez</strong>
@@ -1386,6 +1400,36 @@
             </div>
         </div>
     </div>
+    <div id="accessProfileOverlay" class="access-profile-overlay" hidden>
+        <section id="accessProfileDrawer" class="access-profile-drawer" role="dialog" aria-modal="true" aria-labelledby="accessProfileDrawerTitle" aria-describedby="accessProfileDrawerDescription">
+            <header class="access-profile-drawer-header">
+                <button id="accessProfileClose" class="access-profile-close" type="button" aria-label="Fechar"><img src="node_modules/lucide-static/icons/x.svg" alt=""></button>
+                <h2 id="accessProfileDrawerTitle">Editar dados da licença</h2>
+                <p id="accessProfileDrawerDescription">Atualize seus dados cadastrais. A chave da licença não pode ser alterada.</p>
+            </header>
+            <div class="access-profile-drawer-scroll">
+                <div class="access-profile-drawer-field"><label id="accessProfileDrawerKeyLabel" for="accessProfileDrawerKey">Chave da licença</label><div class="access-profile-drawer-key"><img src="node_modules/lucide-static/icons/lock-keyhole.svg" alt=""><input id="accessProfileDrawerKey" type="password" readonly autocomplete="off"><span id="accessProfileReadonly">Somente leitura</span></div></div>
+                <div class="access-profile-drawer-field"><label for="accessProfileName">Nome</label><input id="accessProfileName" type="text" maxlength="100" autocomplete="name"></div>
+                <div class="access-profile-drawer-field"><label for="accessProfileEmail">E-mail da licença</label><input id="accessProfileEmail" type="text" inputmode="email" maxlength="254" autocomplete="email" aria-describedby="accessProfileEmailError"><p id="accessProfileEmailError" class="access-profile-field-error" role="alert" hidden></p></div>
+                <div class="access-profile-drawer-field"><label for="accessProfilePhone">Telefone (opcional)</label><input id="accessProfilePhone" type="tel" maxlength="32" autocomplete="tel"></div>
+                <div id="accessProfileVerification" class="access-profile-verification" hidden>
+                    <label id="accessProfileCodeLabel">Código enviado ao novo e-mail</label>
+                    <div class="access-profile-code-digits" role="group" aria-labelledby="accessProfileCodeLabel">
+                        <input id="accessProfileCodeDigit0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Dígito 1">
+                        <input id="accessProfileCodeDigit1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Dígito 2">
+                        <input id="accessProfileCodeDigit2" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Dígito 3">
+                        <input id="accessProfileCodeDigit3" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Dígito 4">
+                        <input id="accessProfileCodeDigit4" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Dígito 5">
+                        <input id="accessProfileCodeDigit5" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Dígito 6">
+                    </div>
+                    <input id="accessProfileCode" type="hidden">
+                    <p id="accessProfileCodeHint">Confirme o código para salvar o novo endereço.</p>
+                </div>
+                <p id="accessProfileFeedback" class="access-profile-feedback" role="status" aria-live="polite" hidden></p>
+            </div>
+            <footer class="access-profile-actions"><button id="accessProfileCancel" class="btn btn-secondary" type="button">Cancelar</button><button id="accessProfileSave" class="btn btn-primary" type="button">Salvar alterações</button></footer>
+        </section>
+    </div>
     <script src="src/renderer/auth/entitlement-monitor.js"></script>
     <script src="src/renderer/auth/license-gate.js"></script>
     <script src="node_modules/@floating-ui/core/dist/floating-ui.core.umd.min.js"></script>
@@ -1414,6 +1458,7 @@
     <script src="src/renderer/premium/premium-offer.js"></script>
     <script src="src/renderer/cloud-saves/cloud-saves.js"></script>
     <script src="src/renderer/access/access.js"></script>
+    <script src="src/renderer/access/access-profile.js"></script>
     <script src="gamepad.js"></script>
     <script src="src/renderer/shared/home-carousel.js?v=4"></script>
 </body>

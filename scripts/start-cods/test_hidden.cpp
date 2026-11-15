@@ -1,9 +1,15 @@
 #ifndef TEST_GAME
-#error TEST_GAME must be 22 or 23
+#error TEST_GAME must be 19, 22 or 23
 #endif
 #define COD_GAME TEST_GAME
+#if TEST_GAME == 19
+#define COD_SP 0
+#else
 #define COD_SP 1
-#if TEST_GAME == 22
+#endif
+#if TEST_GAME == 19
+constexpr wchar_t kProbeVariant[] = L"iw8";
+#elif TEST_GAME == 22
 constexpr wchar_t kProbeVariant[] = L"cortez";
 #elif TEST_GAME == 23
 constexpr wchar_t kProbeVariant[] = L"jupiter";

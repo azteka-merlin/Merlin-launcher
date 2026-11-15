@@ -36,6 +36,9 @@ function registerAuthIpc({ ipcMain, authSession, shell, apiBaseUrl, onLogout, on
         return resumeAfterAuthentication(result);
     });
     ipcMain.handle('auth:reset-hwid', async (_event, licenseKey) => authSession.resetHwid(licenseKey));
+    ipcMain.handle('auth:profile-get', async () => authSession.getProfile());
+    ipcMain.handle('auth:profile-email-start', async (_event, email) => authSession.startProfileEmailVerification(email));
+    ipcMain.handle('auth:profile-update', async (_event, profile) => authSession.updateProfile(profile));
     ipcMain.handle('auth:logout', async () => {
         try { await onBeforeLogout?.(); } catch (_) {}
         const result = authSession.logout();

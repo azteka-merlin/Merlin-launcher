@@ -405,6 +405,51 @@ function createAuthSession({
         }
     }
 
+    async function profileRequest(method, route, body) {
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                const token = await getAccessToken();
+                const response = await axios({
+                    method, url: `${baseUrl}/launcher/profile${route}`, data: body,
+                    timeout: 15_000, httpsAgent,
+                    headers: { Accept: 'application/json', 'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`, 'User-Agent': 'Merlin/2.0' }
+                });
+                return { ok: true, ...response.data };
+            } catch (error) {
+                if (error?.response?.status === 401 && attempt === 0) {
+                    try { await handleUnauthorized(); continue; } catch (_) {}
+                }
+                const message = String(error?.response?.data?.error || error?.response?.data?.message || '');
+                const code = error?.response?.status === 409 && message.includes('e-mail') ? 'email_in_use'
+                    : error?.response?.status === 429 ? 'rate_limited'
+                    : error?.response?.status === 403 ? 'verification_required'
+                    : error?.response?.status === 400 && route === '/email-verification' && message === 'Invalid request payload' ? 'invalid_email'
+                    : error?.response?.status === 400 && message.includes('Código') ? 'invalid_code'
+                    : error?.response?.status === 401 ? 'auth_required' : 'unavailable';
+                return { ok: false, code };
+            }
+        }
+        return { ok: false, code: 'unavailable' };
+    }
+
+    async function getProfile() {
+        return profileRequest('get', '');
+    }
+
+    async function startProfileEmailVerification(email) {
+        return profileRequest('post', '/email-verification', { email });
+    }
+
+    async function updateProfile(profile) {
+        const result = await profileRequest('put', '', profile);
+        if (result.ok && result.profile && session) {
+            session.license = { ...session.license, name: result.profile.name };
+            persistSession();
+        }
+        return result;
+    }
+
     async function createBillingPortalSession() {
         const accessToken = await getAccessToken();
         try {
@@ -492,7 +537,7 @@ function createAuthSession({
         }
     }
 
-    return { createAccessHandoff, createBillingPortalSession, forgetRememberedKey, getAccessToken, getRememberedKey, handleUnauthorized, hasStoredSession, login, logout, resetHwid, status };
+    return { createAccessHandoff, createBillingPortalSession, forgetRememberedKey, getAccessToken, getProfile, getRememberedKey, handleUnauthorized, hasStoredSession, login, logout, resetHwid, startProfileEmailVerification, status, updateProfile };
 }
 
 module.exports = { AuthError, createAuthSession };

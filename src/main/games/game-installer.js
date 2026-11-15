@@ -8,7 +8,8 @@ function createGameInstaller({
     manifestApiUrl,
     steamService,
     installLuaFile,
-    onInstalled = () => {}
+    onInstalled = () => {},
+    recordGameAdd = () => {}
 }) {
     const { createZipArchiveTools } = require('../files/zip-archive-tools');
     const activeDownloads = new Set();
@@ -72,6 +73,9 @@ function createGameInstaller({
     function installArchiveFiles(extractedDir, depotcachePath, stplugInPath, { autoUpdate = true } = {}) {
         let filesCopied = 0;
         let totalFiles = 0;
+        let luaCopied = 0;
+        let manifestsCopied = 0;
+        let copyFailures = 0;
 
         function walkDirectory(dir) {
             const files = fs.readdirSync(dir);
@@ -90,24 +94,27 @@ function createGameInstaller({
                         const destPath = path.join(depotcachePath, file);
                         fs.copyFileSync(filePath, destPath);
                         filesCopied++;
+                        manifestsCopied++;
                         console.log(`Copied manifest: ${file} -> ${destPath}`);
                     } else if (file.endsWith('.lua')) {
                         const destPath = path.join(stplugInPath, file);
                         const commentedLines = installLuaFile(fs, filePath, destPath, { autoUpdate });
                         filesCopied++;
+                        luaCopied++;
                         console.log(
                             `Installed lua: ${file} -> ${destPath} `
                             + `(${commentedLines} setmanifestid line(s) commented)`
                         );
                     }
                 } catch (error) {
+                    copyFailures++;
                     console.error(`Error copying ${file}:`, error.message);
                 }
             }
         }
 
         walkDirectory(extractedDir);
-        return { filesCopied, totalFiles };
+        return { filesCopied, totalFiles, luaCopied, manifestsCopied, copyFailures };
     }
 
     function parseApiErrorData(data) {
@@ -160,9 +167,11 @@ function createGameInstaller({
         if (!/^\d+$/.test(appId)) {
             return { success: false, message: 'Invalid App ID.' };
         }
+        recordGameAdd({ stage: 'start', appId, steamPath });
 
         const readiness = steamService.getActivationReadiness(steamPath);
         if (!readiness.ok) {
+            recordGameAdd({ stage: 'blocked', appId, reason: readiness.reason, missing: readiness.missing });
             const details = readiness.missing.length > 0
                 ? ` Missing: ${readiness.missing.join(', ')}.`
                 : '';
@@ -175,6 +184,7 @@ function createGameInstaller({
         }
 
         if (activeDownloads.has(appId)) {
+            recordGameAdd({ stage: 'blocked', appId, reason: 'already_running' });
             return {
                 success: false,
                 message: `A download for App ID ${appId} is already running.`
@@ -226,6 +236,7 @@ function createGameInstaller({
                     if (fs.existsSync(zipPath) && fs.statSync(zipPath).size > 0) {
                         downloaded = true;
                         sourceUsed = source.name;
+                        recordGameAdd({ stage: 'archive_received', appId, bytes: archiveData.length });
                         forceDisableAutoUpdate = String(
                             response.headers?.['x-merlin-manifest-source'] || ''
                         ).toLowerCase() === 'r2-override';
@@ -234,6 +245,8 @@ function createGameInstaller({
                     }
                 } catch (error) {
                     const apiErrorCode = getApiErrorCode(error);
+                    recordGameAdd({ stage: 'source_failed', appId, httpStatus: Number(error?.response?.status) || null,
+                        code: /^[A-Za-z0-9_]{1,64}$/.test(apiErrorCode) ? apiErrorCode : null });
                     if (apiErrorCode === 'expired') error.code = 'expired';
                     console.error(`Attempt ${i + 1} failed (${source.name}):`, error.message);
                     if (
@@ -289,6 +302,7 @@ function createGameInstaller({
                 stplugInPath,
                 { autoUpdate: effectiveAutoUpdate }
             );
+            recordGameAdd({ stage: 'files_copied', appId, ...result });
 
             onProgress({ message: 'Cleaning up...', percent: 95 });
             try {
@@ -317,6 +331,7 @@ function createGameInstaller({
             } catch (error) {
                 console.warn('Unable to invalidate Library after installation:', error.message);
             }
+            recordGameAdd({ stage: 'complete', appId, steamRecognition: 'not_verified' });
             return {
                 success: true,
                 message: `Installation successful! ${result.filesCopied} file(s) installed `
@@ -332,6 +347,8 @@ function createGameInstaller({
                 : status === 429
                     ? 'rate_limited'
                     : error.code;
+            recordGameAdd({ stage: 'failed', appId, httpStatus: Number(status) || null,
+                code: typeof code === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(code) ? code : null });
             return {
                 success: false,
                 reason: code,

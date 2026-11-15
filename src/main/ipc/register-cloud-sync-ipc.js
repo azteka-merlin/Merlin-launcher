@@ -1,5 +1,28 @@
-function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getSteamPath, getSteamReadiness, getSteamAccountId, isSteamRunning, stopSteam, onStateChanged }) {
+const path = require('path');
+const { saveFolders } = require('../cloud-sync/cloud-save-folders');
+const { exportCloudSave } = require('../cloud-sync/cloud-save-export');
+function defaultCloudSaveFilename(gameName, appId, now = new Date()) {
+    const name = String(gameName || '').slice(0, 300).normalize('NFKD').replace(/\p{M}/gu, '')
+        .toLocaleLowerCase('pt-BR').replace(/[^\p{L}\p{N}]+/gu, '-')
+        .replace(/^-+|-+$/g, '').slice(0, 90).replace(/-+$/g, '') || String(appId);
+    const two = value => String(value).padStart(2, '0');
+    const stamp = [two(now.getDate()), two(now.getMonth() + 1), String(now.getFullYear()).slice(-2),
+        two(now.getHours()), two(now.getMinutes())].join('-');
+    return `save-${name}-${stamp}.zip`;
+}
+const dialogText = {
+    ptbr: { folders: 'Pastas de save', choose: 'Este jogo usa mais de uma pasta de save. Qual deseja abrir?', cancel: 'Cancelar', export: 'Exportar save', zip: 'Arquivo ZIP' },
+    en: { folders: 'Save folders', choose: 'This game uses more than one save folder. Which one would you like to open?', cancel: 'Cancel', export: 'Export save', zip: 'ZIP archive' },
+    es: { folders: 'Carpetas de partidas', choose: 'Este juego usa más de una carpeta de partidas. ¿Cuál quieres abrir?', cancel: 'Cancelar', export: 'Exportar partida', zip: 'Archivo ZIP' },
+    fr: { folders: 'Dossiers de sauvegarde', choose: 'Ce jeu utilise plusieurs dossiers de sauvegarde. Lequel ouvrir ?', cancel: 'Annuler', export: 'Exporter la sauvegarde', zip: 'Archive ZIP' },
+    de: { folders: 'Spielstandordner', choose: 'Dieses Spiel verwendet mehrere Spielstandordner. Welchen möchtest du öffnen?', cancel: 'Abbrechen', export: 'Spielstand exportieren', zip: 'ZIP-Archiv' }
+};
+
+function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getSteamPath, getSteamReadiness,
+    getSteamAccountId, isSteamRunning, stopSteam, startSteam, onStateChanged, localAppData, dialog, shell, getLanguage }) {
     let busy = false;
+    let exportBusy = false;
+    const labels = () => dialogText[getLanguage?.()] || dialogText.ptbr;
     const status = () => ({
         ...cloudSyncService.status(),
         filesReady: dllInstaller.cloudSupportReady(getSteamPath())
@@ -106,10 +129,64 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         const accountId = await getSteamAccountId?.();
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         try {
-            return { ...(await cloudSyncService.getGame(accountId, appId)), accountId };
+            const result = await cloudSyncService.getGame(accountId, appId);
+            return { ...result, accountId,
+                saveFolderAvailable: saveFolders(localAppData, accountId, appId,
+                    { hints: result.game?.localSaveHints, steamPath: getSteamPath() }).length > 0 };
         } catch (error) {
-            return { success: false, code: error.response?.status === 401 ? 'auth_required' : error.code || 'cloud_game_failed' };
+            return { success: false, code: error.response?.status === 401 ? 'auth_required'
+                : error.code === 'ECONNABORTED' ? 'cloud_timeout'
+                    : error.response?.status >= 500 ? 'cloud_server_error'
+                        : error.response?.data?.code || error.code || 'cloud_game_failed' };
         }
+    });
+    ipcMain.handle('cloud-sync:open-save-folder', async (_event, appId) => {
+        const accountId = await getSteamAccountId?.({ liveOnly: true });
+        if (!accountId) return { success: false, code: 'steam_account_unavailable' };
+        let folders = saveFolders(localAppData, accountId, appId);
+        if (cloudSyncService.status().connected) {
+            try {
+                const details = await cloudSyncService.getGame(accountId, appId);
+                folders = saveFolders(localAppData, accountId, appId,
+                    { hints: details.game?.localSaveHints, steamPath: getSteamPath() });
+            } catch { /* Keep the local-only result. */ }
+        }
+        if (!folders.length) return { success: false, code: 'save_folder_unavailable' };
+        let selected = folders[0];
+        if (folders.length > 1) {
+            const wording = labels();
+            const result = await dialog.showMessageBox({ type: 'question', title: wording.folders,
+                message: wording.choose,
+                buttons: [...folders, wording.cancel], cancelId: folders.length, noLink: true });
+            if (result.response >= folders.length) return { success: false, code: 'cancelled' };
+            selected = folders[result.response];
+        }
+        const error = await shell.openPath(selected);
+        return error ? { success: false, code: 'save_folder_open_failed' } : { success: true };
+    });
+    ipcMain.handle('cloud-sync:export', async (_event, appId, versionId, gameName) => {
+        if (exportBusy) return { success: false, code: 'busy' };
+        if (!cloudSyncService.status().connected) return { success: false, code: 'cloud_disconnected' };
+        const accountId = await getSteamAccountId?.({ liveOnly: true });
+        if (!accountId || !/^[1-9]\d{0,9}$/.test(String(appId))
+            || !(versionId === 'current' || /^[a-f0-9]{64}$/.test(String(versionId)))) {
+            return { success: false, code: 'cloud_export_invalid' };
+        }
+        exportBusy = true;
+        try {
+            const wording = labels();
+            const result = await dialog.showSaveDialog({ title: wording.export,
+                defaultPath: defaultCloudSaveFilename(gameName, appId),
+                filters: [{ name: wording.zip, extensions: ['zip'] }] });
+            if (result.canceled || !result.filePath) return { success: false, code: 'cancelled' };
+            const destination = path.extname(result.filePath).toLowerCase() === '.zip'
+                ? result.filePath : `${result.filePath}.zip`;
+            return await exportCloudSave({ accountId, appId, versionId, destination,
+                getManifest: cloudSyncService.getExportManifest,
+                getFile: cloudSyncService.getExportFile });
+        } catch (error) {
+            return { success: false, code: error.response?.data?.code || error.code || 'cloud_export_failed' };
+        } finally { exportBusy = false; }
     });
     ipcMain.handle('cloud-sync:restore', async (_event, appId, recoveryId) => {
         if (busy) return { success: false, code: 'busy' };
@@ -118,9 +195,29 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
         if (!accountId) return { success: false, code: 'steam_account_unavailable' };
         busy = true;
         try {
-            return await cloudSyncService.restoreGame(accountId, appId, recoveryId);
+            const result = await cloudSyncService.restoreGame(accountId, appId, recoveryId);
+            if (!result?.success) {
+                console.warn('[cloud-sync:restore] rejected', { code: result?.code || 'unknown' });
+                return result;
+            }
+            if (!result.restartSteam) return result;
+            try {
+                const running = await isSteamRunning();
+                if (running && !await stopSteam()) {
+                    return { ...result, steamRestarted: false, steamRestartCode: 'steam_close_failed' };
+                }
+                const started = await startSteam();
+                const steamRestarted = Boolean(started || await isSteamRunning());
+                return { ...result, steamRestarted,
+                    ...(!steamRestarted ? { steamRestartCode: 'steam_start_failed' } : {}) };
+            } catch {
+                return { ...result, steamRestarted: false, steamRestartCode: 'steam_restart_failed' };
+            }
         } catch (error) {
             const status = error.response?.status;
+            console.warn('[cloud-sync:restore] request failed', {
+                status: status || null, code: error.response?.data?.code || error.code || 'unknown'
+            });
             return {
                 success: false,
                 code: status === 401 ? 'auth_required'
@@ -136,4 +233,4 @@ function registerCloudSyncIpc({ ipcMain, cloudSyncService, dllInstaller, getStea
     ipcMain.handle('cloud-sync:ack-steam-restart', () => cloudSyncService.acknowledgeSteamRestart());
 }
 
-module.exports = { registerCloudSyncIpc };
+module.exports = { registerCloudSyncIpc, defaultCloudSaveFilename };

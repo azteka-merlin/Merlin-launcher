@@ -14,6 +14,8 @@ Quando uma correção ou integração Premium faz o jogo gravar em uma pasta com
 - `OpenSteamTool.dll` carrega `merlin_cloud_redirect.dll` apenas quando a configuração de teste está ativada. O CloudRedirect foi incluído sob licença MIT, a partir do commit `00969da863c8d7b2e2821ebc2c6cb231bbe56ef2` (v2.6.6). Seus caminhos locais foram isolados dos de uma instalação independente do CloudRedirect.
 - A DLL fala com o gateway S3 da API stage. Ela **não** recebe chave de R2. O gateway valida a assinatura SigV4 e a licença, e grava no bucket R2 já existente, sob `cloud-sync/stage/steam/<account-id>/<appid>/`.
 - A API guarda uma cópia de recuperação fora do namespace S3 antes de sobrescrever ou excluir um objeto. O gateway não expõe as cópias de recuperação ao cliente.
+- A exportação aparece somente nas versões completas marcadas como V2. O Launcher baixa os arquivos sob autorização da licença, confere tamanho e SHA-1 e monta um ZIP local com `merlin-save.json` e `Arquivos/`. Backups legados parciais não oferecem exportação. O ZIP não é importado automaticamente.
+- O botão para abrir a pasta do save aparece se a DLL registrou um diretório válido ou se arquivos do estado atual já existem em uma pasta local correspondente. Jogos com mais de uma pasta apresentam a escolha ao usuário. Em outro computador sem arquivos locais, a pasta pode não estar disponível até o jogo ser detectado localmente.
 - O Launcher deve continuar aberto, mesmo em segundo plano, para renovar a autorização. A Steam precisa ser reiniciada após ativar/desativar para que a DLL releia a configuração.
 
 ## Teste manual seguro

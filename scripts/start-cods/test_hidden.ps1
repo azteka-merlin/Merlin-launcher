@@ -8,6 +8,7 @@ $sourceProbe = Join-Path $PSScriptRoot 'console_probe.cpp'
 $sourceTest = Join-Path $PSScriptRoot 'test_hidden.cpp'
 $probeObj = Join-Path $build 'console_probe_watch.obj'
 $variants = @(
+    @{ Name = 'mw'; Game = 19; Diagnostic = 'console_probe_diagnostics_mw.txt' },
     @{ Name = 'mw2'; Game = 22; Diagnostic = 'console_probe_diagnostics_mw2.txt' },
     @{ Name = 'mw3'; Game = 23; Diagnostic = 'console_probe_diagnostics_mw3.txt' }
 )
@@ -64,5 +65,5 @@ foreach ($variant in $variants) {
         if (-not $reason) { $reason = 'erro do launcher ou do teste' }
         throw "Teste de console oculto $($variant.Name) falhou (código $($process.ExitCode)): $reason."
     }
-    Write-Output ('Teste passou para ' + $variant.Name.ToUpperInvariant() + ': o watcher ocultou o console ao mostrar e ao renomear para IW9; as APIs de console continuaram funcionando.')
+    Write-Output ('Teste passou para ' + $variant.Name.ToUpperInvariant() + ': o watcher ocultou o console ao mostrar e ao renomear; as APIs de console continuaram funcionando.')
 }

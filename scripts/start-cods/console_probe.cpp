@@ -6,6 +6,7 @@
 
 constexpr wchar_t kCortezTitle[] =
     L"IW9 (Cortez) SP Steam (SP22 9.7 build 23096551 2025-07-10) Offline v1 by .r4v3n";
+constexpr wchar_t kIw8Title[] = L"IW8 Steam synthetic console probe";
 constexpr wchar_t kJupiterTitle[] =
     L"IW9 (Jupiter) SP Steam synthetic console probe";
 constexpr wchar_t kGenericTitle[] = L"Merlin Generic Console Probe";
@@ -96,7 +97,10 @@ void AppendRenameDiagnostic(const Observation& genericShown,
 
 int wmain(int argc, wchar_t** argv) {
     if (argc != 2) return 36;
-    if (wcscmp(argv[1], L"cortez") == 0) {
+    if (wcscmp(argv[1], L"iw8") == 0) {
+        kProbeTitle = kIw8Title;
+        kDiagnosticPath = "console_probe_diagnostics_mw.txt";
+    } else if (wcscmp(argv[1], L"cortez") == 0) {
         kProbeTitle = kCortezTitle;
         kDiagnosticPath = "console_probe_diagnostics_mw2.txt";
     } else if (wcscmp(argv[1], L"jupiter") == 0) {

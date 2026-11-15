@@ -1,6 +1,6 @@
 param(
     [switch]$Deploy,
-    [ValidateSet('start_mw2_campanha','start_mw2_multiplayer','start_mw3_campanha','start_mw3_multiplayer')]
+    [ValidateSet('start_mw','start_mw2_campanha','start_mw2_multiplayer','start_mw3_campanha','start_mw3_multiplayer')]
     [string]$Only
 )
 
@@ -18,6 +18,7 @@ if (-not (Test-Path -LiteralPath $vcvars -PathType Leaf)) { throw "Compilador C+
 New-Item -ItemType Directory -Force -Path $build, $dist | Out-Null
 
 $variants = @(
+    @{ Name='start_mw';             Game=19; Sp=0; Icon='mw2019.ico'; Fix=(Join-Path $env:USERPROFILE 'Documents\Call of Duty Modern Warfare\2000950') },
     @{ Name='start_mw2_multiplayer'; Game=22; Sp=0; Icon='mwii.ico'; Fix='D:\games\CODS\mw2\fix' },
     @{ Name='start_mw2_campanha';    Game=22; Sp=1; Icon='mwii.ico'; Fix='D:\games\CODS\mw2\fix' },
     @{ Name='start_mw3_multiplayer'; Game=23; Sp=0; Icon='mwiii-placeholder.ico'; Fix='D:\games\CODS\mw3\Fix' },
@@ -59,7 +60,12 @@ foreach ($variant in $variants) {
             throw "Pasta do fix não encontrada: $($variant.Fix)"
         }
         Copy-Item -LiteralPath $exe -Destination (Join-Path $variant.Fix ($variant.Name + '.exe')) -Force
-        if ($variant.Game -eq 22) {
+        if ($variant.Game -eq 19) {
+            $mwInstall = 'C:\Program Files (x86)\Steam\steamapps\common\Call of Duty Modern Warfare'
+            if (Test-Path -LiteralPath (Join-Path $mwInstall 'ModernWarfare.exe') -PathType Leaf) {
+                Copy-Item -LiteralPath $exe -Destination (Join-Path $mwInstall ($variant.Name + '.exe')) -Force
+            }
+        } elseif ($variant.Game -eq 22) {
             $mw2Install = 'D:\SteamLibrary\steamapps\common\Call of Duty Modern Warfare II'
             if (Test-Path -LiteralPath (Join-Path $mw2Install 'cod22-cod.exe') -PathType Leaf) {
                 Copy-Item -LiteralPath $exe -Destination (Join-Path $mw2Install ($variant.Name + '.exe')) -Force

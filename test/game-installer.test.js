@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { createGameInstaller } = require('../src/main/games/game-installer');
 
-function createInstallerWithManifestError(manifestError) {
+function createInstallerWithManifestError(manifestError, recordGameAdd = () => {}) {
     return createGameInstaller({
         app: { getPath: () => 'C:\\Temp' },
         fs: {
@@ -25,7 +25,8 @@ function createInstallerWithManifestError(manifestError) {
         authSession: { getAccessToken: async () => 'token', handleUnauthorized: async () => {} },
         manifestApiUrl: 'https://staging.api-merlin.com/api/manifests',
         steamService: { getActivationReadiness: () => ({ ok: true, missing: [] }) },
-        installLuaFile: () => 0
+        installLuaFile: () => 0,
+        recordGameAdd
     });
 }
 
@@ -141,4 +142,16 @@ test('keeps missing manifests as the regular unsupported game failure', async ()
 
     assert.equal(result.success, false);
     assert.match(result.message, /Unable to download files for App ID 1350390/);
+});
+
+test('records a failed addition without persisting the API error text', async () => {
+    const events = [];
+    const error = new Error('Bearer private-token C:\\Users\\Person');
+    error.code = 'ETIMEDOUT';
+    const installer = createInstallerWithManifestError(error, event => events.push(event));
+    const result = await installer.install({ appId: '1350390', steamPath: 'C:\\Steam', onProgress: () => {} });
+    assert.equal(result.success, false);
+    assert.deepEqual(events.map(event => event.stage), ['start', 'source_failed', 'failed']);
+    assert.equal(events[1].code, 'ETIMEDOUT');
+    assert.doesNotMatch(JSON.stringify(events), /private-token|Person/);
 });

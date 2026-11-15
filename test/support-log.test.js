@@ -4,6 +4,8 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { collectRecentSteamIntegrationLog } = require('../src/main/support/steam-integration-log');
+const { collectRecentGameAddLog } = require('../src/main/support/steam-integration-log');
+const { createGameAddLog } = require('../src/main/support/game-add-log');
 const { registerSupportLogIpc } = require('../src/main/ipc/register-support-log-ipc');
 
 async function withLogDirectory(t) {
@@ -123,4 +125,43 @@ test('export never overwrites its source log', async t => {
 
     assert.deepEqual(await handler(), { status: 'save_failed' });
     assert.equal(await fs.readFile(sourcePath, 'utf8'), original);
+});
+
+test('records DLL mismatch without paths or secrets and exports game addition events', async t => {
+    const { localAppData, logDirectory } = await withLogDirectory(t);
+    const bundle = path.join(localAppData, 'bundle.dll');
+    const steam = path.join(localAppData, 'steam');
+    await fs.mkdir(steam);
+    await fs.writeFile(bundle, 'new');
+    await fs.writeFile(path.join(steam, 'test.dll'), 'old');
+    const record = createGameAddLog({
+        localAppData,
+        requiredFiles: [{ name: 'test.dll', relativeDestination: 'test.dll' }],
+        getSourcePath: () => bundle
+    });
+    record({ stage: 'start', appId: '123', steamPath: steam });
+    record({ stage: 'complete', appId: '123', steamRecognition: 'not_verified' });
+    const text = await collectRecentGameAddLog({ localAppData });
+    assert.match(text, /"state":"different"/);
+    assert.match(text, /"steamRecognition":"not_verified"/);
+    assert.doesNotMatch(text, /bundle\.dll|"steamPath"|\\steam\\/);
+    assert.equal((await fs.readFile(path.join(logDirectory, 'merlin_game_add.log'), 'utf8')).split('\n').filter(Boolean).length, 2);
+});
+
+test('support export works when only the game addition log has recent events', async t => {
+    const { localAppData } = await withLogDirectory(t);
+    createGameAddLog({ localAppData, requiredFiles: [], getSourcePath: () => '' })({ stage: 'failed', appId: '123' });
+    let handler;
+    let copied = '';
+    registerSupportLogIpc({
+        ipcMain: { handle: (_channel, callback) => { handler = callback; } },
+        clipboard: { writeText: text => { copied = text; } },
+        dialog: { showSaveDialog: async () => ({ canceled: true }) },
+        getMainWindow: () => null,
+        getDownloadsPath: () => localAppData,
+        localAppData
+    });
+    assert.deepEqual(await handler(), { status: 'copied' });
+    assert.match(copied, /Adicionar jogos/);
+    assert.match(copied, /"stage":"failed"/);
 });

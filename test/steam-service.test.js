@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path').win32;
+const { EventEmitter } = require('node:events');
 
 const { createSteamService } = require('../src/main/steam/steam-service');
 
@@ -18,6 +19,26 @@ function createService(existingPaths, fileContents = {}) {
         userProfile: 'C:\\Users\\Test'
     });
 }
+
+test('starting Steam completes when the process spawns, without waiting for Steam to exit', async () => {
+    const child = new EventEmitter();
+    let detached = false;
+    let unrefed = false;
+    child.unref = () => { unrefed = true; };
+    const service = createSteamService({ fs: {}, path, exec: () => {}, platform: 'win32',
+        spawn(command, args, options) {
+            assert.equal(command, path.join('C:\\Steam', 'steam.exe'));
+            assert.deepEqual(args, []);
+            detached = options.detached && options.stdio === 'ignore';
+            process.nextTick(() => child.emit('spawn'));
+            return child;
+        }
+    });
+    assert.equal(await Promise.race([service.start('C:\\Steam'),
+        new Promise(resolve => setTimeout(() => resolve('timed out'), 100))]), true);
+    assert.equal(detached, true);
+    assert.equal(unrefed, true);
+});
 
 test('reports a valid Steam installation only when exe and DLLs exist', () => {
     const root = path.normalize('C:\\Steam');

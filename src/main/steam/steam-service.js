@@ -8,7 +8,7 @@ const REQUIRED_STEAM_FILES = [
     }
 ];
 
-function createSteamService({ fs, path, exec, platform, userProfile }) {
+function createSteamService({ fs, path, exec, spawn, platform, userProfile }) {
     let lastActiveAccountId = null;
     function parseQuotedVdf(raw) {
         const source = String(raw || '');
@@ -156,11 +156,14 @@ function createSteamService({ fs, path, exec, platform, userProfile }) {
 
     function start(steamPath) {
         return new Promise(resolve => {
-            if (platform === 'win32') {
-                exec(`"${path.join(steamPath, 'steam.exe')}"`, error => resolve(!error));
-            } else {
-                exec('steam', error => resolve(!error));
-            }
+            let child;
+            try {
+                child = spawn(platform === 'win32' ? path.join(steamPath, 'steam.exe') : 'steam', [], {
+                    detached: true, stdio: 'ignore', windowsHide: true
+                });
+            } catch (_) { resolve(false); return; }
+            child.once('error', () => resolve(false));
+            child.once('spawn', () => { child.unref(); resolve(true); });
         });
     }
 

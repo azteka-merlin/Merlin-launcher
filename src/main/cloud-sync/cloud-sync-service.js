@@ -223,6 +223,29 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         return result;
     }
 
+    function exportPath(accountId, appId, versionId, name) {
+        if (!/^[1-9]\d{0,9}$/.test(String(accountId)) || !/^[1-9]\d{0,9}$/.test(String(appId))
+            || !(versionId === 'current' || /^[a-f0-9]{64}$/.test(String(versionId)))) {
+            throw Object.assign(new Error('invalid_export'), { code: 'cloud_export_invalid' });
+        }
+        const base = `/launcher/cloud/export/${encodeURIComponent(appId)}/${encodeURIComponent(versionId)}`;
+        return `${base}?accountId=${encodeURIComponent(accountId)}${name === undefined ? '' : `&name=${encodeURIComponent(name)}`}`;
+    }
+
+    async function getExportManifest(accountId, appId, versionId) {
+        return requestCloudApi('GET', exportPath(accountId, appId, versionId));
+    }
+
+    async function getExportFile(accountId, appId, versionId, name) {
+        if (typeof name !== 'string' || !name) throw Object.assign(new Error('invalid_export'), { code: 'cloud_export_invalid' });
+        if (!supportedOrigin() || !enabled()) throw Object.assign(new Error('cloud_unavailable'), { code: 'cloud_unavailable' });
+        const token = await authSession.getAccessToken();
+        const url = `${apiBaseUrl}${exportPath(accountId, appId, versionId, name).replace('?', '/file?')}`;
+        const response = await axios.request({ method: 'GET', url, responseType: 'stream', timeout: 120_000,
+            httpsAgent, headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' } });
+        return response.data;
+    }
+
     async function enable() {
         if (!supportedOrigin()) return { ...status(), errorCode: 'unavailable' };
         const wasEnabled = enabled();
@@ -359,6 +382,8 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         disable,
         enable,
         getGame,
+        getExportManifest,
+        getExportFile,
         listGames,
         renew,
         retry,

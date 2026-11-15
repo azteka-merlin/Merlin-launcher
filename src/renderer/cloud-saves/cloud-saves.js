@@ -45,16 +45,71 @@
     Object.assign(messages.es, { cloud_saves_checking_backup: 'Comprobando copia…' });
     Object.assign(messages.fr, { cloud_saves_checking_backup: 'Vérification de la sauvegarde…' });
     Object.assign(messages.de, { cloud_saves_checking_backup: 'Backup wird geprüft…' });
+    Object.assign(messages.ptbr, { cloud_saves_error_busy: 'Aguarde a restauração atual terminar.' });
+    Object.assign(messages.en, { cloud_saves_error_busy: 'Wait for the current restore to finish.' });
+    Object.assign(messages.es, { cloud_saves_error_busy: 'Espera a que termine la restauración actual.' });
+    Object.assign(messages.fr, { cloud_saves_error_busy: 'Attendez la fin de la restauration en cours.' });
+    Object.assign(messages.de, { cloud_saves_error_busy: 'Warte, bis die laufende Wiederherstellung abgeschlossen ist.' });
+    Object.assign(messages.ptbr, {
+        cloud_saves_restore_notice_v2: 'Feche o jogo antes de restaurar. A Steam será reiniciada após a confirmação.',
+        cloud_saves_restore_message: 'Feche o jogo antes de continuar. O Merlin vai reiniciar a Steam; outros jogos e downloads abertos podem ser interrompidos.',
+        cloud_saves_restore_message_legacy: 'Este backup antigo recupera apenas os arquivos alterados e pode não reconstruir o save inteiro. Feche o jogo. O Merlin vai reiniciar a Steam; outros jogos e downloads podem ser interrompidos.',
+        cloud_saves_restore_message_prod: 'Os arquivos deste backup serão recuperados; os demais arquivos do jogo permanecerão como estão. Feche o jogo antes de continuar. A Steam pode ficar aberta.',
+        cloud_saves_restored_restarting: 'Backup restaurado na nuvem. A Steam foi reiniciada; aguarde a sincronização antes de abrir o jogo.',
+        cloud_saves_restored_restart_failed: 'Backup restaurado na nuvem, mas a Steam não reiniciou. Abra a Steam manualmente e aguarde a sincronização antes de jogar.'
+    });
+    Object.assign(messages.en, {
+        cloud_saves_restore_notice_v2: 'Close the game before restoring. Steam will restart after confirmation.',
+        cloud_saves_restore_message: 'Close the game before continuing. Merlin will restart Steam; other open games and downloads may be interrupted.',
+        cloud_saves_restore_message_legacy: 'This older backup restores only changed files and may not rebuild the entire save. Close the game. Merlin will restart Steam; other games and downloads may be interrupted.',
+        cloud_saves_restore_message_prod: 'The files in this backup will be recovered; other game files will stay as they are. Close the game before continuing. Steam can stay open.',
+        cloud_saves_restored_restarting: 'Backup restored in the cloud. Steam restarted; wait for synchronization before starting the game.',
+        cloud_saves_restored_restart_failed: 'Backup restored in the cloud, but Steam did not restart. Open Steam manually and wait for synchronization before playing.'
+    });
+    Object.assign(messages.es, {
+        cloud_saves_restore_notice_v2: 'Cierra el juego antes de restaurar. Steam se reiniciará después de confirmar.',
+        cloud_saves_restore_message: 'Cierra el juego antes de continuar. Merlin reiniciará Steam; otros juegos y descargas abiertos pueden interrumpirse.',
+        cloud_saves_restore_message_legacy: 'Esta copia antigua restaura solo los archivos modificados y puede no recuperar toda la partida. Cierra el juego. Merlin reiniciará Steam.',
+        cloud_saves_restore_message_prod: 'Se recuperarán los archivos de esta copia; los demás archivos del juego permanecerán como están. Cierra el juego. Steam puede seguir abierto.',
+        cloud_saves_restored_restarting: 'Copia restaurada en la nube. Steam se reinició; espera la sincronización antes de abrir el juego.',
+        cloud_saves_restored_restart_failed: 'Copia restaurada en la nube, pero Steam no se reinició. Ábrelo manualmente y espera la sincronización antes de jugar.'
+    });
+    Object.assign(messages.fr, {
+        cloud_saves_restore_notice_v2: 'Fermez le jeu avant la restauration. Steam redémarrera après confirmation.',
+        cloud_saves_restore_message: 'Fermez le jeu avant de continuer. Merlin redémarrera Steam ; les autres jeux et téléchargements ouverts peuvent être interrompus.',
+        cloud_saves_restore_message_legacy: 'Cette ancienne sauvegarde ne restaure que les fichiers modifiés et peut ne pas reconstituer la partie entière. Fermez le jeu. Merlin redémarrera Steam.',
+        cloud_saves_restore_message_prod: 'Les fichiers de cette sauvegarde seront récupérés ; les autres fichiers resteront inchangés. Fermez le jeu. Steam peut rester ouvert.',
+        cloud_saves_restored_restarting: 'Sauvegarde restaurée dans le cloud. Steam a redémarré ; attendez la synchronisation avant de lancer le jeu.',
+        cloud_saves_restored_restart_failed: 'Sauvegarde restaurée dans le cloud, mais Steam n’a pas redémarré. Ouvrez Steam manuellement et attendez la synchronisation.'
+    });
+    Object.assign(messages.de, {
+        cloud_saves_restore_notice_v2: 'Schließe das Spiel vor der Wiederherstellung. Steam wird nach Bestätigung neu gestartet.',
+        cloud_saves_restore_message: 'Schließe das Spiel, bevor du fortfährst. Merlin startet Steam neu; andere Spiele und Downloads können unterbrochen werden.',
+        cloud_saves_restore_message_legacy: 'Dieses ältere Backup stellt nur geänderte Dateien wieder her und möglicherweise nicht den ganzen Spielstand. Schließe das Spiel. Merlin startet Steam neu.',
+        cloud_saves_restore_message_prod: 'Die Dateien dieses Backups werden wiederhergestellt; andere Dateien bleiben unverändert. Schließe das Spiel. Steam kann geöffnet bleiben.',
+        cloud_saves_restored_restarting: 'Backup in der Cloud wiederhergestellt. Steam wurde neu gestartet; warte vor dem Spielen auf die Synchronisierung.',
+        cloud_saves_restored_restart_failed: 'Backup in der Cloud wiederhergestellt, aber Steam wurde nicht neu gestartet. Öffne Steam manuell und warte auf die Synchronisierung.'
+    });
     Object.assign(messages.ptbr, { cloud_saves_loading_details: 'Carregando saves do jogo…' });
     Object.assign(messages.en, { cloud_saves_loading_details: 'Loading game saves…' });
     Object.assign(messages.es, { cloud_saves_loading_details: 'Cargando partidas del juego…' });
     Object.assign(messages.fr, { cloud_saves_loading_details: 'Chargement des sauvegardes du jeu…' });
     Object.assign(messages.de, { cloud_saves_loading_details: 'Spielstände werden geladen…' });
+    Object.assign(messages.ptbr, { cloud_saves_export: 'Baixar', cloud_saves_exporting: 'Baixando…', cloud_saves_exported: 'Save baixado em ZIP.', cloud_saves_export_failed: 'Não foi possível baixar este save completo.', cloud_saves_open_folder: 'Abrir pasta do save', cloud_saves_folder_failed: 'Não foi possível localizar a pasta deste save neste computador.' });
+    Object.assign(messages.en, { cloud_saves_export: 'Download', cloud_saves_exporting: 'Downloading…', cloud_saves_exported: 'Save downloaded as ZIP.', cloud_saves_export_failed: 'Could not download this complete save.', cloud_saves_open_folder: 'Open save folder', cloud_saves_folder_failed: 'Could not find this save folder on this computer.' });
+    Object.assign(messages.es, { cloud_saves_export: 'Descargar', cloud_saves_exporting: 'Descargando…', cloud_saves_exported: 'Partida descargada como ZIP.', cloud_saves_export_failed: 'No se pudo descargar esta partida completa.', cloud_saves_open_folder: 'Abrir carpeta de la partida', cloud_saves_folder_failed: 'No se encontró la carpeta de esta partida en este equipo.' });
+    Object.assign(messages.fr, { cloud_saves_export: 'Télécharger', cloud_saves_exporting: 'Téléchargement…', cloud_saves_exported: 'Sauvegarde téléchargée en ZIP.', cloud_saves_export_failed: 'Impossible de télécharger cette sauvegarde complète.', cloud_saves_open_folder: 'Ouvrir le dossier de sauvegarde', cloud_saves_folder_failed: 'Dossier de sauvegarde introuvable sur cet ordinateur.' });
+    Object.assign(messages.de, { cloud_saves_export: 'Herunterladen', cloud_saves_exporting: 'Lade herunter…', cloud_saves_exported: 'Spielstand als ZIP heruntergeladen.', cloud_saves_export_failed: 'Dieser vollständige Spielstand konnte nicht heruntergeladen werden.', cloud_saves_open_folder: 'Spielstandordner öffnen', cloud_saves_folder_failed: 'Der Spielstandordner wurde auf diesem Computer nicht gefunden.' });
     Object.assign(messages.ptbr, { cloud_saves_refresh: 'Atualizar jogos', cloud_saves_refreshing: 'Atualizando…' });
     Object.assign(messages.en, { cloud_saves_refresh: 'Refresh games', cloud_saves_refreshing: 'Refreshing…' });
     Object.assign(messages.es, { cloud_saves_refresh: 'Actualizar juegos', cloud_saves_refreshing: 'Actualizando…' });
     Object.assign(messages.fr, { cloud_saves_refresh: 'Actualiser les jeux', cloud_saves_refreshing: 'Actualisation…' });
     Object.assign(messages.de, { cloud_saves_refresh: 'Spiele aktualisieren', cloud_saves_refreshing: 'Aktualisiere…' });
+    Object.assign(messages.ptbr, { cloud_saves_refresh_details: 'Atualizar' });
+    Object.assign(messages.en, { cloud_saves_refresh_details: 'Refresh' });
+    Object.assign(messages.es, { cloud_saves_refresh_details: 'Actualizar' });
+    Object.assign(messages.fr, { cloud_saves_refresh_details: 'Actualiser' });
+    Object.assign(messages.de, { cloud_saves_refresh_details: 'Aktualisieren' });
     Object.assign(messages.ptbr, { cloud_saves_cached_refreshing: 'Exibindo a última lista enquanto atualiza…', cloud_saves_cached_stale: 'Não foi possível atualizar. Exibindo a última lista salva.' });
     Object.assign(messages.en, { cloud_saves_cached_refreshing: 'Showing the last saved list while refreshing…', cloud_saves_cached_stale: 'Could not refresh. Showing the last saved list.' });
     Object.assign(messages.es, { cloud_saves_cached_refreshing: 'Mostrando la última lista mientras se actualiza…', cloud_saves_cached_stale: 'No se pudo actualizar. Se muestra la última lista guardada.' });
@@ -90,6 +145,9 @@
             meta: document.getElementById('cloudSavesGameMeta'),
             currentDate: document.getElementById('cloudSavesCurrentDate'),
             currentSummary: document.getElementById('cloudSavesCurrentSummary'),
+            currentExport: document.getElementById('cloudSavesCurrentExport'),
+            detailsRefresh: document.getElementById('cloudSavesDetailsRefreshBtn'),
+            openFolder: document.getElementById('cloudSavesOpenFolder'),
             backups: document.getElementById('cloudSavesBackups'),
             noBackups: document.getElementById('cloudSavesNoBackups')
         };
@@ -117,16 +175,20 @@
         const notify = (message, type = 'info') => window.showNotification?.(message, type);
         const plural = (count, one, many) => tr(count === 1 ? one : many, { count });
         const fileSummary = (count, size) => tr(count === 1 ? 'cloud_saves_file_one' : 'cloud_saves_file_many', { count, size: bytes(size) });
-        const state = { games: [], selected: null, loading: false, error: false, cached: false, cachedAccountId: null, accountId: null, detailRequestId: 0, listRequestId: 0 };
+        const state = { games: [], selected: null, loading: false, restoring: false, steamRestartUntil: 0,
+            error: false, cached: false, cachedAccountId: null, accountId: null, detailRequestId: 0, listRequestId: 0 };
         let wasActive = false;
         let accountMonitor = null;
         let observedAccountId = null;
 
         async function checkSteamAccount() {
-            if (window.merlinView?.get?.() !== 'cloud-saves' || state.loading || !window.electronAPI.cloudSync.accountStatus) return;
+            if (window.merlinView?.get?.() !== 'cloud-saves' || state.loading || state.restoring
+                || !window.electronAPI.cloudSync.accountStatus) return;
             const status = await window.electronAPI.cloudSync.accountStatus().catch(() => null);
-            if (window.merlinView?.get?.() !== 'cloud-saves' || state.loading || !status) return;
+            if (window.merlinView?.get?.() !== 'cloud-saves' || state.loading || state.restoring || !status) return;
             const current = status.steamRunning && status.accountAvailable ? status.accountId : null;
+            if (!current && Date.now() < state.steamRestartUntil) return;
+            if (current) state.steamRestartUntil = 0;
             if (current === observedAccountId) return;
             observedAccountId = current;
             state.listRequestId += 1;
@@ -148,6 +210,7 @@
         function errorMessage(code) {
             if (code === 'game_active') return tr('cloud_saves_error_game_active');
             if (code === 'recovery_incomplete') return tr('cloud_saves_error_recovery_incomplete');
+            if (code === 'busy') return tr('cloud_saves_error_busy');
             if (['recovery_not_found', 'recovery_conflict', 'cloud_timeout', 'cloud_server_error'].includes(code)) return tr(`cloud_saves_error_${code}`);
             if (code === 'steam_closed') return tr('cloud_saves_unavailable_steam_closed');
             if (code === 'steam_account_unavailable') return tr('cloud_saves_error_account');
@@ -244,10 +307,23 @@
 
         function renderDetails(game) {
             if (!game) return;
+            const backupsHint = document.querySelector('[data-i18n="cloud_saves_backups_hint"]');
+            if (backupsHint) {
+                backupsHint.hidden = game.historyVersion === 2;
+                if (!backupsHint.hidden) backupsHint.textContent = tr('cloud_saves_backups_hint');
+            }
+            const restoreNotice = document.getElementById('cloudSavesDetailsNotice');
+            if (restoreNotice) restoreNotice.textContent = tr(game.historyVersion === 2
+                ? 'cloud_saves_restore_notice_v2' : 'cloud_saves_restore_notice');
             elements.name.textContent = game.name || '—';
             elements.meta.textContent = plural(game.currentVersion?.fileCount || 0, 'cloud_saves_synced_files_one', 'cloud_saves_synced_files_many');
             elements.currentDate.textContent = date(game.currentVersion?.createdAt);
             elements.currentSummary.textContent = fileSummary(game.currentVersion?.fileCount || 0, game.currentVersion?.totalSize);
+            elements.currentExport.hidden = game.currentVersion?.version !== 2;
+            elements.currentExport.textContent = tr('cloud_saves_export');
+            elements.openFolder.hidden = !game.saveFolderAvailable;
+            elements.openFolder.title = tr('cloud_saves_open_folder');
+            elements.openFolder.setAttribute('aria-label', tr('cloud_saves_open_folder'));
             const candidates = coverCandidates(game);
             elements.cover.hidden = candidates.length === 0;
             elements.coverFallback.hidden = candidates.length > 0;
@@ -284,7 +360,18 @@
                 restore.className = 'btn btn-secondary cloud-saves-restore-btn';
                 restore.textContent = tr('cloud_saves_restore');
                 restore.addEventListener('click', () => void restoreBackup(game, backup, restore));
-                card.append(info, restore);
+                const actions = document.createElement('div');
+                actions.className = 'cloud-saves-backup-actions';
+                if (backup.version === 2) {
+                    const exportButton = document.createElement('button');
+                    exportButton.type = 'button';
+                    exportButton.className = 'btn btn-secondary cloud-saves-export-btn';
+                    exportButton.textContent = tr('cloud_saves_export');
+                    exportButton.addEventListener('click', () => void exportVersion(game, backup.id, exportButton));
+                    actions.append(exportButton);
+                }
+                actions.append(restore);
+                card.append(info, actions);
                 elements.backups.append(card);
             }
         }
@@ -353,32 +440,53 @@
             }
         }
 
-        async function openGame(appId) {
+        async function openGame(appId, refresh = false) {
             const requestId = ++state.detailRequestId;
-            state.selected = state.games.find(game => String(game.appId) === String(appId)) || { appId };
+            const previous = refresh ? state.selected : null;
+            state.selected = previous || state.games.find(game => String(game.appId) === String(appId)) || { appId };
             renderBreadcrumb();
             elements.listState.hidden = true;
             elements.detailsState.hidden = false;
             elements.detailsContent.hidden = true;
             elements.detailsLoading.hidden = false;
-            elements.listCrumb.focus();
+            if (elements.detailsRefresh) elements.detailsRefresh.disabled = true;
+            if (!refresh) elements.listCrumb.focus();
             try {
                 const result = await window.electronAPI.cloudSync.getGame(appId);
                 if (requestId !== state.detailRequestId) return;
                 if (!result?.success || !result.game) throw new Error(result?.code || 'cloud_game_failed');
-                state.selected = result.game;
+                state.selected = { ...result.game, saveFolderAvailable: result.saveFolderAvailable };
+                const gameIndex = state.games.findIndex(game => String(game.appId) === String(appId));
+                if (gameIndex !== -1) {
+                    state.games[gameIndex] = { ...state.games[gameIndex],
+                        name: result.game.name || state.games[gameIndex].name,
+                        coverUrl: result.game.coverUrl || state.games[gameIndex].coverUrl,
+                        lastSyncAt: result.game.currentVersion?.createdAt || state.games[gameIndex].lastSyncAt,
+                        backupCount: Array.isArray(result.game.backups)
+                            ? result.game.backups.length : state.games[gameIndex].backupCount };
+                    renderList();
+                }
                 renderDetails(state.selected);
                 renderBreadcrumb();
                 elements.detailsContent.hidden = false;
             } catch (error) {
                 if (requestId !== state.detailRequestId) return;
-                state.selected = null;
-                renderBreadcrumb();
-                elements.detailsState.hidden = true;
-                elements.listState.hidden = false;
+                if (previous) {
+                    state.selected = previous;
+                    renderDetails(previous);
+                    elements.detailsContent.hidden = false;
+                } else {
+                    state.selected = null;
+                    renderBreadcrumb();
+                    elements.detailsState.hidden = true;
+                    elements.listState.hidden = false;
+                }
                 notify(errorMessage(error.message), 'error');
             } finally {
-                if (requestId === state.detailRequestId) elements.detailsLoading.hidden = true;
+                if (requestId === state.detailRequestId) {
+                    elements.detailsLoading.hidden = true;
+                    if (elements.detailsRefresh) elements.detailsRefresh.disabled = false;
+                }
             }
         }
 
@@ -386,37 +494,61 @@
             if (button.disabled) return;
             button.disabled = true;
             try {
-                const accepted = await window.merlinRestartPrompt?.ask?.({ title: tr('cloud_saves_restore_title'), message: tr('cloud_saves_restore_message'), cancelLabel: window.merlinI18n.t('repair_steam_running_cancel'), actionLabel: tr('cloud_saves_restore_action') });
+                const accepted = await window.merlinRestartPrompt?.ask?.({ title: tr('cloud_saves_restore_title'),
+                    message: tr(game.historyVersion !== 2 ? 'cloud_saves_restore_message_prod'
+                        : backup.version === 2 ? 'cloud_saves_restore_message' : 'cloud_saves_restore_message_legacy'),
+                    cancelLabel: window.merlinI18n.t('repair_steam_running_cancel'), actionLabel: tr('cloud_saves_restore_action') });
                 if (!accepted) return;
 
-                button.textContent = tr('cloud_saves_checking_backup');
-                const latest = await window.electronAPI.cloudSync.getGame(game.appId);
-                if (!latest?.success || !latest.game) throw new Error(latest?.code || 'cloud_game_failed');
-                if (!latest.game.backups?.some(item => item.id === backup.id)) {
-                    state.selected = latest.game;
-                    renderDetails(state.selected);
-                    notify(tr('cloud_saves_backup_changed'));
-                    return;
-                }
-
+                state.restoring = true;
                 button.textContent = tr('cloud_saves_restoring');
                 const result = await window.electronAPI.cloudSync.restore(game.appId, backup.id);
                 if (!result?.success) throw new Error(result?.code || 'cloud_restore_failed');
-                notify(tr('cloud_saves_restored'), 'success');
+                if (result.restartSteam && result.steamRestarted) state.steamRestartUntil = Date.now() + 30_000;
+                notify(tr(result.restartSteam
+                    ? result.steamRestarted ? 'cloud_saves_restored_restarting' : 'cloud_saves_restored_restart_failed'
+                    : 'cloud_saves_restored'), result.restartSteam && !result.steamRestarted ? 'error' : 'success');
                 await openGame(game.appId);
             } catch (error) {
+                console.warn('[cloud-saves:restore] failed', { code: error?.message || 'unknown' });
                 if (error.message === 'recovery_not_found') await openGame(game.appId);
                 notify(errorMessage(error.message), 'error');
             } finally {
+                state.restoring = false;
                 button.disabled = false;
                 button.textContent = tr('cloud_saves_restore');
             }
+        }
+
+        async function exportVersion(game, versionId, button) {
+            if (button.disabled) return;
+            button.disabled = true;
+            button.textContent = tr('cloud_saves_exporting');
+            try {
+                const result = await window.electronAPI.cloudSync.export(game.appId, versionId, game.name);
+                if (result?.success) notify(tr('cloud_saves_exported'), 'success');
+                else if (result?.code !== 'cancelled') notify(tr('cloud_saves_export_failed'), 'error');
+            } catch { notify(tr('cloud_saves_export_failed'), 'error'); }
+            finally { button.disabled = false; button.textContent = tr('cloud_saves_export'); }
         }
 
         document.getElementById('cloudSavesConfigCrumb')?.addEventListener('click', () => window.merlinView?.set?.('settings'));
         elements.search?.addEventListener('input', renderList);
         elements.retry?.addEventListener('click', () => void loadGames());
         elements.refresh?.addEventListener('click', () => void loadGames());
+        elements.detailsRefresh?.addEventListener('click', () => {
+            if (state.selected && elements.detailsLoading.hidden && !state.restoring) {
+                void openGame(state.selected.appId, true);
+            }
+        });
+        elements.currentExport?.addEventListener('click', () => {
+            if (state.selected?.currentVersion?.version === 2) void exportVersion(state.selected, 'current', elements.currentExport);
+        });
+        elements.openFolder?.addEventListener('click', async () => {
+            if (!state.selected?.saveFolderAvailable) return;
+            const result = await window.electronAPI.cloudSync.openSaveFolder(state.selected.appId).catch(() => null);
+            if (!result?.success && result?.code !== 'cancelled') notify(tr('cloud_saves_folder_failed'), 'error');
+        });
         elements.listCrumb?.addEventListener('click', () => {
             state.detailRequestId += 1;
             state.selected = null;

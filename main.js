@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
-const { exec, execFile } = require('child_process');
+const { exec, execFile, spawn } = require('child_process');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
 const nodeUnrar = require('node-unrar-js');
@@ -63,6 +63,7 @@ const { registerPremiumIpc } = require('./src/main/ipc/register-premium-ipc');
 const { registerPollsIpc } = require('./src/main/ipc/register-polls-ipc');
 const { registerSteamPluginIpc } = require('./src/main/ipc/register-steam-plugin-ipc');
 const { registerSupportLogIpc } = require('./src/main/ipc/register-support-log-ipc');
+const { createGameAddLog } = require('./src/main/support/game-add-log');
 const { createLibraryCacheStore } = require('./src/main/library/library-cache-store');
 const { createLibraryCatalogClient } = require('./src/main/library/library-catalog-client');
 const { createLibraryCatalogService } = require('./src/main/library/library-catalog-service');
@@ -285,6 +286,7 @@ const steamService = createSteamService({
     fs,
     path,
     exec,
+    spawn,
     platform: process.platform,
     userProfile: process.env.USERPROFILE
 });
@@ -407,6 +409,7 @@ const correctionsService = createCorrectionsService({
     nodeUnrar,
     dialog,
     shell,
+    getLanguage: () => configStore.get().language,
     configStore,
     steamService,
     authSession,
@@ -493,6 +496,11 @@ const gameInstaller = createGameInstaller({
     manifestApiUrl,
     steamService,
     installLuaFile,
+    recordGameAdd: createGameAddLog({
+        localAppData: process.env.LOCALAPPDATA,
+        requiredFiles: REQUIRED_STEAM_FILES,
+        getSourcePath: getBundledSteamRuntimePath
+    }),
     onInstalled: () => libraryService.invalidate()
 });
 
@@ -765,11 +773,16 @@ registerCloudSyncIpc({
     ipcMain,
     cloudSyncService,
     dllInstaller,
+    localAppData: process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
+    dialog,
+    shell,
+    getLanguage: () => configStore.get().language,
     getSteamPath: () => configStore.get().steamPath,
     getSteamReadiness: () => steamService.getActivationReadiness(configStore.get().steamPath),
     getSteamAccountId: options => steamService.getActiveAccountId({ ...options, steamPath: configStore.get().steamPath }),
     isSteamRunning: () => steamService.isRunning(),
     stopSteam: () => steamService.close(configStore.get().steamPath),
+    startSteam: () => steamService.start(configStore.get().steamPath),
     onStateChanged: () => { applyLoginItemSettings(); updateTray(); }
 });
 registerAnnouncementsIpc({ ipcMain, announcementsService });
