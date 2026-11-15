@@ -106,11 +106,14 @@ test('stale local photos stay visible and can refresh from Steam during a Ryuu o
     assert.deepEqual(await fs.readFile(file),previous);
     complete();
     const deadline=Date.now()+3000;
-    while((await fs.stat(file)).mtimeMs<=old.getTime()+1000){
+    for(;;){
+        let current;
+        try{current=await fs.readFile(file);}
+        catch(error){if(!['EBUSY','EPERM'].includes(error.code))throw error;}
+        if(current?.equals(updated))break;
         assert.ok(Date.now()<deadline,'The known Steam photo must refresh even while Ryuu is paused');
-        await new Promise(resolve=>setImmediate(resolve));
+        await new Promise(resolve=>setTimeout(resolve,10));
     }
-    assert.deepEqual(await fs.readFile(file),updated);
     assert.equal(service.state().paused,true);
 });
 test('an HTML response cannot poison the persistent image cache',async t=>{
