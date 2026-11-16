@@ -9,7 +9,6 @@ const { createUpdatePlan, stageUpdate, applyUpdate, recoverUpdate, removeWorkspa
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
-const MAX_FOLDER_MANIFEST_FILES = 200000;
 const MAX_FOLDER_BUNDLES = 2500;
 const MAX_BUNDLE_MEMBER_SIZE = 200 * 1024 * 1024;
 const DOWNLOAD_WORKERS = 4;
@@ -34,7 +33,7 @@ function hasRunningGameProcess(directory) {
 }
 
 function validFolderManifestFileCount(files) {
-    return Array.isArray(files) && files.length > 0 && files.length <= MAX_FOLDER_MANIFEST_FILES;
+    return Array.isArray(files) && files.length > 0;
 }
 
 function validArchiveSize(value) {
@@ -617,7 +616,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const finalFileCount = (Array.isArray(files) ? files.length : 0) +
             (Array.isArray(bundles) ? bundles.reduce((sum, bundle) => sum + (Array.isArray(bundle.files) ? bundle.files.length : 0), 0) : 0);
         if (manifest?.gameId !== item.id || !Array.isArray(files) || !Array.isArray(bundles) ||
-            finalFileCount < 1 || finalFileCount > MAX_FOLDER_MANIFEST_FILES || bundles.length > MAX_FOLDER_BUNDLES ||
+            finalFileCount < 1 || bundles.length > MAX_FOLDER_BUNDLES ||
             !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
@@ -1238,7 +1237,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             await recoverUpdate(current.path, id);
             const marker = loadJson(path.join(current.path, MARKER), null);
             if (repairing && (marker?.archiveKey !== item.archiveKey || !Array.isArray(options.repairPaths) ||
-                !options.repairPaths.length || options.repairPaths.length > MAX_FOLDER_MANIFEST_FILES)) throw new Error('integrity_verification_required');
+                !options.repairPaths.length)) throw new Error('integrity_verification_required');
             if (!repairing && marker?.archiveKey === item.archiveKey) throw new Error('no_update');
             if (await isGameRunning(current.path)) throw new Error('game_running');
             await openDownloadSession(operation);

@@ -91,14 +91,14 @@ test('removed catalog games appear only while their installation marker still ex
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('folder manifest safety ceiling accepts up to 200,000 files', () => {
+test('folder manifests are not rejected solely for their file count', () => {
     assert.equal(validFolderManifestFileCount(new Array(11_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(20_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(30_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(100_000)), true);
     assert.equal(validFolderManifestFileCount(new Array(100_001)), true);
     assert.equal(validFolderManifestFileCount(new Array(200_000)), true);
-    assert.equal(validFolderManifestFileCount(new Array(200_001)), false);
+    assert.equal(validFolderManifestFileCount(new Array(500_001)), true);
 });
 
 test('installation checks room for the ZIP, extraction and a safety margin', () => {

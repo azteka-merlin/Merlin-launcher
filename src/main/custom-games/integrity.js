@@ -3,13 +3,12 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { safeEntryPath } = require('./safe-zip');
 
-const MAX_FILES = 200000;
 const MAX_BYTES = 200 * 1024 ** 3;
 const MAX_ISSUES = 100;
 
 function normalizeIntegrityManifest(value, gameId, archiveKey, root) {
     if (value?.version !== 1 || value.gameId !== gameId || value.archiveKey !== archiveKey ||
-        !Array.isArray(value.files) || value.files.length < 1 || value.files.length > MAX_FILES ||
+        !Array.isArray(value.files) || value.files.length < 1 ||
         !Number.isSafeInteger(value.totalSizeBytes) || value.totalSizeBytes < 0 || value.totalSizeBytes > MAX_BYTES) {
         throw new Error('invalid_integrity_manifest');
     }

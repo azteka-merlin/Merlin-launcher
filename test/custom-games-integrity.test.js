@@ -8,7 +8,7 @@ const { createCustomGamesService } = require('../src/main/custom-games/custom-ga
 const { normalizeIntegrityManifest } = require('../src/main/custom-games/integrity');
 
 const hash = data => createHash('sha256').update(data).digest('hex');
-test('integrity validation accepts 200,000 distinct files and rejects a larger manifest', () => {
+test('integrity validation accepts 200,000 distinct files and rejects duplicate paths', () => {
     const id = '00000000-0000-4000-8000-000000000001';
     const files = Array.from({ length: 200000 }, (_, index) => ({ path: `data/${index}.bin`, sizeBytes: 1, sha256: 'a'.repeat(64) }));
     const manifest = { version: 1, gameId: id, archiveKey: 'package', totalSizeBytes: files.length, files };

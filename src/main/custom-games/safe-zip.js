@@ -7,7 +7,6 @@ const { pipeline } = require('node:stream/promises');
 const yauzl = require('yauzl');
 const { decodeDeflate64 } = require('./deflate64');
 
-const MAX_FILES = 100000;
 const MAX_UNCOMPRESSED = 200 * 1024 ** 3;
 const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
     let value = index;
@@ -60,7 +59,6 @@ async function inspectArchive(zipPath, destination, isCancelled, expectedEntries
     const zipfile = await openZip(zipPath);
     const seen = new Set();
     let files = 0;
-    let entries = 0;
     let totalBytes = 0;
 
     return new Promise((resolve, reject) => {
@@ -93,7 +91,6 @@ async function inspectArchive(zipPath, destination, isCancelled, expectedEntries
                 const unixMode = entry.externalFileAttributes >>> 16;
                 if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
                 if (entry.isEncrypted() || ![0, 8, 9].includes(entry.compressionMethod)) throw new Error('unsupported_archive_compression');
-                if (++entries > MAX_FILES) throw new Error('archive_file_limit');
                 if (!normalized.endsWith('/')) {
                     files += 1;
                     if (expectedHashes && !/^[a-f0-9]{64}$/i.test(String(expectedHashes.get(relative) || ''))) {
@@ -117,7 +114,6 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
     const directoryCache = new Map();
     const destinationRoot = path.resolve(destination);
     let files = 0;
-    let entries = 0;
     let declaredTotal = 0;
     let extracted = 0;
     await fs.promises.mkdir(destination, { recursive: true });
@@ -176,7 +172,6 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
                 seen.add(relative);
                 const unixMode = entry.externalFileAttributes >>> 16;
                 if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
-                if (++entries > MAX_FILES) throw new Error('archive_file_limit');
                 declaredTotal += entry.uncompressedSize;
                 if (declaredTotal > MAX_UNCOMPRESSED) throw new Error('archive_size_limit');
                 if (entry.fileName.endsWith('/')) {
