@@ -359,7 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let busy = false;
     let loaded = false;
     let offline = false;
-    let activeStage = null;
+    let selectingDrive = false;
+    let installPending = false;
+    let cancelRequest = null;
     let progressSnapshot = null;
     let progressModalDismissed = false;
     let pendingProgress = null;
@@ -392,11 +394,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const setText = (element, value) => { if (element.textContent !== value) element.textContent = value; };
     const knownEta = value => value !== null && value !== undefined && Number.isFinite(Number(value)) && Number(value) >= 0;
+    const isTerminal = state => ['completed', 'failed', 'cancelled'].includes(state.stage);
+
+    function clearPendingProgress() {
+        if (progressFrame !== null) window.cancelAnimationFrame(progressFrame);
+        progressFrame = null;
+        pendingProgress = null;
+    }
 
     function renderProgress(state) {
         if (!state?.id) return;
         progressSnapshot = state;
-        activeStage = state.stage;
         if (!selected || selected.id !== state.id) {
             selected = games.find(game => game.id === state.id) || { id: state.id, name: state.name || state.id };
         }
@@ -406,12 +414,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const repairing = state.kind === 'repair';
         const updating = state.kind === 'update' || repairing;
         const applying = updating && state.stage === 'applying';
-        const terminal = ['completed', 'failed', 'cancelled'].includes(state.stage);
-        if (terminal && progressFrame !== null) {
-            window.cancelAnimationFrame(progressFrame);
-            progressFrame = null;
-            pendingProgress = null;
-        }
+        const terminal = isTerminal(state);
+        if (terminal) clearPendingProgress();
         const nextBusy = !terminal;
         const busyChanged = busy !== nextBusy;
         busy = nextBusy;
@@ -674,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
             drives = result.drives || [];
             offline = Boolean(result.offline);
             loaded = true;
-            if (result.operation) {
+            if (result.operation && !isTerminal(result.operation) && !progressSnapshot) {
                 progressModalDismissed = true;
                 renderProgress(result.operation);
             }
@@ -743,8 +747,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function beginInstall(game) {
         if (busy) return notify(tr('custom_games_busy'), 'error');
-        try { drives = await api.drives(game.id); }
+        if (selectingDrive || !el.customGamesInstallModal.hidden) return;
+        selectingDrive = true;
+        let availableDrives;
+        try { availableDrives = await api.drives(game.id); }
         catch { return notify(tr('custom_games_no_drives'), 'error'); }
+        finally { selectingDrive = false; }
+        if (busy) return;
+        drives = availableDrives;
         if (!drives.length) return notify(tr('custom_games_no_drives'), 'error');
         selected = game;
         selectedDrive = drives.find(drive => drive.letter === 'C')?.letter || drives[0].letter;
@@ -763,8 +773,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onProgress(state) {
         if (!state?.id) return;
-        if (['completed', 'failed', 'cancelled'].includes(state.stage)) {
-            renderProgress(state);
+        if (isTerminal(state)) {
+            // The installer can send terminal progress before it finishes cleanup.
+            // A local attempt stays active until the invoke returns its result.
+            if (installPending) clearPendingProgress();
+            else renderProgress(state);
             return;
         }
         pendingProgress = state;
@@ -778,37 +791,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function startInstall(item, drive) {
-        selected = item;
-        progressSnapshot = null;
+        if (busy || el.customGamesInstallModal.hidden) return;
+        installPending = true;
+        clearPendingProgress();
         progressModalDismissed = false;
         el.customGamesInstallModal.hidden = true;
-        el.customGamesProgressModal.hidden = false;
-        el.customGamesDownloadWidget.hidden = false;
-        el.customGamesProgressName.textContent = item.name;
-        el.customGamesProgressDetail.textContent = '';
-        el.customGamesProgressRate.textContent = tr('custom_games_eta_calculating');
-        el.customGamesProgressBar.style.width = '0%';
-        el.customGamesProgressCancel.hidden = false;
-        el.customGamesProgressMinimize.hidden = false;
-        el.customGamesProgressClose.hidden = true;
-        busy = true;
-        render();
+        cancelRequest = null;
+        el.customGamesProgressCancel.disabled = false;
+        renderProgress({ id: item.id, name: item.name, stage: 'starting',
+            received: 0, total: Number(item.archiveSize) || 0 });
+        let result;
         try {
-            const result = await api.install(item.id, drive);
-            if (!result.success) notify(errorText(result.code), 'error');
-            else notify(tr('custom_games_install_success'), 'success');
-            renderProgress({ ...(progressSnapshot || {}), id: item.id, name: item.name,
-                stage: result.success ? 'completed' : result.code === 'cancelled' ? 'cancelled' : 'failed',
-                code: result.code, done: true });
+            result = await api.install(item.id, drive);
         } catch {
-            notify(tr('custom_games_operation_failed'), 'error');
-            renderProgress({ ...(progressSnapshot || {}), id: item.id, name: item.name,
-                stage: 'failed', code: 'install_failed', done: true });
+            result = { success: false, code: 'install_failed' };
+        } finally {
+            installPending = false;
         }
-        finally {
-            busy = false;
-            await load();
-        }
+        renderProgress({ id: item.id, name: item.name,
+            stage: result.success ? 'completed' : result.code === 'cancelled' ? 'cancelled' : 'failed',
+            code: result.code, done: true });
+        if (result.success) notify(tr('custom_games_install_success'), 'success');
+        else if (result.code !== 'cancelled') notify(errorText(result.code), 'error');
+        await load();
     }
 
     async function startVerify(item) {
@@ -862,8 +867,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     el.customGamesProgressCancel.addEventListener('click', async () => {
         el.customGamesProgressCancel.disabled = true;
-        await api.cancel();
-        el.customGamesProgressCancel.disabled = false;
+        const request = api.cancel();
+        cancelRequest = request;
+        try { await request; }
+        catch { if (cancelRequest === request) notify(tr('custom_games_operation_failed'), 'error'); }
+        finally {
+            if (cancelRequest === request) {
+                cancelRequest = null;
+                el.customGamesProgressCancel.disabled = false;
+            }
+        }
     });
     el.customGamesProgressClose.addEventListener('click', () => {
         el.customGamesProgressModal.hidden = true;

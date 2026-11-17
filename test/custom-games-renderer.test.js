@@ -47,6 +47,9 @@ function renderer(options = {}) {
                 { id: 'one', name: 'Game One', archiveSize: 100, imageUrl: 'image-1.png' },
                 { id: 'two', name: 'Game Two', archiveSize: 100, imageUrl: 'image-2.png' },
             ], drives: [] }; },
+            async drives(id) { return options.drives(id); },
+            async install(id, drive) { return options.install(id, drive); },
+            async cancel() { return options.cancel(); },
             async uninstall(id) { return options.uninstall ? options.uninstall(id) : { success: true }; },
             async verify(id) { return options.verify ? options.verify(id) : { success: true, healthy: true, totalFiles: 3 }; },
             async update(id) { return options.update ? options.update(id) : { success: true }; },
@@ -61,6 +64,7 @@ function renderer(options = {}) {
     vm.runInNewContext(script, { window, document, translations });
     events.get('document:DOMContentLoaded')();
     get('customGamesView').hidden = true;
+    get('customGamesInstallModal').hidden = true;
     return { get, events, frames, translations, viewCalls,
         progress: state => progressListener(state),
         flush() { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback()); },
@@ -137,6 +141,69 @@ test('terminal progress is immediate and discards the previous pending animation
     assert.equal(ui.get('customGamesProgressCancel').hidden, true);
     ui.flush();
     assert.equal(ui.get('customGamesProgressTitle').textContent, 'Download cancelado');
+});
+
+test('a rapid retry starts with clean modal and widget progress after cancellation', async () => {
+    const installs = [];
+    const cancels = [];
+    let driveRequests = 0;
+    const ui = renderer({
+        drives: async () => {
+            driveRequests++;
+            return [{ letter: 'C', freeBytes: 100 * MiB, requiredFreeBytes: MiB }];
+        },
+        install: (id, drive) => new Promise(resolve => installs.push({ id, drive, resolve })),
+        cancel: () => new Promise(resolve => cancels.push(resolve)),
+    });
+    const downloadButton = () => ui.get('customGamesGrid').children[0].children[3].children[0];
+    const confirm = ui.get('customGamesInstallConfirm');
+    const cancel = ui.get('customGamesProgressCancel');
+    const turn = () => new Promise(resolve => setImmediate(resolve));
+
+    await ui.open();
+    const download = downloadButton();
+    const opening = download.click();
+    download.click();
+    await opening;
+    assert.equal(driveRequests, 1);
+    confirm.click();
+    confirm.click();
+    assert.equal(installs.length, 1);
+    assert.equal(installs[0].id, 'one');
+    assert.equal(installs[0].drive, 'C');
+
+    ui.progress(downloading({ received: 60 * MiB }));
+    ui.flush();
+    assert.equal(ui.get('customGamesWidgetBar').style.width, '60%');
+    const firstCancel = cancel.click();
+    ui.progress(downloading({ received: 70 * MiB }));
+    ui.progress({ id: 'one', name: 'Game One', stage: 'cancelled' });
+    assert.equal(ui.frames.size, 0);
+    assert.equal(downloadButton().disabled, true);
+    installs[0].resolve({ success: false, code: 'cancelled' });
+    await turn();
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Download cancelado');
+    ui.get('customGamesProgressClose').click();
+
+    await downloadButton().click();
+    confirm.click();
+    assert.equal(installs.length, 2);
+    assert.equal(cancel.disabled, false);
+    assert.equal(ui.get('customGamesProgressClose').hidden, true);
+    for (const prefix of ['customGamesProgress', 'customGamesWidget']) {
+        assert.equal(ui.get(prefix + 'Title').textContent, 'Baixando jogo');
+        assert.equal(ui.get(prefix + 'Detail').textContent, '');
+        assert.equal(ui.get(prefix + 'Bar').style.width, '0%');
+    }
+
+    const secondCancel = cancel.click();
+    cancels[0]({ success: true });
+    await firstCancel;
+    assert.equal(cancel.disabled, true);
+    cancels[1]({ success: true });
+    installs[1].resolve({ success: false, code: 'cancelled' });
+    await secondCancel;
+    await turn();
 });
 
 test('extraction uses global installed totals and remaining files across all packages', () => {
