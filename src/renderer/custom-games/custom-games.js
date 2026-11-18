@@ -14,6 +14,8 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Não foi possível verificar o espaço livre deste disco.',
         custom_games_install: 'Baixar e instalar', custom_games_cancel: 'Cancelar',
         custom_games_downloading: 'Baixando jogo', custom_games_extracting: 'Descompactando jogo',
+        custom_games_install_preparing: 'Preparando download', custom_games_reading_manifest: 'Recebendo a lista de arquivos…',
+        custom_games_checking_manifest: 'Conferindo a lista de {total} arquivos…',
         custom_games_repair: 'Reparar arquivos', custom_games_repairing: 'Reparando jogo',
         custom_games_repair_done: 'Reparo concluído', custom_games_repair_failed: 'Não foi possível reparar o jogo',
         custom_games_repair_cancelled: 'Reparo cancelado', custom_games_repair_result: '{files} arquivos restaurados · {protected} arquivos protegidos preservados',
@@ -81,6 +83,8 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Could not check free space on this drive.',
         custom_games_install: 'Download and install', custom_games_cancel: 'Cancel',
         custom_games_downloading: 'Downloading game', custom_games_extracting: 'Extracting game',
+        custom_games_install_preparing: 'Preparing download', custom_games_reading_manifest: 'Receiving the file list…',
+        custom_games_checking_manifest: 'Checking the list of {total} files…',
         custom_games_repair: 'Repair files', custom_games_repairing: 'Repairing game',
         custom_games_repair_done: 'Repair completed', custom_games_repair_failed: 'Could not repair the game',
         custom_games_repair_cancelled: 'Repair cancelled', custom_games_repair_result: '{files} files restored · {protected} protected files preserved',
@@ -148,6 +152,8 @@ const customGameTranslations = {
         custom_games_unknown_space: 'No se pudo comprobar el espacio libre de esta unidad.',
         custom_games_install: 'Descargar e instalar', custom_games_cancel: 'Cancelar',
         custom_games_downloading: 'Descargando juego', custom_games_extracting: 'Extrayendo juego',
+        custom_games_install_preparing: 'Preparando la descarga', custom_games_reading_manifest: 'Recibiendo la lista de archivos…',
+        custom_games_checking_manifest: 'Comprobando la lista de {total} archivos…',
         custom_games_repair: 'Reparar archivos', custom_games_repairing: 'Reparando juego',
         custom_games_repair_done: 'Reparación completada', custom_games_repair_failed: 'No se pudo reparar el juego',
         custom_games_repair_cancelled: 'Reparación cancelada', custom_games_repair_result: '{files} archivos restaurados · {protected} archivos protegidos conservados',
@@ -215,6 +221,8 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Impossible de vérifier l’espace libre de ce disque.',
         custom_games_install: 'Télécharger et installer', custom_games_cancel: 'Annuler',
         custom_games_downloading: 'Téléchargement du jeu', custom_games_extracting: 'Extraction du jeu',
+        custom_games_install_preparing: 'Préparation du téléchargement', custom_games_reading_manifest: 'Réception de la liste des fichiers…',
+        custom_games_checking_manifest: 'Vérification de la liste de {total} fichiers…',
         custom_games_repair: 'Réparer les fichiers', custom_games_repairing: 'Réparation du jeu',
         custom_games_repair_done: 'Réparation terminée', custom_games_repair_failed: 'Impossible de réparer le jeu',
         custom_games_repair_cancelled: 'Réparation annulée', custom_games_repair_result: '{files} fichiers restaurés · {protected} fichiers protégés conservés',
@@ -282,6 +290,8 @@ const customGameTranslations = {
         custom_games_unknown_space: 'Freier Speicherplatz auf diesem Laufwerk konnte nicht geprüft werden.',
         custom_games_install: 'Herunterladen und installieren', custom_games_cancel: 'Abbrechen',
         custom_games_downloading: 'Spiel wird heruntergeladen', custom_games_extracting: 'Spiel wird entpackt',
+        custom_games_install_preparing: 'Download wird vorbereitet', custom_games_reading_manifest: 'Dateiliste wird empfangen…',
+        custom_games_checking_manifest: 'Liste mit {total} Dateien wird geprüft…',
         custom_games_repair: 'Dateien reparieren', custom_games_repairing: 'Spiel reparieren',
         custom_games_repair_done: 'Reparatur abgeschlossen', custom_games_repair_failed: 'Spiel konnte nicht repariert werden',
         custom_games_repair_cancelled: 'Reparatur abgebrochen', custom_games_repair_result: '{files} Dateien wiederhergestellt · {protected} geschützte Dateien beibehalten',
@@ -414,6 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const repairing = state.kind === 'repair';
         const updating = state.kind === 'update' || repairing;
         const applying = updating && state.stage === 'applying';
+        const preparingInstall = ['starting', 'reading_manifest', 'checking_manifest'].includes(state.stage);
         const terminal = isTerminal(state);
         if (terminal) clearPendingProgress();
         const nextBusy = !terminal;
@@ -428,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     : state.stage === 'preparing' ? 'custom_games_update_preparing' : 'custom_games_update_downloading'
             : integrity && terminal ? state.stage === 'completed' ? 'custom_games_integrity_done'
             : state.stage === 'cancelled' || state.code === 'cancelled' ? 'custom_games_integrity_cancelled' : 'custom_games_integrity_failed'
+            : preparingInstall ? 'custom_games_install_preparing'
             : extracting ? 'custom_games_extracting' : verifying ? 'custom_games_verifying' : state.stage === 'completed'
             ? 'custom_games_install_success' : state.stage === 'cancelled' || state.code === 'cancelled'
                 ? 'custom_games_cancelled_title' : state.stage === 'failed'
@@ -449,6 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let detail = '';
         if (state.stage === 'preparing' && updating) {
             detail = tr(repairing ? 'custom_games_repairing' : 'custom_games_update_preparing');
+        } else if (state.stage === 'reading_manifest') {
+            detail = tr('custom_games_reading_manifest');
+            if (state.bytes > 0) detail += ` · ${size(state.bytes)}`;
+        } else if (state.stage === 'checking_manifest') {
+            detail = tr('custom_games_checking_manifest', { total: state.totalInstallFiles });
         } else if (applying) {
             detail = tr('custom_games_update_apply_progress', { files: state.files || 0, total: state.totalFiles || 0 });
         } else if (state.stage === 'downloading') {
@@ -487,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : tr('custom_games_network_calculating');
         // A network estimate does not include pending extraction. Keep both
         // estimates named while the service overlaps the two kinds of work.
-        let rate = terminal || verifying || applying || state.stage === 'preparing' ? '' : extracting
+        let rate = terminal || verifying || applying || preparingInstall || state.stage === 'preparing' ? '' : extracting
             ? globalExtraction ? extractionRate : knownEta(state.etaSeconds)
                 ? tr('custom_games_speed_eta', { speed: size(speed), time: formatEta(state.etaSeconds) }) : tr('custom_games_eta_calculating')
             : networkRate;

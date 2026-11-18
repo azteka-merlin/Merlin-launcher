@@ -604,10 +604,16 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         await fs.promises.mkdir(downloads, { recursive: true });
         assertRealDirectory(downloads);
         const token = await authSession.getAccessToken();
+        emit(operation, onProgress, 'reading_manifest', { bytes: 0, totalBytes: 0 }, true);
         const response = await axios.get(manifestUrl, {
             headers: { ...PROTOCOL_HEADERS, Authorization: `Bearer ${token}` }, timeout: 60000,
             params: transferParams(operation),
             signal: operation.controller.signal,
+            onDownloadProgress: ({ loaded, total }) => {
+                if (operation.stage === 'reading_manifest' && !operation.controller.signal.aborted) {
+                    emit(operation, onProgress, 'reading_manifest', { bytes: loaded, totalBytes: total || 0 });
+                }
+            },
         });
         const manifest = response.data;
         const files = manifest?.files;
@@ -620,6 +626,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
+        emit(operation, onProgress, 'checking_manifest', { totalInstallFiles: finalFileCount }, true);
 
         let declared = 0;
         const seen = new Set();

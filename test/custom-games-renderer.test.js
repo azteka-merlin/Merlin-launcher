@@ -191,7 +191,7 @@ test('a rapid retry starts with clean modal and widget progress after cancellati
     assert.equal(cancel.disabled, false);
     assert.equal(ui.get('customGamesProgressClose').hidden, true);
     for (const prefix of ['customGamesProgress', 'customGamesWidget']) {
-        assert.equal(ui.get(prefix + 'Title').textContent, 'Baixando jogo');
+        assert.equal(ui.get(prefix + 'Title').textContent, 'Preparando download');
         assert.equal(ui.get(prefix + 'Detail').textContent, '');
         assert.equal(ui.get(prefix + 'Bar').style.width, '0%');
     }
@@ -204,6 +204,22 @@ test('a rapid retry starts with clean modal and widget progress after cancellati
     installs[1].resolve({ success: false, code: 'cancelled' });
     await secondCancel;
     await turn();
+});
+
+test('manifest preparation reports file list progress separately from game download', () => {
+    const ui = renderer();
+    ui.progress(downloading({ stage: 'reading_manifest', bytes: 3 * MiB, received: 0 }));
+    ui.flush();
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Preparando download');
+    assert.match(ui.get('customGamesProgressDetail').textContent, /Recebendo a lista de arquivos.*3\.0 MB/);
+    assert.equal(ui.get('customGamesProgressRate').textContent, '');
+    ui.progress(downloading({ stage: 'checking_manifest', totalInstallFiles: 277422, received: 0 }));
+    ui.flush();
+    assert.match(ui.get('customGamesProgressDetail').textContent, /Conferindo a lista de 277422 arquivos/);
+    ui.progress(downloading());
+    ui.flush();
+    assert.equal(ui.get('customGamesProgressTitle').textContent, 'Baixando jogo');
+    assert.equal(ui.get('customGamesProgressBar').style.width, '20%');
 });
 
 test('extraction uses global installed totals and remaining files across all packages', () => {
