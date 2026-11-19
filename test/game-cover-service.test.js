@@ -123,3 +123,58 @@ test('an HTML response cannot poison the persistent image cache',async t=>{
     assert.deepEqual(await fs.readdir(dir),[]);
     await assert.rejects(()=>service.load('../secret'));
 });
+
+test('a shared image wins on a local cache miss without reporting a fresh download', async t => {
+    const dir = await directory(t);
+    const requested = [];
+    const reports = [];
+    const sharedUrl = 'https://api-merlin.com/api/public/game-images';
+    const service = createGameCoverService({
+        cacheDirectory: () => dir,
+        shared: { url: sharedUrl, report: (...args) => reports.push(args) },
+        axios: { get: async url => { requested.push(url); return jpeg(); } }
+    });
+    assert.match((await service.load('4407750')).url, /^file:/);
+    assert.deepEqual(requested, [sharedUrl + '/4407750']);
+    assert.deepEqual(reports, []);
+});
+
+test('a missing shared image leaves a fresh local hit immediately usable and reports once after the check', async t => {
+    const dir = await directory(t);
+    await fs.writeFile(path.join(dir, '4407750.jpg'), jpeg().data);
+    let respond;
+    let reportDone;
+    const report = new Promise(resolve => { reportDone = resolve; });
+    let heads = 0;
+    const service = createGameCoverService({
+        cacheDirectory: () => dir,
+        shared: { url: 'https://api-merlin.com/api/public/game-images', report: (...args) => reportDone(args) },
+        axios: { head: () => { heads++; return new Promise(resolve => { respond = resolve; }); } }
+    });
+    const [first, second] = await Promise.all([service.load('4407750'), service.load('4407750')]);
+    assert.equal(first.cached, true);
+    assert.equal(second.url, first.url);
+    assert.equal(heads, 1);
+    respond({ status: 404 });
+    assert.deepEqual(await report, ['4407750', undefined]);
+});
+
+test('after a shared miss, a valid fallback is cached even when sending the report never completes', async t => {
+    const dir = await directory(t);
+    const sharedUrl = 'https://api-merlin.com/api/public/game-images';
+    const source = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4407750/header.jpg';
+    const requested = [];
+    const reports = [];
+    const service = createGameCoverService({
+        cacheDirectory: () => dir,
+        shared: { url: sharedUrl, report: (...args) => { reports.push(args); return new Promise(() => {}); } },
+        axios: { get: async (url, options) => {
+            requested.push([url, options.timeout]);
+            return url.startsWith(sharedUrl) ? { status: 404 } : jpeg();
+        } }
+    });
+    assert.match((await service.load('4407750', source)).url, /^file:/);
+    assert.deepEqual(requested, [[sharedUrl + '/4407750', 450], [source, 4000]]);
+    assert.deepEqual(reports, [['4407750', source]]);
+    assert.deepEqual(await fs.readFile(path.join(dir, '4407750.jpg')), jpeg().data);
+});

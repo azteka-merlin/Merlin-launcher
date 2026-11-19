@@ -310,6 +310,25 @@ const homeContentApiUrl = `${apiBaseUrl}/home`;
 const releaseNotesApiUrl = `${apiBaseUrl}/release-notes`;
 const updateLatestApiUrl = `${apiBaseUrl}/updates/latest`;
 const updateDownloadApiUrl = `${apiBaseUrl}/updates/download`;
+const launcherVersion = app.getVersion();
+const activityApiPaths = new Set([
+    apiBaseUrl + '/auth/login', apiBaseUrl + '/auth/reset-hwid',
+    apiBaseUrl + '/manifests', premiumActivateUrl, premiumActivateThirdPartyUrl, premiumActivationEventUrl,
+].map(url => {
+    const target = new URL(url);
+    return target.origin + target.pathname;
+}));
+// The API stores this header whenever one of these requests writes an activity event.
+axios.interceptors.request.use(config => {
+    if (!config.url) return config;
+    const candidate = URL.canParse(config.url, config.baseURL || apiBaseUrl);
+    if (!candidate) return config;
+    const target = new URL(config.url, config.baseURL || apiBaseUrl);
+    if (activityApiPaths.has(target.origin + target.pathname)) {
+        config.headers.set('X-Merlin-Version', launcherVersion);
+    }
+    return config;
+}, undefined, { synchronous: true });
 const apiAgent = createApiAgent();
 const downloadManager = createDownloadManager({ fs, path, axios, httpsAgent: apiAgent });
 const machineIdentity = createMachineIdentity({ crypto, execFile, os });
@@ -387,7 +406,6 @@ const correctionsCatalogStore = createCorrectionsCatalogStore({
     path,
     getFilePath: getCorrectionsCatalogFilePath
 });
-const launcherVersion = app.getVersion();
 const correctionsLicenseTokenClient = createLicenseTokenClient({
     axios,
     authSession,
@@ -749,7 +767,23 @@ registerSupportLogIpc({
 
 registerGamesIpc({ ipcMain, addGamesService });
 registerLibraryIpc({ ipcMain, libraryService });
-registerGameCoversIpc({ ipcMain, gameCoverService: createGameCoverService({ axios, cacheDirectory: () => path.join(app.getPath('userData'),'cache','game-covers'), simulateRyuuFailure: !app.isPackaged && process.env.MERLIN_SIMULATE_RYUU_FAILURE === '1' }) });
+registerGameCoversIpc({
+    ipcMain,
+    gameCoverService: createGameCoverService({
+        axios,
+        cacheDirectory: () => path.join(app.getPath('userData'), 'cache', 'game-covers'),
+        simulateRyuuFailure: !app.isPackaged && process.env.MERLIN_SIMULATE_RYUU_FAILURE === '1',
+        shared: {
+            url: apiBaseUrl + '/public/game-images',
+            async report(appId, sourceUrl) {
+                const token = await authSession.getAccessToken();
+                await axios.post(apiBaseUrl + '/games/images/' + appId, { sourceUrl: sourceUrl || undefined }, {
+                    timeout: 3000, maxRedirects: 0, httpsAgent: apiAgent, headers: { Authorization: 'Bearer ' + token },
+                });
+            },
+        },
+    }),
+});
 registerCorrectionsIpc({ ipcMain, correctionsService });
 registerCustomGamesIpc({ ipcMain, service: customGamesService, getMainWindow: () => mainWindow });
 registerPremiumIpc({ ipcMain, premiumService });
