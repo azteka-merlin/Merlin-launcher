@@ -27,7 +27,9 @@ function renderer(options = {}) {
     const frames = new Map();
     const translations = { ptbr: {}, en: {}, es: {}, fr: {}, de: {} };
     const viewCalls = [];
+    const intervals = new Map();
     let nextFrame = 0;
+    let nextInterval = 0;
     let language = 'ptbr';
     let progressListener;
     let imageCreates = 0;
@@ -54,18 +56,22 @@ function renderer(options = {}) {
             async verify(id) { return options.verify ? options.verify(id) : { success: true, healthy: true, totalFiles: 3 }; },
             async update(id) { return options.update ? options.update(id) : { success: true }; },
             async repair(id) { return options.repair ? options.repair(id) : { success: true, updatedFiles: 1, protectedFiles: 0 }; },
+            async running(ids) { return options.running ? options.running(ids) : { success: true, running: {} }; },
+            async closeGame(id) { return options.closeGame ? options.closeGame(id) : { success: true }; },
         } },
         merlinI18n: { t: key => translations[language][key], current: () => language },
         merlinView: { set(view) { viewCalls.push(view); } },
         addEventListener(name, handler) { events.set(name, handler); },
         requestAnimationFrame(callback) { frames.set(++nextFrame, callback); return nextFrame; },
         cancelAnimationFrame(id) { frames.delete(id); },
+        setInterval(callback, delay) { intervals.set(++nextInterval, { callback, delay }); return nextInterval; },
+        clearInterval(id) { intervals.delete(id); },
     };
     vm.runInNewContext(script, { window, document, translations });
     events.get('document:DOMContentLoaded')();
     get('customGamesView').hidden = true;
     get('customGamesInstallModal').hidden = true;
-    return { get, events, frames, translations, viewCalls,
+    return { get, events, frames, intervals, translations, viewCalls,
         progress: state => progressListener(state),
         flush() { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback()); },
         imageCreates: () => imageCreates,

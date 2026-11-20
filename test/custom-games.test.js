@@ -207,18 +207,22 @@ test('one custom-games IPC service owns list, download, play, folder and uninsta
         subscribeProgress: listener => { progressListener = listener; return () => {}; },
         install: async () => { progressListener({ stage: 'downloading' }); return { success: true }; },
         cancel: () => ({ success: true }), play: () => ({ success: true }),
+        runningGames: async () => ({ success: true, running: {} }),
+        closeGame: async () => ({ success: true }),
         openFolder: () => ({ success: true }), uninstall: () => ({ success: true }), verify: () => ({ success: true, healthy: true }),
         update: () => ({ success: true }),
         repair: () => ({ success: true }),
     };
     registerCustomGamesIpc({ ipcMain, service, getMainWindow: () => window });
     assert.deepEqual([...handlers.keys()].sort(), [
-        'custom-games:cancel', 'custom-games:drives', 'custom-games:install', 'custom-games:list',
-        'custom-games:open-folder', 'custom-games:play', 'custom-games:refresh', 'custom-games:repair', 'custom-games:uninstall', 'custom-games:update', 'custom-games:verify',
+        'custom-games:cancel', 'custom-games:close-game', 'custom-games:drives', 'custom-games:install', 'custom-games:list',
+        'custom-games:open-folder', 'custom-games:play', 'custom-games:refresh', 'custom-games:repair', 'custom-games:running', 'custom-games:uninstall', 'custom-games:update', 'custom-games:verify',
     ]);
     assert.deepEqual(await handlers.get('custom-games:install')({}, { id: 'a', drive: 'D' }), { success: true });
     assert.deepEqual(progress, { stage: 'downloading' });
     assert.deepEqual(await handlers.get('custom-games:verify')({}, 'a'), { success: true, healthy: true });
+    assert.deepEqual(await handlers.get('custom-games:running')({}, ['a']), { success: true, running: {} });
+    assert.deepEqual(await handlers.get('custom-games:close-game')({}, 'a'), { success: true });
 });
 
 test('all custom-games UI labels exist in five languages', () => {
