@@ -41,6 +41,62 @@ test('rejects incomplete files and unsafe archive paths without publishing a ZIP
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('downloads files concurrently with a fixed limit and verifies all ZIP entries', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-export-test-'));
+    try {
+        const bytes = Buffer.from('known save bytes');
+        const sha = crypto.createHash('sha1').update(bytes).digest('hex');
+        const files = Array.from({ length: 9 }, (_, index) => ({ name: `slot${index}.dat`, sha, size: bytes.length }));
+        let active = 0;
+        let peak = 0;
+        const target = path.join(root, 'export.zip');
+        await exportCloudSave({
+            accountId: '123', appId: '730', versionId: 'current', destination: target,
+            getManifest: async () => ({ success: true, format: 2, appId: '730', files }),
+            getFile: async () => Readable.from((async function* () {
+                peak = Math.max(peak, ++active);
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 20));
+                    yield bytes;
+                } finally { active--; }
+            })()),
+        });
+        assert.equal(peak, 4);
+        assert.equal(active, 0);
+        const archive = new AdmZip(target);
+        for (const file of files) assert.deepEqual(archive.readFile('Arquivos/' + file.name), bytes);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('cancels the other downloads and leaves no ZIP when one file fails', { timeout: 3000 }, async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-export-test-'));
+    try {
+        const files = Array.from({ length: 6 }, (_, index) => ({ name: `slot${index}.dat`, sha: 'f'.repeat(40), size: 1 }));
+        const target = path.join(root, 'export.zip');
+        let admitBatch;
+        let started = 0;
+        let cancelled = 0;
+        const batchReady = new Promise(resolve => { admitBatch = resolve; });
+        await assert.rejects(exportCloudSave({
+            accountId: '123', appId: '730', versionId: 'current', destination: target,
+            getManifest: async () => ({ success: true, format: 2, appId: '730', files }),
+            getFile: async (_account, _app, _version, name, { signal }) => {
+                if (++started === 4) admitBatch();
+                await batchReady;
+                if (name === 'slot0.dat') return Readable.from([Buffer.from([1])]);
+                return new Promise((_resolve, reject) => {
+                    const cancel = () => { cancelled++; reject(signal.reason); };
+                    if (signal.aborted) cancel();
+                    else signal.addEventListener('abort', cancel, { once: true });
+                });
+            },
+        }), { code: 'cloud_export_integrity' });
+        assert.equal(started, 4);
+        assert.equal(cancelled, 3);
+        assert.equal(fs.existsSync(target), false);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('opens only an existing, validated save folder record', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-folder-test-'));
     try {

@@ -236,13 +236,13 @@ function createCloudSyncService({ axios, authSession, configStore, apiBaseUrl, l
         return requestCloudApi('GET', exportPath(accountId, appId, versionId));
     }
 
-    async function getExportFile(accountId, appId, versionId, name) {
+    async function getExportFile(accountId, appId, versionId, name, { signal } = {}) {
         if (typeof name !== 'string' || !name) throw Object.assign(new Error('invalid_export'), { code: 'cloud_export_invalid' });
         if (!supportedOrigin() || !enabled()) throw Object.assign(new Error('cloud_unavailable'), { code: 'cloud_unavailable' });
         const token = await authSession.getAccessToken();
         const url = `${apiBaseUrl}${exportPath(accountId, appId, versionId, name).replace('?', '/file?')}`;
         const response = await axios.request({ method: 'GET', url, responseType: 'stream', timeout: 120_000,
-            httpsAgent, headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' } });
+            signal, httpsAgent, headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' } });
         return response.data;
     }
 

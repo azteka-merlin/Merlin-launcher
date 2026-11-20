@@ -7,6 +7,7 @@ const { promisify } = require('util');
 const { Transform } = require('stream');
 const { pipeline } = require('stream/promises');
 const execFileAsync = promisify(execFile);
+const MAX_PARALLEL_DOWNLOADS = 4;
 
 function safeCloudPath(name) {
     if (typeof name !== 'string' || !name || name.length > 2048 || name.includes('\\')
@@ -48,6 +49,25 @@ async function zipDirectory(source, destination) {
     }
 }
 
+async function downloadFiles(files, download) {
+    let next = 0;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const workers = Array.from({ length: Math.min(files.length, MAX_PARALLEL_DOWNLOADS) }, async () => {
+        try {
+            while (!signal.aborted && next < files.length) {
+                const file = files[next++];
+                await download(file, signal);
+            }
+        } catch (error) {
+            controller.abort(error);
+        }
+    });
+    // Wait for every stream to close before deleting the temporary folder.
+    await Promise.all(workers);
+    signal.throwIfAborted();
+}
+
 async function exportCloudSave({ accountId, appId, versionId, destination, getManifest, getFile }) {
     const manifest = await getManifest(accountId, appId, versionId);
     const files = validateManifest(manifest, appId);
@@ -55,10 +75,11 @@ async function exportCloudSave({ accountId, appId, versionId, destination, getMa
     try {
         const contents = path.join(temporary, 'contents');
         await fs.promises.mkdir(contents);
-        for (const file of files) {
+        await downloadFiles(files, async (file, signal) => {
             const target = path.join(contents, 'Arquivos', ...file.name.split('/'));
             await fs.promises.mkdir(path.dirname(target), { recursive: true });
-            const input = await getFile(accountId, appId, versionId, file.name);
+            signal.throwIfAborted();
+            const input = await getFile(accountId, appId, versionId, file.name, { signal });
             const hash = crypto.createHash('sha1');
             let bytes = 0;
             const inspect = new Transform({ transform(chunk, _encoding, callback) {
@@ -66,11 +87,11 @@ async function exportCloudSave({ accountId, appId, versionId, destination, getMa
                 hash.update(chunk);
                 callback(null, chunk);
             } });
-            await pipeline(input, inspect, fs.createWriteStream(target, { flags: 'wx' }));
+            await pipeline(input, inspect, fs.createWriteStream(target, { flags: 'wx' }), { signal });
             if (bytes !== file.size || hash.digest('hex') !== file.sha) {
                 throw Object.assign(new Error('Save file integrity failed'), { code: 'cloud_export_integrity' });
             }
-        }
+        });
         await fs.promises.writeFile(path.join(contents, 'merlin-save.json'), JSON.stringify({
             format: 'merlin-cloud-save-v2', appId: String(appId), createdAt: manifest.createdAt,
             files: files.map(file => ({ path: file.name, sha1: file.sha, size: file.size }))
