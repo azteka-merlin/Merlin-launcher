@@ -1,5 +1,11 @@
 const LICENSE_KEY_PATTERN = /^MERLIN-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/;
 const TOKEN_REFRESH_MARGIN_MS = 60_000;
+const API_TRANSPORT_ERROR_CODES = new Set([
+    'ECONNABORTED', 'ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'EHOSTUNREACH',
+    'ENETUNREACH', 'ENOTFOUND', 'EAI_AGAIN', 'EPIPE', 'ERR_NETWORK',
+    'ERR_TLS_CERT_ALTNAME_INVALID', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+    'ERR_SSL_PROTOCOL_ERROR'
+]);
 
 class AuthError extends Error {
     constructor(code, message) {
@@ -151,7 +157,7 @@ function createAuthSession({
         if (status === 401) {
             return new AuthError('invalid_key', 'Invalid license key.');
         }
-        if (!error.response) {
+        if (!error.response && API_TRANSPORT_ERROR_CODES.has(String(error.code || '').toUpperCase())) {
             return new AuthError('unavailable', 'The Merlin API is unavailable.');
         }
         return new AuthError('server_error', 'The Merlin API could not validate this license.');

@@ -35,7 +35,7 @@ const licenseGateTranslations = {
         autoRenewingAction: 'Ver assinatura',
         revoked: 'Esta licença foi revogada.',
         hwid_mismatch: 'Esta chave já está vinculada a outro computador.',
-        unavailable: 'Não foi possível conectar à Merlin API. Tente novamente.',
+        unavailable: 'Não foi possível conectar ao servidor. Tente novamente em alguns instantes.',
         server_error: 'Não foi possível validar sua chave. Tente novamente.',
         invalid_response: 'Não foi possível validar sua chave. Tente novamente.',
         device_error: 'Não foi possível identificar este computador.',
@@ -80,7 +80,7 @@ const licenseGateTranslations = {
         autoRenewingAction: 'View subscription',
         revoked: 'This license has been revoked.',
         hwid_mismatch: 'This key is already linked to another computer.',
-        unavailable: 'Could not connect to the Merlin API. Try again.',
+        unavailable: 'Could not connect to the server. Please try again in a few moments.',
         server_error: 'Could not validate your key. Try again.',
         invalid_response: 'Could not validate your key. Try again.',
         device_error: 'This computer could not be identified.',
@@ -125,7 +125,7 @@ const licenseGateTranslations = {
         autoRenewingAction: 'Ver suscripción',
         revoked: 'Esta licencia ha sido revocada.',
         hwid_mismatch: 'Esta clave ya está vinculada a otro equipo.',
-        unavailable: 'No se pudo conectar con Merlin API. Inténtalo de nuevo.',
+        unavailable: 'No fue posible conectarse al servidor. Inténtalo de nuevo en unos instantes.',
         server_error: 'No se pudo validar tu clave. Inténtalo de nuevo.',
         invalid_response: 'No se pudo validar tu clave. Inténtalo de nuevo.',
         device_error: 'No se pudo identificar este equipo.',
@@ -170,7 +170,7 @@ const licenseGateTranslations = {
         autoRenewingAction: 'Voir l’abonnement',
         revoked: 'Cette licence a été révoquée.',
         hwid_mismatch: 'Cette clé est déjà liée à un autre ordinateur.',
-        unavailable: 'Connexion à Merlin API impossible. Réessayez.',
+        unavailable: 'Impossible de se connecter au serveur. Réessayez dans quelques instants.',
         server_error: 'Impossible de valider votre clé. Réessayez.',
         invalid_response: 'Impossible de valider votre clé. Réessayez.',
         device_error: 'Impossible d’identifier cet ordinateur.',
@@ -215,7 +215,7 @@ const licenseGateTranslations = {
         autoRenewingAction: 'Abonnement ansehen',
         revoked: 'Diese Lizenz wurde widerrufen.',
         hwid_mismatch: 'Dieser Schlüssel ist bereits mit einem anderen Computer verknüpft.',
-        unavailable: 'Verbindung zur Merlin API fehlgeschlagen. Versuchen Sie es erneut.',
+        unavailable: 'Verbindung zum Server nicht möglich. Bitte versuchen Sie es in wenigen Augenblicken erneut.',
         server_error: 'Ihr Schlüssel konnte nicht validiert werden. Versuchen Sie es erneut.',
         invalid_response: 'Ihr Schlüssel konnte nicht validiert werden. Versuchen Sie es erneut.',
         device_error: 'Dieser Computer konnte nicht identifiziert werden.',
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             showError(result.code);
         } catch (_) {
-            showError('unavailable');
+            showError('server_error');
         }
     });
 
@@ -667,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(result.code);
             await restoreRememberedKey();
         } catch (_) {
-            showError('unavailable');
+            showError('server_error');
             await restoreRememberedKey();
         }
     })();

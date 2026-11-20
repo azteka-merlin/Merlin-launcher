@@ -22,6 +22,12 @@ const customGameTranslations = {
         custom_games_repair_verify: 'Verifique a integridade novamente antes de reparar.',
         custom_games_repair_unavailable: 'Esta versão não está mais disponível para reparo. Use Atualizar jogo para instalar a versão atual.',
         custom_games_update: 'Atualizar jogo', custom_games_update_preparing: 'Preparando atualização',
+        custom_games_preparing_recovery: 'Conferindo uma atualização anterior…',
+        custom_games_preparing_game: 'Verificando se o jogo está fechado…',
+        custom_games_preparing_session: 'Validando o pacote…',
+        custom_games_preparing_manifest: 'Lendo as informações do pacote…',
+        custom_games_preparing_plan: 'Organizando a comparação dos arquivos…',
+        custom_games_preparing_files: 'Comparando arquivos: {checked}/{total}',
         custom_games_update_downloading: 'Baixando atualização', custom_games_update_applying: 'Aplicando atualização',
         custom_games_update_apply_progress: '{files} de {total} arquivos aplicados',
         custom_games_update_done: 'Jogo atualizado', custom_games_update_failed: 'Não foi possível atualizar o jogo',
@@ -49,7 +55,13 @@ const customGameTranslations = {
         custom_games_continue: 'Continuar usando Merlin', custom_games_show_progress: 'Ver progresso',
         custom_games_install_failed: 'Não foi possível concluir a instalação', custom_games_cancelled_title: 'Download cancelado',
         custom_games_cancel_download: 'Cancelar download', custom_games_close: 'Fechar',
-        custom_games_installed: 'Instalado', custom_games_download: 'Baixar', custom_games_play: 'Jogar',
+        custom_games_installed: 'Instalado', custom_games_running: 'Jogando', custom_games_download: 'Baixar', custom_games_play: 'Jogar',
+        custom_games_close_game: 'Fechar jogo', custom_games_close_title: 'Fechar o jogo?',
+        custom_games_close_message: 'O Merlin vai solicitar que o jogo feche. Salve seu progresso antes de continuar.',
+        custom_games_close_requested: 'Pedido de fechamento enviado ao jogo.',
+        custom_games_close_unavailable: 'Este jogo não aceitou o pedido de fechamento. Feche-o pela janela do jogo.',
+        custom_games_not_running: 'O jogo já não está em execução.',
+        custom_games_process_check_failed: 'Não foi possível consultar o estado do jogo agora. Tente novamente.',
         custom_games_folder: 'Abrir pasta', custom_games_uninstall: 'Desinstalar',
         custom_games_uninstall_title: 'Desinstalar jogo?',
         custom_games_uninstall_message: 'A pasta do jogo será movida para a Lixeira. Seus saves fora dela não serão removidos.',
@@ -91,6 +103,12 @@ const customGameTranslations = {
         custom_games_repair_verify: 'Verify integrity again before repairing.',
         custom_games_repair_unavailable: 'This version is no longer available for repair. Use Update game to install the current version.',
         custom_games_update: 'Update game', custom_games_update_preparing: 'Preparing update',
+        custom_games_preparing_recovery: 'Checking for a previous update…',
+        custom_games_preparing_game: 'Checking that the game is closed…',
+        custom_games_preparing_session: 'Validating the package…',
+        custom_games_preparing_manifest: 'Reading package information…',
+        custom_games_preparing_plan: 'Organizing the file comparison…',
+        custom_games_preparing_files: 'Comparing files: {checked}/{total}',
         custom_games_update_downloading: 'Downloading update', custom_games_update_applying: 'Applying update',
         custom_games_update_apply_progress: '{files} of {total} files applied',
         custom_games_update_done: 'Game updated', custom_games_update_failed: 'Could not update the game',
@@ -118,7 +136,13 @@ const customGameTranslations = {
         custom_games_continue: 'Continue using Merlin', custom_games_show_progress: 'View progress',
         custom_games_install_failed: 'The installation could not be completed', custom_games_cancelled_title: 'Download canceled',
         custom_games_cancel_download: 'Cancel download', custom_games_close: 'Close',
-        custom_games_installed: 'Installed', custom_games_download: 'Download', custom_games_play: 'Play',
+        custom_games_installed: 'Installed', custom_games_running: 'Playing', custom_games_download: 'Download', custom_games_play: 'Play',
+        custom_games_close_game: 'Close game', custom_games_close_title: 'Close the game?',
+        custom_games_close_message: 'Merlin will ask the game to close. Save your progress before continuing.',
+        custom_games_close_requested: 'Close request sent to the game.',
+        custom_games_close_unavailable: 'The game did not accept the close request. Close it from its window.',
+        custom_games_not_running: 'The game is no longer running.',
+        custom_games_process_check_failed: 'Could not check the game status right now. Try again.',
         custom_games_folder: 'Open folder', custom_games_uninstall: 'Uninstall',
         custom_games_uninstall_title: 'Uninstall game?',
         custom_games_uninstall_message: 'The game folder will be moved to the Recycle Bin. Saves outside it will not be removed.',
@@ -160,6 +184,12 @@ const customGameTranslations = {
         custom_games_repair_verify: 'Verifica de nuevo la integridad antes de reparar.',
         custom_games_repair_unavailable: 'Esta versión ya no está disponible para reparación. Usa Actualizar juego para instalar la versión actual.',
         custom_games_update: 'Actualizar juego', custom_games_update_preparing: 'Preparando actualización',
+        custom_games_preparing_recovery: 'Comprobando una actualización anterior…',
+        custom_games_preparing_game: 'Comprobando que el juego esté cerrado…',
+        custom_games_preparing_session: 'Validando el paquete…',
+        custom_games_preparing_manifest: 'Leyendo la información del paquete…',
+        custom_games_preparing_plan: 'Organizando la comparación de archivos…',
+        custom_games_preparing_files: 'Comparando archivos: {checked}/{total}',
         custom_games_update_downloading: 'Descargando actualización', custom_games_update_applying: 'Aplicando actualización',
         custom_games_update_apply_progress: '{files} de {total} archivos aplicados',
         custom_games_update_done: 'Juego actualizado', custom_games_update_failed: 'No se pudo actualizar el juego',
@@ -187,7 +217,13 @@ const customGameTranslations = {
         custom_games_continue: 'Seguir usando Merlin', custom_games_show_progress: 'Ver progreso',
         custom_games_install_failed: 'No se pudo completar la instalación', custom_games_cancelled_title: 'Descarga cancelada',
         custom_games_cancel_download: 'Cancelar descarga', custom_games_close: 'Cerrar',
-        custom_games_installed: 'Instalado', custom_games_download: 'Descargar', custom_games_play: 'Jugar',
+        custom_games_installed: 'Instalado', custom_games_running: 'En ejecución', custom_games_download: 'Descargar', custom_games_play: 'Jugar',
+        custom_games_close_game: 'Cerrar juego', custom_games_close_title: '¿Cerrar el juego?',
+        custom_games_close_message: 'Merlin solicitará que el juego se cierre. Guarda tu progreso antes de continuar.',
+        custom_games_close_requested: 'Se envió la solicitud para cerrar el juego.',
+        custom_games_close_unavailable: 'El juego no aceptó la solicitud. Ciérralo desde su ventana.',
+        custom_games_not_running: 'El juego ya no está en ejecución.',
+        custom_games_process_check_failed: 'No se pudo consultar el estado del juego. Inténtalo de nuevo.',
         custom_games_folder: 'Abrir carpeta', custom_games_uninstall: 'Desinstalar',
         custom_games_uninstall_title: '¿Desinstalar juego?',
         custom_games_uninstall_message: 'La carpeta del juego se moverá a la Papelera. No se borrarán las partidas guardadas fuera de ella.',
@@ -229,6 +265,12 @@ const customGameTranslations = {
         custom_games_repair_verify: 'Vérifiez à nouveau l’intégrité avant de réparer.',
         custom_games_repair_unavailable: 'Cette version n’est plus disponible pour réparation. Mettez le jeu à jour pour installer la version actuelle.',
         custom_games_update: 'Mettre à jour', custom_games_update_preparing: 'Préparation de la mise à jour',
+        custom_games_preparing_recovery: 'Vérification d’une mise à jour précédente…',
+        custom_games_preparing_game: 'Vérification de la fermeture du jeu…',
+        custom_games_preparing_session: 'Validation du paquet…',
+        custom_games_preparing_manifest: 'Lecture des informations du paquet…',
+        custom_games_preparing_plan: 'Préparation de la comparaison des fichiers…',
+        custom_games_preparing_files: 'Comparaison des fichiers : {checked}/{total}',
         custom_games_update_downloading: 'Téléchargement de la mise à jour', custom_games_update_applying: 'Application de la mise à jour',
         custom_games_update_apply_progress: '{files} sur {total} fichiers appliqués',
         custom_games_update_done: 'Jeu mis à jour', custom_games_update_failed: 'Impossible de mettre à jour le jeu',
@@ -256,7 +298,13 @@ const customGameTranslations = {
         custom_games_continue: 'Continuer à utiliser Merlin', custom_games_show_progress: 'Voir la progression',
         custom_games_install_failed: 'Impossible de terminer l’installation', custom_games_cancelled_title: 'Téléchargement annulé',
         custom_games_cancel_download: 'Annuler le téléchargement', custom_games_close: 'Fermer',
-        custom_games_installed: 'Installé', custom_games_download: 'Télécharger', custom_games_play: 'Jouer',
+        custom_games_installed: 'Installé', custom_games_running: 'En cours', custom_games_download: 'Télécharger', custom_games_play: 'Jouer',
+        custom_games_close_game: 'Fermer le jeu', custom_games_close_title: 'Fermer le jeu ?',
+        custom_games_close_message: 'Merlin va demander au jeu de se fermer. Enregistrez votre progression avant de continuer.',
+        custom_games_close_requested: 'Demande de fermeture envoyée au jeu.',
+        custom_games_close_unavailable: 'Le jeu a refusé la demande. Fermez-le depuis sa fenêtre.',
+        custom_games_not_running: 'Le jeu n’est plus en cours d’exécution.',
+        custom_games_process_check_failed: 'Impossible de vérifier l’état du jeu. Réessayez.',
         custom_games_folder: 'Ouvrir le dossier', custom_games_uninstall: 'Désinstaller',
         custom_games_uninstall_title: 'Désinstaller le jeu ?',
         custom_games_uninstall_message: 'Le dossier du jeu sera déplacé dans la Corbeille. Les sauvegardes externes ne seront pas supprimées.',
@@ -298,6 +346,12 @@ const customGameTranslations = {
         custom_games_repair_verify: 'Prüfe die Integrität vor der Reparatur erneut.',
         custom_games_repair_unavailable: 'Diese Version ist nicht mehr zur Reparatur verfügbar. Aktualisiere das Spiel auf die aktuelle Version.',
         custom_games_update: 'Spiel aktualisieren', custom_games_update_preparing: 'Update vorbereiten',
+        custom_games_preparing_recovery: 'Vorheriges Update wird geprüft…',
+        custom_games_preparing_game: 'Es wird geprüft, ob das Spiel geschlossen ist…',
+        custom_games_preparing_session: 'Paket wird überprüft…',
+        custom_games_preparing_manifest: 'Paketinformationen werden gelesen…',
+        custom_games_preparing_plan: 'Dateivergleich wird vorbereitet…',
+        custom_games_preparing_files: 'Dateien werden verglichen: {checked}/{total}',
         custom_games_update_downloading: 'Update herunterladen', custom_games_update_applying: 'Update anwenden',
         custom_games_update_apply_progress: '{files} von {total} Dateien angewendet',
         custom_games_update_done: 'Spiel aktualisiert', custom_games_update_failed: 'Spiel konnte nicht aktualisiert werden',
@@ -325,7 +379,13 @@ const customGameTranslations = {
         custom_games_continue: 'Merlin weiter verwenden', custom_games_show_progress: 'Fortschritt anzeigen',
         custom_games_install_failed: 'Die Installation konnte nicht abgeschlossen werden', custom_games_cancelled_title: 'Download abgebrochen',
         custom_games_cancel_download: 'Download abbrechen', custom_games_close: 'Schließen',
-        custom_games_installed: 'Installiert', custom_games_download: 'Herunterladen', custom_games_play: 'Spielen',
+        custom_games_installed: 'Installiert', custom_games_running: 'Wird gespielt', custom_games_download: 'Herunterladen', custom_games_play: 'Spielen',
+        custom_games_close_game: 'Spiel schließen', custom_games_close_title: 'Spiel schließen?',
+        custom_games_close_message: 'Merlin bittet das Spiel, sich zu schließen. Speichere deinen Fortschritt, bevor du fortfährst.',
+        custom_games_close_requested: 'Schließanfrage an das Spiel gesendet.',
+        custom_games_close_unavailable: 'Das Spiel hat die Anfrage abgelehnt. Schließe es über das Spielfenster.',
+        custom_games_not_running: 'Das Spiel läuft nicht mehr.',
+        custom_games_process_check_failed: 'Der Spielstatus konnte nicht geprüft werden. Versuche es erneut.',
         custom_games_folder: 'Ordner öffnen', custom_games_uninstall: 'Deinstallieren',
         custom_games_uninstall_title: 'Spiel deinstallieren?',
         custom_games_uninstall_message: 'Der Spielordner wird in den Papierkorb verschoben. Spielstände außerhalb des Ordners bleiben erhalten.',
@@ -359,6 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'customGamesDownloadWidget', 'customGamesWidgetTitle', 'customGamesWidgetName', 'customGamesWidgetDetail',
         'customGamesWidgetRate', 'customGamesWidgetBar', 'customGamesWidgetOpen', 'customGamesWidgetClose',
         'customGamesInfoModal', 'customGamesInfoName', 'customGamesInfoText', 'customGamesInfoClose',
+        'customGamesCloseModal', 'customGamesCloseName', 'customGamesCloseCancel', 'customGamesCloseConfirm',
         'customGamesUninstallModal', 'customGamesUninstallName', 'customGamesUninstallCancel', 'customGamesUninstallConfirm',
     ].map(id => [id, document.getElementById(id)]));
     let games = [];
@@ -366,6 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selected = null;
     let selectedDrive = '';
     let uninstallTarget = null;
+    let closeTarget = null;
     let busy = false;
     let loaded = false;
     let offline = false;
@@ -378,6 +440,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let progressFrame = null;
     let gridDirty = false;
     let uninstallPending = false;
+    let closePending = false;
+    let runningGamesTimer = null;
+    let runningGamesRequestPending = false;
     let hasGoldAccess = false;
     const tr = (key, values = {}) => Object.entries(values).reduce((value, [name, replacement]) =>
         value.replaceAll(`{${name}}`, replacement), window.merlinI18n.t(key));
@@ -425,6 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const updating = state.kind === 'update' || repairing;
         const applying = updating && state.stage === 'applying';
         const preparingInstall = ['starting', 'reading_manifest', 'checking_manifest'].includes(state.stage);
+        const planningFiles = state.stage === 'preparing' && updating && state.phase === 'checking_files';
         const terminal = isTerminal(state);
         if (terminal) clearPendingProgress();
         const nextBusy = !terminal;
@@ -446,9 +512,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? 'custom_games_install_failed' : 'custom_games_downloading');
         const name = state.name || selected.name || '';
         const globalExtraction = extracting && Number(state.extractionTotalBytes) > 0;
-        const current = applying ? Number(state.files) || 0 : globalExtraction ? Number(state.extractedBytes) || 0
+        const current = planningFiles ? Number(state.filesChecked) || 0 : applying ? Number(state.files) || 0 : globalExtraction ? Number(state.extractedBytes) || 0
             : extracting || verifying ? Number(state.bytes) || 0 : Number(state.received) || 0;
-        const total = applying ? Number(state.totalFiles) || 0 : globalExtraction ? Number(state.extractionTotalBytes)
+        const total = planningFiles ? Number(state.totalFiles) || 0 : applying ? Number(state.totalFiles) || 0 : globalExtraction ? Number(state.extractionTotalBytes)
             : extracting || verifying ? Number(state.totalBytes) || 0 : Number(state.total) || 0;
         const percent = total > 0 ? Math.min(100, Math.floor(current / total * 100)) : 0;
         const totalInstallFiles = Number.isInteger(state.totalInstallFiles) && state.totalInstallFiles > 0
@@ -460,7 +526,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }) : '';
         let detail = '';
         if (state.stage === 'preparing' && updating) {
-            detail = tr(repairing ? 'custom_games_repairing' : 'custom_games_update_preparing');
+            if (repairing) detail = tr('custom_games_repairing');
+            else if (state.phase === 'organizing_files') detail = tr('custom_games_preparing_plan');
+            else if (planningFiles) detail = tr('custom_games_preparing_files', {
+                checked: Number(state.filesChecked) || 0, total: Number(state.totalFiles) || 0,
+            });
+            else {
+                const preparationLabels = {
+                    recovering: 'custom_games_preparing_recovery',
+                    checking_game: 'custom_games_preparing_game',
+                    opening_session: 'custom_games_preparing_session',
+                    reading_manifests: 'custom_games_preparing_manifest',
+                };
+                detail = tr(preparationLabels[state.preparation] || 'custom_games_update_preparing');
+            }
         } else if (state.stage === 'reading_manifest') {
             detail = tr('custom_games_reading_manifest');
             if (state.bytes > 0) detail += ` · ${size(state.bytes)}`;
@@ -599,15 +678,22 @@ document.addEventListener('DOMContentLoaded', () => {
             title.title = game.name;
             const meta = document.createElement('p');
             meta.className = 'correction-card-appid';
-            meta.textContent = game.installed ? tr('custom_games_installed') : size(game.archiveSize);
+            meta.textContent = game.running ? tr('custom_games_running') : game.installed ? tr('custom_games_installed') : size(game.archiveSize);
             const actions = document.createElement('div');
             actions.className = 'custom-game-actions';
             if (game.installed) {
                 if (game.executablePath) {
-                    const play = action(tr('custom_games_play'), async () => {
-                    const result = await api.play(game.id);
-                    if (!result.success) notify(errorText(result.code), 'error');
-                    }, 'primary');
+                    const play = action(tr(game.running ? 'custom_games_close_game' : 'custom_games_play'), async () => {
+                        if (game.running) {
+                            closeTarget = game;
+                            el.customGamesCloseName.textContent = game.name;
+                            el.customGamesCloseModal.hidden = false;
+                            return;
+                        }
+                        const result = await api.play(game.id);
+                        if (!result.success) notify(errorText(result.code), 'error');
+                        else void refreshRunningGames();
+                    }, game.running ? 'secondary' : 'primary');
                     play.disabled = busy && ['update', 'repair'].includes(progressSnapshot?.kind) && progressSnapshot.id === game.id;
                     actions.append(play);
                 }
@@ -656,6 +742,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (code === 'integrity_verification_required') return tr('custom_games_repair_verify');
         if (['game_version_unavailable', 'game_version_not_found'].includes(code)) return tr('custom_games_repair_unavailable');
         if (code === 'game_running' || code === 'game_running_check_failed') return tr('custom_games_game_running');
+        if (code === 'game_close_unsupported') return tr('custom_games_close_unavailable');
+        if (code === 'game_not_running') return tr('custom_games_not_running');
+        if (code === 'game_process_check_failed') return tr('custom_games_process_check_failed');
         if (code === 'update_recovery_required') return tr('custom_games_update_recovery');
         if (code === 'no_update') return tr('custom_games_no_update');
         if (code === 'integrity_index_pending') return tr('custom_games_integrity_pending');
@@ -700,6 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderProgress(result.operation);
             }
             render();
+            if (!el.customGamesView.hidden) void refreshRunningGames();
             if (offline) notify(tr('custom_games_offline'));
         } catch {
             if (hasGamesToKeepVisible) notify(tr('custom_games_error'), 'error');
@@ -709,6 +799,40 @@ document.addEventListener('DOMContentLoaded', () => {
             el.customGamesRefresh.classList.remove('loading');
             el.customGamesRefresh.querySelector('span').textContent = tr('custom_games_refresh');
         }
+    }
+
+    async function refreshRunningGames() {
+        if (el.customGamesView.hidden || runningGamesRequestPending) return;
+        const ids = games.filter(game => game.installed && game.executablePath).map(game => game.id);
+        if (!ids.length) return;
+        runningGamesRequestPending = true;
+        try {
+            const result = await api.running(ids);
+            if (!result?.success) return;
+            const running = result.running || {};
+            let changed = false;
+            games = games.map(game => {
+                const value = running[game.id] === true;
+                if (Boolean(game.running) !== value) changed = true;
+                return { ...game, running: value };
+            });
+            if (changed) {
+                if (el.customGamesView.hidden) gridDirty = true;
+                else render();
+            }
+        } catch { /* Keep the last known state if this local process check fails. */ }
+        finally { runningGamesRequestPending = false; }
+    }
+
+    function startRunningGamesPolling() {
+        if (runningGamesTimer !== null) return;
+        void refreshRunningGames();
+        runningGamesTimer = window.setInterval(() => void refreshRunningGames(), 5000);
+    }
+
+    function stopRunningGamesPolling() {
+        if (runningGamesTimer !== null) window.clearInterval(runningGamesTimer);
+        runningGamesTimer = null;
     }
 
     function updateDriveSelection() {
@@ -920,6 +1044,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     el.customGamesInstallCancel.addEventListener('click', () => { el.customGamesInstallModal.hidden = true; selected = null; });
     el.customGamesInfoClose.addEventListener('click', () => { el.customGamesInfoModal.hidden = true; });
+    el.customGamesCloseCancel.addEventListener('click', () => {
+        if (closePending) return;
+        el.customGamesCloseModal.hidden = true;
+        closeTarget = null;
+    });
+    el.customGamesCloseConfirm.addEventListener('click', async () => {
+        if (!closeTarget || closePending) return;
+        const item = closeTarget;
+        closePending = true;
+        el.customGamesCloseConfirm.disabled = true;
+        el.customGamesCloseCancel.disabled = true;
+        try {
+            const result = await api.closeGame(item.id);
+            if (result.success) notify(tr('custom_games_close_requested'), 'info');
+            else notify(errorText(result.code), 'error');
+            el.customGamesCloseModal.hidden = true;
+            closeTarget = null;
+            void refreshRunningGames();
+        } catch { notify(tr('custom_games_process_check_failed'), 'error'); }
+        finally {
+            closePending = false;
+            el.customGamesCloseConfirm.disabled = false;
+            el.customGamesCloseCancel.disabled = false;
+        }
+    });
     el.customGamesUninstallCancel.addEventListener('click', () => {
         if (uninstallPending) return;
         el.customGamesUninstallModal.hidden = true;
@@ -966,6 +1115,8 @@ document.addEventListener('DOMContentLoaded', () => {
         el.customGamesView.hidden = !current;
         el.customGamesBtn.classList.toggle('active', current);
         el.customGamesBtn.setAttribute('aria-pressed', String(current));
+        if (current) startRunningGamesPolling();
+        else stopRunningGamesPolling();
         if (current && !loaded) void load();
         else if (current && gridDirty) render();
     });

@@ -35,9 +35,10 @@ function normalizeIntegrityManifest(value, gameId, archiveKey, root) {
     });
     if (total !== value.totalSizeBytes) throw new Error('invalid_integrity_manifest');
     for (const relative of seen) {
-        const parts = relative.split(path.sep);
-        for (let index = 1; index < parts.length; index++) {
-            if (seen.has(parts.slice(0, index).join(path.sep))) throw new Error('invalid_integrity_manifest');
+        let separator = relative.indexOf(path.sep);
+        while (separator !== -1) {
+            if (seen.has(relative.slice(0, separator))) throw new Error('invalid_integrity_manifest');
+            separator = relative.indexOf(path.sep, separator + 1);
         }
     }
     return { version: 1, gameId, archiveKey, totalSizeBytes: total, files };

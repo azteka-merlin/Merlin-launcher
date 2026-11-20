@@ -14,6 +14,8 @@ function registerCustomGamesIpc({ ipcMain, service, getMainWindow = () => null }
     ipcMain.handle('custom-games:repair', (_event, id) => service.repair(id));
     ipcMain.handle('custom-games:cancel', () => service.cancel());
     ipcMain.handle('custom-games:play', (_event, id) => service.play(id));
+    ipcMain.handle('custom-games:running', (_event, ids) => service.runningGames(ids));
+    ipcMain.handle('custom-games:close-game', (_event, id) => service.closeGame(id));
     ipcMain.handle('custom-games:open-folder', (_event, id) => service.openFolder(id));
     ipcMain.handle('custom-games:uninstall', (_event, id) => service.uninstall(id));
 }

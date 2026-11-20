@@ -78,6 +78,46 @@ function moveWithWindowsShellToRecycleBin(targetPath) {
     });
 }
 
+function runPowerShell(command, timeout = 15000) {
+    return new Promise((resolve, reject) => execFile('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command],
+        { windowsHide: true, timeout, maxBuffer: 64 * 1024 }, (error, output) => {
+            if (error) reject(new Error('game_process_check_failed'));
+            else resolve(output.trim());
+        }));
+}
+
+async function findRunningExecutables(executablePaths) {
+    const paths = [...new Set(executablePaths.filter(value => typeof value === 'string' && value))];
+    if (process.platform !== 'win32' || !paths.length) return new Set();
+    const expected = new Set(paths.map(value => value.toLowerCase()));
+    const names = [...new Set(paths.map(value => path.basename(value, path.extname(value))))];
+    const encoded = Buffer.from(JSON.stringify(names), 'utf8').toString('base64');
+    const command = `$names = @(ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')))); ` +
+        '$matches = @(); foreach ($proc in @(Get-Process -Name $names -ErrorAction SilentlyContinue)) { ' +
+        'try { $procPath = $proc.Path; if ($procPath) { $matches += [PSCustomObject]@{ path = $procPath } } } catch {} }; ' +
+        '$json = ConvertTo-Json -InputObject @($matches) -Compress; [Console]::Out.Write($json)';
+    let rows;
+    try { rows = JSON.parse(await runPowerShell(command)); }
+    catch { throw new Error('game_process_check_failed'); }
+    return new Set((Array.isArray(rows) ? rows : rows ? [rows] : [])
+        .map(row => typeof row?.path === 'string' ? row.path.toLowerCase() : '')
+        .filter(value => expected.has(value)));
+}
+
+async function requestCloseExecutable(executablePath) {
+    if (process.platform !== 'win32') throw new Error('game_close_unsupported');
+    const encoded = Buffer.from(executablePath, 'utf8').toString('base64');
+    const command = `$target = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); ` +
+        '$name = [IO.Path]::GetFileNameWithoutExtension($target); ' +
+        '$matches = @(Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object { ' +
+        '$_.Path -and [String]::Equals($_.Path, $target, [StringComparison]::OrdinalIgnoreCase) }); ' +
+        'if (-not $matches.Count) { [Console]::Out.Write("not_running"); exit 0 }; ' +
+        '$requested = 0; foreach ($proc in $matches) { try { if ($proc.CloseMainWindow()) { $requested++ } } catch {} }; ' +
+        'if ($requested -gt 0) { [Console]::Out.Write("requested") } else { [Console]::Out.Write("unsupported") }';
+    try { return await runPowerShell(command, 10000); }
+    catch { throw new Error('game_process_check_failed'); }
+}
+
 function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, testDriveRoot = null,
     windowsRecycleBinMove = moveWithWindowsShellToRecycleBin, downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS,
     initialCatalog = null, installRunner = null, extractionConcurrency = 2, isGameRunning = hasRunningGameProcess }) {
@@ -264,6 +304,16 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         return target;
     }
 
+    async function resolveInstalledExecutable(root, relative) {
+        const normalized = String(relative || '').trim().replace(/\\/g, '/');
+        if (!normalized || !/\.exe$/i.test(normalized)) throw new Error('play_unavailable');
+        const target = path.resolve(root, ...normalized.split('/'));
+        if (!target.toLowerCase().startsWith(`${path.resolve(root).toLowerCase()}${path.sep}`)) throw new Error('invalid_executable');
+        const real = await fs.promises.realpath(target);
+        if (!real.toLowerCase().startsWith(`${path.resolve(root).toLowerCase()}${path.sep}`)) throw new Error('invalid_executable');
+        return real;
+    }
+
     function markerFor(item, letter) {
         try {
             const target = installPath(letter, item.installName);
@@ -333,7 +383,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 requiredFreeBytes: requiredFreeBytes(item.archiveSize, 0, item.packageType),
                 // Admin metadata can be updated after a game was installed. Prefer the catalog value
                 // so an old local registry entry (including null) cannot hide the Play action.
-                executablePath: item.executablePath || (found ? registry[item.id]?.executablePath : null) || null };
+                executablePath: item.executablePath || (found ? registry[item.id]?.executablePath || marker?.executablePath : null) || null };
         }),
             drives, offline, operation: active ? { ...active.snapshot } : null };
     }
@@ -1240,19 +1290,24 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const staging = path.join(path.dirname(current.path), item.packageType === 'folder'
             ? `.merlin-updating-${id}` : `.merlin-updating-${id}-${randomUUID()}`);
         try {
-            emit(operation, onProgress, 'preparing', { kind }, true);
+            emit(operation, onProgress, 'preparing', { kind, preparation: 'recovering' }, true);
             await recoverUpdate(current.path, id);
             const marker = loadJson(path.join(current.path, MARKER), null);
             if (repairing && (marker?.archiveKey !== item.archiveKey || !Array.isArray(options.repairPaths) ||
                 !options.repairPaths.length)) throw new Error('integrity_verification_required');
             if (!repairing && marker?.archiveKey === item.archiveKey) throw new Error('no_update');
+            emit(operation, onProgress, 'preparing', { kind, preparation: 'checking_game' }, true);
             if (await isGameRunning(current.path)) throw new Error('game_running');
+            emit(operation, onProgress, 'preparing', { kind, preparation: 'opening_session' }, true);
             await openDownloadSession(operation);
+            emit(operation, onProgress, 'preparing', { kind, preparation: 'reading_manifests' }, true);
             const next = await loadIntegrityManifest(id, item.archiveKey, current.path, operation.controller.signal, operation);
             let previous = null;
             try { previous = await loadIntegrityManifest(id, marker?.archiveKey, current.path, operation.controller.signal); }
             catch { if (operation.controller.signal.aborted) throw new Error('cancelled'); }
-            const plan = await createUpdatePlan(current.path, previous, next, item, operation.controller.signal);
+            const plan = await createUpdatePlan(current.path, previous, next, item, operation.controller.signal, progress => {
+                emit(operation, onProgress, 'preparing', { kind, ...progress });
+            });
             if (repairing) {
                 const wanted = new Set(options.repairPaths.map(relative => String(relative).toLowerCase()));
                 const packageHasGame = item.origin === 'port' && next.files.some(file =>
@@ -1317,17 +1372,54 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         } catch (error) { return { success: false, code: error.message }; }
     }
 
+    async function runningGames(ids = []) {
+        if (!Array.isArray(ids) || ids.length > 250) return { success: false, code: 'invalid_game_list' };
+        if (process.platform !== 'win32') return { success: true, running: {} };
+        const requested = [...new Set(ids.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 120))];
+        const catalogById = new Map(catalog.map(item => [item.id, item]));
+        const targets = [];
+        for (const id of requested) {
+            const record = registry[id];
+            if (!record?.drive || !record.installName) continue;
+            try {
+                const item = catalogById.get(id) || { id, installName: record.installName };
+                const current = markerFor({ ...item, installName: record.installName }, record.drive);
+                if (!current) continue;
+                const relative = item.executablePath || record.executablePath || current.marker.executablePath;
+                const executable = await resolveInstalledExecutable(current.path, relative);
+                targets.push({ id, executable });
+            } catch { /* Missing games and stale registrations are not running targets. */ }
+        }
+        try {
+            const runningPaths = await findRunningExecutables(targets.map(target => target.executable));
+            const running = {};
+            for (const target of targets) if (runningPaths.has(target.executable.toLowerCase())) running[target.id] = true;
+            return { success: true, running };
+        } catch (error) { return { success: false, code: error.message || 'game_process_check_failed' }; }
+    }
+
+    async function closeGame(id) {
+        try {
+            const { item, current } = requireInstalled(id);
+            const marker = loadJson(path.join(current.path, MARKER), null);
+            const relative = item.executablePath || registry[id]?.executablePath || marker?.executablePath;
+            const executable = await resolveInstalledExecutable(current.path, relative);
+            const result = await requestCloseExecutable(executable);
+            if (result === 'not_running') return { success: false, code: 'game_not_running' };
+            if (result !== 'requested') return { success: false, code: 'game_close_unsupported' };
+            return { success: true };
+        } catch (error) {
+            return { success: false, code: error.message || 'game_process_check_failed' };
+        }
+    }
+
     async function play(id) {
         try {
             const { item, current } = requireInstalled(id);
             if (['update', 'repair'].includes(active?.kind) && active.item.id === id) throw new Error('busy');
             if (/^[a-f0-9-]{36}$/i.test(id)) await recoverUpdate(current.path, id);
             const relative = item.executablePath || registry[id]?.executablePath;
-            if (!relative || !/\.exe$/i.test(relative)) throw new Error('play_unavailable');
-            const executable = path.resolve(current.path, ...relative.split('/'));
-            if (!executable.startsWith(`${current.path}${path.sep}`)) throw new Error('invalid_executable');
-            const real = await fs.promises.realpath(executable);
-            if (!real.toLowerCase().startsWith(`${current.path.toLowerCase()}${path.sep}`)) throw new Error('invalid_executable');
+            const executable = await resolveInstalledExecutable(current.path, relative);
             try {
                 // Use the desktop shell so Windows can request UAC elevation when required.
                 const error = await shell.openPath(executable);
@@ -1378,7 +1470,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         }
     }
 
-    return { list, refresh, install, update, verify, repair, cancel, suspend, openFolder, play, uninstall, listDrives, subscribeProgress };
+    return { list, refresh, install, update, verify, repair, cancel, suspend, openFolder, play, runningGames, closeGame,
+        uninstall, listDrives, subscribeProgress };
 }
 
 module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount, validArchiveSize,

@@ -180,6 +180,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         repair: id => ipcRenderer.invoke('custom-games:repair', id),
         cancel: () => ipcRenderer.invoke('custom-games:cancel'),
         play: id => ipcRenderer.invoke('custom-games:play', id),
+        running: ids => ipcRenderer.invoke('custom-games:running', ids),
+        closeGame: id => ipcRenderer.invoke('custom-games:close-game', id),
         openFolder: id => ipcRenderer.invoke('custom-games:open-folder', id),
         uninstall: id => ipcRenderer.invoke('custom-games:uninstall', id),
         onProgress: callback => ipcRenderer.on('custom-games:progress', (_event, state) => callback(state)),

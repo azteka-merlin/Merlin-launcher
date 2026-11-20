@@ -10,6 +10,7 @@ const { createTransferMeter, createTaskLimiter } = require('./transfer-progress'
 
 const MARKER = '.merlin-install.json';
 const RANGE_BYTES = 64 * 1024 ** 2;
+const UPDATE_PLAN_SCAN_CONCURRENCY = 16;
 const key = value => value.replace(/\\/g, '/').toLowerCase();
 const checkCancelled = signal => { if (signal?.aborted) throw new Error('cancelled'); };
 
@@ -29,13 +30,19 @@ async function assertDirectory(directory) {
     }
 }
 
-async function safeParents(root, target, create = false, replaceableParents = null) {
-    await assertDirectory(root);
+async function safeParents(root, target, create = false, replaceableParents = null, validatedDirectories = null) {
+    const validate = async directory => {
+        const cacheKey = key(path.resolve(directory));
+        if (validatedDirectories?.has(cacheKey)) return;
+        await assertDirectory(directory);
+        validatedDirectories?.add(cacheKey);
+    };
+    await validate(root);
     let parent = root;
     for (const part of path.relative(root, path.dirname(target)).split(path.sep).filter(Boolean)) {
         parent = path.join(parent, part);
         if (create) await fs.promises.mkdir(parent).catch(error => { if (error.code !== 'EEXIST') throw error; });
-        try { await assertDirectory(parent); }
+        try { await validate(parent); }
         catch (error) {
             if (!create && error.code === 'ENOENT') return false;
             if (!create && replaceableParents?.has(key(path.relative(root, parent)))) {
@@ -48,9 +55,9 @@ async function safeParents(root, target, create = false, replaceableParents = nu
     return true;
 }
 
-async function localFile(root, relative, { allowDirectory = false, replaceableParents = null } = {}) {
+async function localFile(root, relative, { allowDirectory = false, replaceableParents = null, validatedDirectories = null } = {}) {
     const target = safeEntryPath(root, relative);
-    if (!await safeParents(root, target, false, replaceableParents)) return null;
+    if (!await safeParents(root, target, false, replaceableParents, validatedDirectories)) return null;
     const stat = await fs.promises.lstat(target).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
     if (stat && ((!stat.isFile() && !(allowDirectory && stat.isDirectory())) || stat.isSymbolicLink())) throw new Error('unsafe_install_path');
     if (stat?.isDirectory()) await assertDirectory(target);
@@ -92,16 +99,28 @@ function protectedFile(relative, origin, protectedPaths, packageHasGame = false)
         /\.(ini|cfg|sav)$/i.test(name) || parts.at(-1) === 'settings.json';
 }
 
-async function createUpdatePlan(root, previous, next, options = {}, signal = null) {
+async function createUpdatePlan(root, previous, next, options = {}, signal = null, onProgress = () => {}) {
     const packageHasGame = options.origin === 'port' && next.files.some(file => key(file.path).startsWith('game/'));
+    const previousFiles = previous?.files || [];
+    const totalFiles = next.files.length + previousFiles.length;
+    onProgress({ phase: 'organizing_files', filesChecked: 0, totalFiles });
     const before = new Map((previous?.files || []).map(file => [key(file.path), file]));
     const after = new Set(next.files.map(file => key(file.path)));
     const removable = new Set((previous?.files || []).filter(file => !after.has(key(file.path)) &&
         !protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)).map(file => key(file.path)));
     const plan = { replace: [], remove: [], unchangedFiles: 0, protectedFiles: 0 };
-    for (let index = 0; index < next.files.length; index++) {
+    const validatedDirectories = new Set();
+    let filesChecked = 0;
+    let lastProgressAt = 0;
+    const reportProgress = (force = false) => {
+        const now = Date.now();
+        if (force || filesChecked === 1 || filesChecked % 64 === 0 || now - lastProgressAt >= 500) {
+            lastProgressAt = now;
+            onProgress({ phase: 'checking_files', filesChecked, totalFiles });
+        }
+    };
+    const inspectNextFile = async (file, index) => {
         checkCancelled(signal);
-        const file = next.files[index];
         if (protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) {
             const target = safeEntryPath(root, file.path);
             const existing = await fs.promises.lstat(target).catch(error => {
@@ -110,21 +129,49 @@ async function createUpdatePlan(root, previous, next, options = {}, signal = nul
             });
             // A protected game/save may live on another disk via a junction.
             // Existing protected data needs no traversal or writable-path checks.
-            if (existing) { plan.protectedFiles++; continue; }
+            if (existing) return { protected: true };
         }
-        const local = await localFile(root, file.path, { allowDirectory: true, replaceableParents: removable });
+        const local = await localFile(root, file.path, { allowDirectory: true, replaceableParents: removable, validatedDirectories });
         const old = before.get(key(file.path));
-        if (local && protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) { plan.protectedFiles++; continue; }
+        if (local && protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) return { protected: true };
         if (local?.isDirectory()) await directoryEntries(root, file.path, removable);
-        if (old?.sha256 === file.sha256 && old?.sizeBytes === file.sizeBytes && local?.isFile() && local.size === file.sizeBytes) {
-            plan.unchangedFiles++;
-        } else plan.replace.push({ ...file, entryIndex: index });
-    }
-    for (const file of previous?.files || []) {
+        return { file, index, unchanged: old?.sha256 === file.sha256 && old?.sizeBytes === file.sizeBytes &&
+            local?.isFile() && local.size === file.sizeBytes };
+    };
+    for (let start = 0; start < next.files.length; start += UPDATE_PLAN_SCAN_CONCURRENCY) {
         checkCancelled(signal);
-        if (after.has(key(file.path)) || protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) continue;
-        if (await localFile(root, file.path)) plan.remove.push(file);
+        const batch = next.files.slice(start, start + UPDATE_PLAN_SCAN_CONCURRENCY);
+        const results = await Promise.allSettled(batch.map((file, offset) => inspectNextFile(file, start + offset)));
+        checkCancelled(signal);
+        const failed = results.find(result => result.status === 'rejected');
+        if (failed) throw failed.reason;
+        for (const result of results) {
+            const entry = result.value;
+            if (entry.protected) plan.protectedFiles++;
+            else if (entry.unchanged) plan.unchangedFiles++;
+            else plan.replace.push({ ...entry.file, entryIndex: entry.index });
+            filesChecked++;
+            reportProgress();
+        }
     }
+    for (let start = 0; start < previousFiles.length; start += UPDATE_PLAN_SCAN_CONCURRENCY) {
+        checkCancelled(signal);
+        const batch = previousFiles.slice(start, start + UPDATE_PLAN_SCAN_CONCURRENCY);
+        const results = await Promise.allSettled(batch.map(async file => {
+            checkCancelled(signal);
+            if (after.has(key(file.path)) || protectedFile(file.path, options.origin, options.protectedPaths, packageHasGame)) return null;
+            return await localFile(root, file.path, { validatedDirectories }) ? file : null;
+        }));
+        checkCancelled(signal);
+        const failed = results.find(result => result.status === 'rejected');
+        if (failed) throw failed.reason;
+        for (const result of results) {
+            if (result.value) plan.remove.push(result.value);
+            filesChecked++;
+            reportProgress();
+        }
+    }
+    reportProgress(true);
     return plan;
 }
 

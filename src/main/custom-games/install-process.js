@@ -5,8 +5,8 @@ const FAILURE = Object.freeze({ success: false, code: 'install_process_failed', 
 const PROGRESS_NUMBERS = ['received', 'total', 'completedFiles', 'totalFiles', 'files', 'bytes', 'totalBytes',
     'installedFiles', 'totalInstallFiles', 'extractedBytes', 'extractionTotalBytes',
     'speedBytesPerSecond', 'etaSeconds', 'extractionSpeedBytesPerSecond', 'extractionEtaSeconds', 'retryAttempt', 'maxAttempts',
-    'updatedFiles', 'removedFiles', 'unchangedFiles', 'protectedFiles'];
-const PROGRESS_STRINGS = ['id', 'name', 'drive', 'stage', 'code', 'kind'];
+    'updatedFiles', 'removedFiles', 'unchangedFiles', 'protectedFiles', 'filesChecked'];
+const PROGRESS_STRINGS = ['id', 'name', 'drive', 'stage', 'code', 'kind', 'phase', 'preparation'];
 
 function sanitizeInstallProgress(value) {
     if (!value || typeof value !== 'object') return null;
