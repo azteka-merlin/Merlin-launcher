@@ -86,33 +86,37 @@ function runPowerShell(command, timeout = 15000) {
         }));
 }
 
-async function findRunningExecutables(executablePaths) {
-    const paths = [...new Set(executablePaths.filter(value => typeof value === 'string' && value))];
-    if (process.platform !== 'win32' || !paths.length) return new Set();
-    const expected = new Set(paths.map(value => value.toLowerCase()));
-    const names = [...new Set(paths.map(value => path.basename(value, path.extname(value))))];
-    const encoded = Buffer.from(JSON.stringify(names), 'utf8').toString('base64');
-    const command = `$names = @(ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')))); ` +
-        '$matches = @(); foreach ($proc in @(Get-Process -Name $names -ErrorAction SilentlyContinue)) { ' +
-        'try { $procPath = $proc.Path; if ($procPath) { $matches += [PSCustomObject]@{ path = $procPath } } } catch {} }; ' +
-        '$json = ConvertTo-Json -InputObject @($matches) -Compress; [Console]::Out.Write($json)';
+async function findRunningExecutables(targets) {
+    const entries = [...new Map(targets.filter(target => target && typeof target.id === 'string'
+        && typeof target.executable === 'string' && typeof target.root === 'string')
+        .map(target => [target.id, target])).values()];
+    if (process.platform !== 'win32' || !entries.length) return new Set();
+    const encoded = Buffer.from(JSON.stringify(entries), 'utf8').toString('base64');
+    const command = `$targets = @(ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')))); ` +
+        '$processPaths = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.ExecutablePath } | ' +
+        'ForEach-Object { $_.ExecutablePath }); $running = @(); foreach ($target in $targets) { ' +
+        '$root = [string]$target.root; if (-not $root.EndsWith([IO.Path]::DirectorySeparatorChar)) { $root += [IO.Path]::DirectorySeparatorChar }; ' +
+        '$match = $processPaths | Where-Object { [String]::Equals($_, [string]$target.executable, [StringComparison]::OrdinalIgnoreCase) ' +
+        '-or $_.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1; ' +
+        'if ($match) { $running += [string]$target.id } }; ' +
+        '$json = ConvertTo-Json -InputObject @($running) -Compress; [Console]::Out.Write($json)';
     let rows;
     try { rows = JSON.parse(await runPowerShell(command)); }
     catch { throw new Error('game_process_check_failed'); }
     return new Set((Array.isArray(rows) ? rows : rows ? [rows] : [])
-        .map(row => typeof row?.path === 'string' ? row.path.toLowerCase() : '')
-        .filter(value => expected.has(value)));
+        .filter(value => typeof value === 'string'));
 }
 
-async function requestCloseExecutable(executablePath) {
+async function requestCloseExecutable(executablePath, installRoot) {
     if (process.platform !== 'win32') throw new Error('game_close_unsupported');
-    const encoded = Buffer.from(executablePath, 'utf8').toString('base64');
-    const command = `$target = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); ` +
-        '$name = [IO.Path]::GetFileNameWithoutExtension($target); ' +
-        '$matches = @(Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object { ' +
-        '$_.Path -and [String]::Equals($_.Path, $target, [StringComparison]::OrdinalIgnoreCase) }); ' +
+    const encoded = Buffer.from(JSON.stringify({ executable: executablePath, root: installRoot }), 'utf8').toString('base64');
+    const command = `$target = ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}'))); ` +
+        '$root = [string]$target.root; if (-not $root.EndsWith([IO.Path]::DirectorySeparatorChar)) { $root += [IO.Path]::DirectorySeparatorChar }; ' +
+        '$matches = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.ExecutablePath -and ' +
+        '([String]::Equals($_.ExecutablePath, [string]$target.executable, [StringComparison]::OrdinalIgnoreCase) ' +
+        '-or $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) }); ' +
         'if (-not $matches.Count) { [Console]::Out.Write("not_running"); exit 0 }; ' +
-        '$requested = 0; foreach ($proc in $matches) { try { if ($proc.CloseMainWindow()) { $requested++ } } catch {} }; ' +
+        '$requested = 0; foreach ($row in $matches) { try { $proc = Get-Process -Id $row.ProcessId -ErrorAction Stop; if ($proc.CloseMainWindow()) { $requested++ } } catch {} }; ' +
         'if ($requested -gt 0) { [Console]::Out.Write("requested") } else { [Console]::Out.Write("unsupported") }';
     try { return await runPowerShell(command, 10000); }
     catch { throw new Error('game_process_check_failed'); }
@@ -1387,13 +1391,12 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 if (!current) continue;
                 const relative = item.executablePath || record.executablePath || current.marker.executablePath;
                 const executable = await resolveInstalledExecutable(current.path, relative);
-                targets.push({ id, executable });
+                targets.push({ id, executable, root: current.path });
             } catch { /* Missing games and stale registrations are not running targets. */ }
         }
         try {
-            const runningPaths = await findRunningExecutables(targets.map(target => target.executable));
-            const running = {};
-            for (const target of targets) if (runningPaths.has(target.executable.toLowerCase())) running[target.id] = true;
+            const runningIds = await findRunningExecutables(targets);
+            const running = Object.fromEntries([...runningIds].map(id => [id, true]));
             return { success: true, running };
         } catch (error) { return { success: false, code: error.message || 'game_process_check_failed' }; }
     }
@@ -1404,7 +1407,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             const marker = loadJson(path.join(current.path, MARKER), null);
             const relative = item.executablePath || registry[id]?.executablePath || marker?.executablePath;
             const executable = await resolveInstalledExecutable(current.path, relative);
-            const result = await requestCloseExecutable(executable);
+            const result = await requestCloseExecutable(executable, current.path);
             if (result === 'not_running') return { success: false, code: 'game_not_running' };
             if (result !== 'requested') return { success: false, code: 'game_close_unsupported' };
             return { success: true };

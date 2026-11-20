@@ -177,7 +177,12 @@ test('opening account access refreshes distant upgrades and downgrades without a
 test('a failed explicit access refresh reports failure and preserves the authenticated session', async () => {
     const { session, state } = accessRefreshFixture();
     await session.login('MERLIN-ABCD-EFGH-JKLM');
-    state.request = async () => { throw new Error('Connection unavailable'); };
+    state.request = async () => {
+        const error = new Error('Connection reset');
+        error.code = 'ECONNRESET';
+        error.request = {};
+        throw error;
+    };
     assert.deepEqual(await session.status({ forceRefresh: true }), { authenticated: false, code: 'unavailable' });
     assert.equal((await session.status()).license.planTier, 'prata');
     assert.equal(await session.getAccessToken(), 'access-token-1');

@@ -1,3 +1,5 @@
+const GAME_LAUNCH_CONFIRMATION_TIMEOUT_MS = 90_000;
+
 const customGameTranslations = {
     ptbr: {
         custom_games_nav: 'Baixe e Jogue', custom_games_title: 'Baixe e Jogue',
@@ -55,7 +57,7 @@ const customGameTranslations = {
         custom_games_continue: 'Continuar usando Merlin', custom_games_show_progress: 'Ver progresso',
         custom_games_install_failed: 'Não foi possível concluir a instalação', custom_games_cancelled_title: 'Download cancelado',
         custom_games_cancel_download: 'Cancelar download', custom_games_close: 'Fechar',
-        custom_games_installed: 'Instalado', custom_games_running: 'Jogando', custom_games_download: 'Baixar', custom_games_play: 'Jogar',
+        custom_games_installed: 'Instalado', custom_games_running: 'Jogando', custom_games_starting: 'Iniciando…', custom_games_download: 'Baixar', custom_games_play: 'Jogar',
         custom_games_close_game: 'Fechar jogo', custom_games_close_title: 'Fechar o jogo?',
         custom_games_close_message: 'O Merlin vai solicitar que o jogo feche. Salve seu progresso antes de continuar.',
         custom_games_close_requested: 'Pedido de fechamento enviado ao jogo.',
@@ -136,7 +138,7 @@ const customGameTranslations = {
         custom_games_continue: 'Continue using Merlin', custom_games_show_progress: 'View progress',
         custom_games_install_failed: 'The installation could not be completed', custom_games_cancelled_title: 'Download canceled',
         custom_games_cancel_download: 'Cancel download', custom_games_close: 'Close',
-        custom_games_installed: 'Installed', custom_games_running: 'Playing', custom_games_download: 'Download', custom_games_play: 'Play',
+        custom_games_installed: 'Installed', custom_games_running: 'Playing', custom_games_starting: 'Starting…', custom_games_download: 'Download', custom_games_play: 'Play',
         custom_games_close_game: 'Close game', custom_games_close_title: 'Close the game?',
         custom_games_close_message: 'Merlin will ask the game to close. Save your progress before continuing.',
         custom_games_close_requested: 'Close request sent to the game.',
@@ -217,7 +219,7 @@ const customGameTranslations = {
         custom_games_continue: 'Seguir usando Merlin', custom_games_show_progress: 'Ver progreso',
         custom_games_install_failed: 'No se pudo completar la instalación', custom_games_cancelled_title: 'Descarga cancelada',
         custom_games_cancel_download: 'Cancelar descarga', custom_games_close: 'Cerrar',
-        custom_games_installed: 'Instalado', custom_games_running: 'En ejecución', custom_games_download: 'Descargar', custom_games_play: 'Jugar',
+        custom_games_installed: 'Instalado', custom_games_running: 'En ejecución', custom_games_starting: 'Iniciando…', custom_games_download: 'Descargar', custom_games_play: 'Jugar',
         custom_games_close_game: 'Cerrar juego', custom_games_close_title: '¿Cerrar el juego?',
         custom_games_close_message: 'Merlin solicitará que el juego se cierre. Guarda tu progreso antes de continuar.',
         custom_games_close_requested: 'Se envió la solicitud para cerrar el juego.',
@@ -298,7 +300,7 @@ const customGameTranslations = {
         custom_games_continue: 'Continuer à utiliser Merlin', custom_games_show_progress: 'Voir la progression',
         custom_games_install_failed: 'Impossible de terminer l’installation', custom_games_cancelled_title: 'Téléchargement annulé',
         custom_games_cancel_download: 'Annuler le téléchargement', custom_games_close: 'Fermer',
-        custom_games_installed: 'Installé', custom_games_running: 'En cours', custom_games_download: 'Télécharger', custom_games_play: 'Jouer',
+        custom_games_installed: 'Installé', custom_games_running: 'En cours', custom_games_starting: 'Démarrage…', custom_games_download: 'Télécharger', custom_games_play: 'Jouer',
         custom_games_close_game: 'Fermer le jeu', custom_games_close_title: 'Fermer le jeu ?',
         custom_games_close_message: 'Merlin va demander au jeu de se fermer. Enregistrez votre progression avant de continuer.',
         custom_games_close_requested: 'Demande de fermeture envoyée au jeu.',
@@ -379,7 +381,7 @@ const customGameTranslations = {
         custom_games_continue: 'Merlin weiter verwenden', custom_games_show_progress: 'Fortschritt anzeigen',
         custom_games_install_failed: 'Die Installation konnte nicht abgeschlossen werden', custom_games_cancelled_title: 'Download abgebrochen',
         custom_games_cancel_download: 'Download abbrechen', custom_games_close: 'Schließen',
-        custom_games_installed: 'Installiert', custom_games_running: 'Wird gespielt', custom_games_download: 'Herunterladen', custom_games_play: 'Spielen',
+        custom_games_installed: 'Installiert', custom_games_running: 'Wird gespielt', custom_games_starting: 'Wird gestartet…', custom_games_download: 'Herunterladen', custom_games_play: 'Spielen',
         custom_games_close_game: 'Spiel schließen', custom_games_close_title: 'Spiel schließen?',
         custom_games_close_message: 'Merlin bittet das Spiel, sich zu schließen. Speichere deinen Fortschritt, bevor du fortfährst.',
         custom_games_close_requested: 'Schließanfrage an das Spiel gesendet.',
@@ -678,23 +680,35 @@ document.addEventListener('DOMContentLoaded', () => {
             title.title = game.name;
             const meta = document.createElement('p');
             meta.className = 'correction-card-appid';
-            meta.textContent = game.running ? tr('custom_games_running') : game.installed ? tr('custom_games_installed') : size(game.archiveSize);
+            meta.textContent = game.running ? tr('custom_games_running') : game.launching ? tr('custom_games_starting')
+                : game.installed ? tr('custom_games_installed') : size(game.archiveSize);
             const actions = document.createElement('div');
             actions.className = 'custom-game-actions';
             if (game.installed) {
                 if (game.executablePath) {
-                    const play = action(tr(game.running ? 'custom_games_close_game' : 'custom_games_play'), async () => {
+                    const playLabel = game.running ? 'custom_games_close_game'
+                        : game.launching ? 'custom_games_starting' : 'custom_games_play';
+                    const play = action(tr(playLabel), async () => {
                         if (game.running) {
                             closeTarget = game;
                             el.customGamesCloseName.textContent = game.name;
                             el.customGamesCloseModal.hidden = false;
                             return;
                         }
-                        const result = await api.play(game.id);
-                        if (!result.success) notify(errorText(result.code), 'error');
-                        else void refreshRunningGames();
+                        if (game.launching) return;
+                        setGameLaunchState(game.id, true);
+                        try {
+                            const result = await api.play(game.id);
+                            if (!result.success) {
+                                setGameLaunchState(game.id, false);
+                                notify(errorText(result.code), 'error');
+                            } else void refreshRunningGames();
+                        } catch {
+                            setGameLaunchState(game.id, false);
+                            notify(errorText('play_failed'), 'error');
+                        }
                     }, game.running ? 'secondary' : 'primary');
-                    play.disabled = busy && ['update', 'repair'].includes(progressSnapshot?.kind) && progressSnapshot.id === game.id;
+                    play.disabled = game.launching || (busy && ['update', 'repair'].includes(progressSnapshot?.kind) && progressSnapshot.id === game.id);
                     actions.append(play);
                 }
                 actions.append(action(tr('custom_games_folder'), async () => {
@@ -801,8 +815,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function setGameLaunchState(id, launching) {
+        games = games.map(game => game.id === id ? { ...game, launching,
+            launchStartedAt: launching ? Date.now() : null } : game);
+        render();
+    }
+
     async function refreshRunningGames() {
-        if (el.customGamesView.hidden || runningGamesRequestPending) return;
+        if (el.customGamesView.hidden) return;
+        const now = Date.now();
+        let expiredLaunch = false;
+        games = games.map(game => {
+            if (!game.launching || now - Number(game.launchStartedAt || 0) < GAME_LAUNCH_CONFIRMATION_TIMEOUT_MS) return game;
+            expiredLaunch = true;
+            return { ...game, launching: false, launchStartedAt: null };
+        });
+        if (expiredLaunch) render();
+        if (runningGamesRequestPending) return;
         const ids = games.filter(game => game.installed && game.executablePath).map(game => game.id);
         if (!ids.length) return;
         runningGamesRequestPending = true;
@@ -813,8 +842,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let changed = false;
             games = games.map(game => {
                 const value = running[game.id] === true;
-                if (Boolean(game.running) !== value) changed = true;
-                return { ...game, running: value };
+                const launching = !value && game.launching
+                    && Date.now() - Number(game.launchStartedAt || 0) < GAME_LAUNCH_CONFIRMATION_TIMEOUT_MS;
+                if (Boolean(game.running) !== value || Boolean(game.launching) !== launching) changed = true;
+                return { ...game, running: value, launching, launchStartedAt: launching ? game.launchStartedAt : null };
             });
             if (changed) {
                 if (el.customGamesView.hidden) gridDirty = true;
