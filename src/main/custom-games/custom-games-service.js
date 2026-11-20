@@ -112,13 +112,28 @@ async function requestCloseExecutable(executablePath, installRoot) {
     const encoded = Buffer.from(JSON.stringify({ executable: executablePath, root: installRoot }), 'utf8').toString('base64');
     const command = `$target = ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}'))); ` +
         '$root = [string]$target.root; if (-not $root.EndsWith([IO.Path]::DirectorySeparatorChar)) { $root += [IO.Path]::DirectorySeparatorChar }; ' +
-        '$matches = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.ExecutablePath -and ' +
-        '([String]::Equals($_.ExecutablePath, [string]$target.executable, [StringComparison]::OrdinalIgnoreCase) ' +
-        '-or $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) }); ' +
+        '$isTarget = { param($path) [String]::Equals($path, [string]$target.executable, [StringComparison]::OrdinalIgnoreCase) ' +
+        '-or $path.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) }; ' +
+        '$matches = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.ExecutablePath -and (& $isTarget $_.ExecutablePath) }); ' +
         'if (-not $matches.Count) { [Console]::Out.Write("not_running"); exit 0 }; ' +
-        '$requested = 0; foreach ($row in $matches) { try { $proc = Get-Process -Id $row.ProcessId -ErrorAction Stop; if ($proc.CloseMainWindow()) { $requested++ } } catch {} }; ' +
-        'if ($requested -gt 0) { [Console]::Out.Write("requested") } else { [Console]::Out.Write("unsupported") }';
-    try { return await runPowerShell(command, 10000); }
+        'foreach ($row in $matches) { try { $proc = Get-Process -Id $row.ProcessId -ErrorAction Stop; [void]$proc.CloseMainWindow() } catch {} }; ' +
+        '$deadline = [DateTime]::UtcNow.AddSeconds(12); do { $alive = @(); foreach ($row in $matches) { ' +
+        '$current = Get-CimInstance Win32_Process -Filter ("ProcessId=" + [int]$row.ProcessId) -ErrorAction SilentlyContinue; ' +
+        'if ($current.ExecutablePath -and (& $isTarget $current.ExecutablePath)) { $alive += $current } }; ' +
+        'if (-not $alive.Count) { [Console]::Out.Write("closed"); exit 0 }; ' +
+        'Start-Sleep -Milliseconds 400 } while ([DateTime]::UtcNow -lt $deadline); ' +
+        '$accessDenied = $false; foreach ($row in $alive) { try { ' +
+        '$current = Get-CimInstance Win32_Process -Filter ("ProcessId=" + [int]$row.ProcessId) -ErrorAction Stop; ' +
+        'if ($current.ExecutablePath -and (& $isTarget $current.ExecutablePath)) { ' +
+        'Stop-Process -Id $row.ProcessId -Force -ErrorAction Stop } } catch { ' +
+        'if ($_.Exception -is [System.ComponentModel.Win32Exception] -or $_.FullyQualifiedErrorId -match "AccessDenied|UnauthorizedAccess") { $accessDenied = $true } } }; ' +
+        '$deadline = [DateTime]::UtcNow.AddSeconds(4); do { $remaining = @(); foreach ($row in $alive) { ' +
+        '$current = Get-CimInstance Win32_Process -Filter ("ProcessId=" + [int]$row.ProcessId) -ErrorAction SilentlyContinue; ' +
+        'if ($current.ExecutablePath -and (& $isTarget $current.ExecutablePath)) { $remaining += $current } }; ' +
+        'if (-not $remaining.Count) { [Console]::Out.Write("closed"); exit 0 }; ' +
+        'Start-Sleep -Milliseconds 400 } while ([DateTime]::UtcNow -lt $deadline); ' +
+        'if ($accessDenied) { [Console]::Out.Write("access_denied") } else { [Console]::Out.Write("timeout") }';
+    try { return await runPowerShell(command, 22000); }
     catch { throw new Error('game_process_check_failed'); }
 }
 
@@ -1409,7 +1424,9 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             const executable = await resolveInstalledExecutable(current.path, relative);
             const result = await requestCloseExecutable(executable, current.path);
             if (result === 'not_running') return { success: false, code: 'game_not_running' };
-            if (result !== 'requested') return { success: false, code: 'game_close_unsupported' };
+            if (result === 'access_denied') return { success: false, code: 'game_close_access_denied' };
+            if (result === 'timeout') return { success: false, code: 'game_close_failed' };
+            if (result !== 'closed') return { success: false, code: 'game_close_unsupported' };
             return { success: true };
         } catch (error) {
             return { success: false, code: error.message || 'game_process_check_failed' };

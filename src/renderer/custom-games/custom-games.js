@@ -58,10 +58,11 @@ const customGameTranslations = {
         custom_games_install_failed: 'Não foi possível concluir a instalação', custom_games_cancelled_title: 'Download cancelado',
         custom_games_cancel_download: 'Cancelar download', custom_games_close: 'Fechar',
         custom_games_installed: 'Instalado', custom_games_running: 'Jogando', custom_games_starting: 'Iniciando…', custom_games_download: 'Baixar', custom_games_play: 'Jogar',
-        custom_games_close_game: 'Fechar jogo', custom_games_close_title: 'Fechar o jogo?',
+        custom_games_close_game: 'Fechar jogo', custom_games_finishing: 'Finalizando…', custom_games_close_title: 'Fechar o jogo?',
         custom_games_close_message: 'O Merlin vai solicitar que o jogo feche. Salve seu progresso antes de continuar.',
-        custom_games_close_requested: 'Pedido de fechamento enviado ao jogo.',
         custom_games_close_unavailable: 'Este jogo não aceitou o pedido de fechamento. Feche-o pela janela do jogo.',
+        custom_games_close_access_denied: 'O Windows bloqueou o encerramento. Abra o Merlin com o mesmo nível de permissão do jogo.',
+        custom_games_close_failed: 'O jogo continua aberto. Tente fechar novamente pela janela do jogo.',
         custom_games_not_running: 'O jogo já não está em execução.',
         custom_games_process_check_failed: 'Não foi possível consultar o estado do jogo agora. Tente novamente.',
         custom_games_folder: 'Abrir pasta', custom_games_uninstall: 'Desinstalar',
@@ -139,10 +140,11 @@ const customGameTranslations = {
         custom_games_install_failed: 'The installation could not be completed', custom_games_cancelled_title: 'Download canceled',
         custom_games_cancel_download: 'Cancel download', custom_games_close: 'Close',
         custom_games_installed: 'Installed', custom_games_running: 'Playing', custom_games_starting: 'Starting…', custom_games_download: 'Download', custom_games_play: 'Play',
-        custom_games_close_game: 'Close game', custom_games_close_title: 'Close the game?',
+        custom_games_close_game: 'Close game', custom_games_finishing: 'Closing…', custom_games_close_title: 'Close the game?',
         custom_games_close_message: 'Merlin will ask the game to close. Save your progress before continuing.',
-        custom_games_close_requested: 'Close request sent to the game.',
         custom_games_close_unavailable: 'The game did not accept the close request. Close it from its window.',
+        custom_games_close_access_denied: 'Windows blocked the shutdown. Run Merlin with the same permission level as the game.',
+        custom_games_close_failed: 'The game is still open. Try closing it from its window.',
         custom_games_not_running: 'The game is no longer running.',
         custom_games_process_check_failed: 'Could not check the game status right now. Try again.',
         custom_games_folder: 'Open folder', custom_games_uninstall: 'Uninstall',
@@ -220,10 +222,11 @@ const customGameTranslations = {
         custom_games_install_failed: 'No se pudo completar la instalación', custom_games_cancelled_title: 'Descarga cancelada',
         custom_games_cancel_download: 'Cancelar descarga', custom_games_close: 'Cerrar',
         custom_games_installed: 'Instalado', custom_games_running: 'En ejecución', custom_games_starting: 'Iniciando…', custom_games_download: 'Descargar', custom_games_play: 'Jugar',
-        custom_games_close_game: 'Cerrar juego', custom_games_close_title: '¿Cerrar el juego?',
+        custom_games_close_game: 'Cerrar juego', custom_games_finishing: 'Finalizando…', custom_games_close_title: '¿Cerrar el juego?',
         custom_games_close_message: 'Merlin solicitará que el juego se cierre. Guarda tu progreso antes de continuar.',
-        custom_games_close_requested: 'Se envió la solicitud para cerrar el juego.',
         custom_games_close_unavailable: 'El juego no aceptó la solicitud. Ciérralo desde su ventana.',
+        custom_games_close_access_denied: 'Windows bloqueó el cierre. Abre Merlin con el mismo nivel de permisos que el juego.',
+        custom_games_close_failed: 'El juego sigue abierto. Intenta cerrarlo desde su ventana.',
         custom_games_not_running: 'El juego ya no está en ejecución.',
         custom_games_process_check_failed: 'No se pudo consultar el estado del juego. Inténtalo de nuevo.',
         custom_games_folder: 'Abrir carpeta', custom_games_uninstall: 'Desinstalar',
@@ -301,10 +304,11 @@ const customGameTranslations = {
         custom_games_install_failed: 'Impossible de terminer l’installation', custom_games_cancelled_title: 'Téléchargement annulé',
         custom_games_cancel_download: 'Annuler le téléchargement', custom_games_close: 'Fermer',
         custom_games_installed: 'Installé', custom_games_running: 'En cours', custom_games_starting: 'Démarrage…', custom_games_download: 'Télécharger', custom_games_play: 'Jouer',
-        custom_games_close_game: 'Fermer le jeu', custom_games_close_title: 'Fermer le jeu ?',
+        custom_games_close_game: 'Fermer le jeu', custom_games_finishing: 'Fermeture…', custom_games_close_title: 'Fermer le jeu ?',
         custom_games_close_message: 'Merlin va demander au jeu de se fermer. Enregistrez votre progression avant de continuer.',
-        custom_games_close_requested: 'Demande de fermeture envoyée au jeu.',
         custom_games_close_unavailable: 'Le jeu a refusé la demande. Fermez-le depuis sa fenêtre.',
+        custom_games_close_access_denied: 'Windows a bloqué la fermeture. Lancez Merlin avec le même niveau d’autorisation que le jeu.',
+        custom_games_close_failed: 'Le jeu est toujours ouvert. Essayez de le fermer depuis sa fenêtre.',
         custom_games_not_running: 'Le jeu n’est plus en cours d’exécution.',
         custom_games_process_check_failed: 'Impossible de vérifier l’état du jeu. Réessayez.',
         custom_games_folder: 'Ouvrir le dossier', custom_games_uninstall: 'Désinstaller',
@@ -382,10 +386,11 @@ const customGameTranslations = {
         custom_games_install_failed: 'Die Installation konnte nicht abgeschlossen werden', custom_games_cancelled_title: 'Download abgebrochen',
         custom_games_cancel_download: 'Download abbrechen', custom_games_close: 'Schließen',
         custom_games_installed: 'Installiert', custom_games_running: 'Wird gespielt', custom_games_starting: 'Wird gestartet…', custom_games_download: 'Herunterladen', custom_games_play: 'Spielen',
-        custom_games_close_game: 'Spiel schließen', custom_games_close_title: 'Spiel schließen?',
+        custom_games_close_game: 'Spiel schließen', custom_games_finishing: 'Wird beendet…', custom_games_close_title: 'Spiel schließen?',
         custom_games_close_message: 'Merlin bittet das Spiel, sich zu schließen. Speichere deinen Fortschritt, bevor du fortfährst.',
-        custom_games_close_requested: 'Schließanfrage an das Spiel gesendet.',
         custom_games_close_unavailable: 'Das Spiel hat die Anfrage abgelehnt. Schließe es über das Spielfenster.',
+        custom_games_close_access_denied: 'Windows hat das Beenden blockiert. Starte Merlin mit derselben Berechtigungsstufe wie das Spiel.',
+        custom_games_close_failed: 'Das Spiel ist noch geöffnet. Schließe es über das Spielfenster.',
         custom_games_not_running: 'Das Spiel läuft nicht mehr.',
         custom_games_process_check_failed: 'Der Spielstatus konnte nicht geprüft werden. Versuche es erneut.',
         custom_games_folder: 'Ordner öffnen', custom_games_uninstall: 'Deinstallieren',
@@ -680,13 +685,14 @@ document.addEventListener('DOMContentLoaded', () => {
             title.title = game.name;
             const meta = document.createElement('p');
             meta.className = 'correction-card-appid';
-            meta.textContent = game.running ? tr('custom_games_running') : game.launching ? tr('custom_games_starting')
+            meta.textContent = game.closing ? tr('custom_games_finishing')
+                : game.running ? tr('custom_games_running') : game.launching ? tr('custom_games_starting')
                 : game.installed ? tr('custom_games_installed') : size(game.archiveSize);
             const actions = document.createElement('div');
             actions.className = 'custom-game-actions';
             if (game.installed) {
                 if (game.executablePath) {
-                    const playLabel = game.running ? 'custom_games_close_game'
+                    const playLabel = game.closing ? 'custom_games_finishing' : game.running ? 'custom_games_close_game'
                         : game.launching ? 'custom_games_starting' : 'custom_games_play';
                     const play = action(tr(playLabel), async () => {
                         if (game.running) {
@@ -708,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             notify(errorText('play_failed'), 'error');
                         }
                     }, game.running ? 'secondary' : 'primary');
-                    play.disabled = game.launching || (busy && ['update', 'repair'].includes(progressSnapshot?.kind) && progressSnapshot.id === game.id);
+                    play.disabled = game.closing || game.launching || (busy && ['update', 'repair'].includes(progressSnapshot?.kind) && progressSnapshot.id === game.id);
                     actions.append(play);
                 }
                 actions.append(action(tr('custom_games_folder'), async () => {
@@ -757,6 +763,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (['game_version_unavailable', 'game_version_not_found'].includes(code)) return tr('custom_games_repair_unavailable');
         if (code === 'game_running' || code === 'game_running_check_failed') return tr('custom_games_game_running');
         if (code === 'game_close_unsupported') return tr('custom_games_close_unavailable');
+        if (code === 'game_close_access_denied') return tr('custom_games_close_access_denied');
+        if (code === 'game_close_failed') return tr('custom_games_close_failed');
         if (code === 'game_not_running') return tr('custom_games_not_running');
         if (code === 'game_process_check_failed') return tr('custom_games_process_check_failed');
         if (code === 'update_recovery_required') return tr('custom_games_update_recovery');
@@ -821,6 +829,11 @@ document.addEventListener('DOMContentLoaded', () => {
         render();
     }
 
+    function setGameClosingState(id, closing) {
+        games = games.map(game => game.id === id ? { ...game, closing } : game);
+        render();
+    }
+
     async function refreshRunningGames() {
         if (el.customGamesView.hidden) return;
         const now = Date.now();
@@ -844,8 +857,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const value = running[game.id] === true;
                 const launching = !value && game.launching
                     && Date.now() - Number(game.launchStartedAt || 0) < GAME_LAUNCH_CONFIRMATION_TIMEOUT_MS;
-                if (Boolean(game.running) !== value || Boolean(game.launching) !== launching) changed = true;
-                return { ...game, running: value, launching, launchStartedAt: launching ? game.launchStartedAt : null };
+                const closing = value && game.closing;
+                if (Boolean(game.running) !== value || Boolean(game.launching) !== launching || Boolean(game.closing) !== closing) changed = true;
+                return { ...game, running: value, launching, closing, launchStartedAt: launching ? game.launchStartedAt : null };
             });
             if (changed) {
                 if (el.customGamesView.hidden) gridDirty = true;
@@ -1086,14 +1100,19 @@ document.addEventListener('DOMContentLoaded', () => {
         closePending = true;
         el.customGamesCloseConfirm.disabled = true;
         el.customGamesCloseCancel.disabled = true;
+        setGameClosingState(item.id, true);
+        el.customGamesCloseModal.hidden = true;
+        closeTarget = null;
         try {
             const result = await api.closeGame(item.id);
-            if (result.success) notify(tr('custom_games_close_requested'), 'info');
-            else notify(errorText(result.code), 'error');
-            el.customGamesCloseModal.hidden = true;
-            closeTarget = null;
-            void refreshRunningGames();
-        } catch { notify(tr('custom_games_process_check_failed'), 'error'); }
+            if (!result.success) {
+                setGameClosingState(item.id, false);
+                notify(errorText(result.code), 'error');
+            } else void refreshRunningGames();
+        } catch {
+            setGameClosingState(item.id, false);
+            notify(tr('custom_games_process_check_failed'), 'error');
+        }
         finally {
             closePending = false;
             el.customGamesCloseConfirm.disabled = false;
