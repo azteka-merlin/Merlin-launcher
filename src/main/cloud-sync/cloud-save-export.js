@@ -2,9 +2,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { Transform } = require('stream');
 const { pipeline } = require('stream/promises');
+const execFileAsync = promisify(execFile);
 
 function safeCloudPath(name) {
     if (typeof name !== 'string' || !name || name.length > 2048 || name.includes('\\')
@@ -34,14 +36,16 @@ function validateManifest(manifest, appId) {
 
 async function zipDirectory(source, destination) {
     const binary = require('7zip-bin').path7za;
-    await new Promise((resolve, reject) => {
-        const process = spawn(binary, ['a', '-tzip', '-mx=5', '-bd', destination, '.'], {
-            cwd: source, windowsHide: true, stdio: 'ignore'
+    // Electron resolves an executable inside app.asar for execFile.
+    try {
+        await execFileAsync(binary, ['a', '-tzip', '-mx=5', '-bd', '-bso0', destination, '.'], {
+            cwd: source, windowsHide: true
         });
-        process.once('error', reject);
-        process.once('exit', code => code === 0 ? resolve() : reject(Object.assign(
-            new Error(`ZIP failed: ${code}`), { code: 'cloud_export_zip_failed' })));
-    });
+    } catch (error) {
+        throw Object.assign(new Error('Could not create the save archive', { cause: error }), {
+            code: 'cloud_export_zip_failed'
+        });
+    }
 }
 
 async function exportCloudSave({ accountId, appId, versionId, destination, getManifest, getFile }) {
