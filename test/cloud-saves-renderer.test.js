@@ -288,5 +288,5 @@ test('a failed game refresh restores the previous details', async () => {
     assert.equal(ui.get('cloudSavesDetailsState').hidden, false);
     assert.equal(ui.get('cloudSavesDetailsContent').hidden, false);
     assert.equal(ui.get('cloudSavesBackups').children.length, 1);
-    assert.equal(notice, 'cloud_saves_error_cloud_timeout');
+    assert.equal(notice, 'cloud_saves_details_error');
 });
