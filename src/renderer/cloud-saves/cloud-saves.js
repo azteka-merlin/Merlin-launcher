@@ -95,6 +95,11 @@
     Object.assign(messages.es, { cloud_saves_loading_details: 'Cargando partidas del juego…' });
     Object.assign(messages.fr, { cloud_saves_loading_details: 'Chargement des sauvegardes du jeu…' });
     Object.assign(messages.de, { cloud_saves_loading_details: 'Spielstände werden geladen…' });
+    Object.assign(messages.ptbr, { cloud_saves_details_error: 'Não foi possível carregar os saves deste jogo. Tente novamente.', cloud_saves_license_unavailable: 'Não foi possível validar sua licença agora. Tente novamente em instantes.' });
+    Object.assign(messages.en, { cloud_saves_details_error: 'Could not load the saves for this game. Try again.', cloud_saves_license_unavailable: 'Your license could not be verified right now. Try again shortly.' });
+    Object.assign(messages.es, { cloud_saves_details_error: 'No se pudieron cargar las partidas de este juego. Inténtalo de nuevo.', cloud_saves_license_unavailable: 'No se pudo verificar tu licencia en este momento. Inténtalo de nuevo en unos instantes.' });
+    Object.assign(messages.fr, { cloud_saves_details_error: 'Impossible de charger les sauvegardes de ce jeu. Réessayez.', cloud_saves_license_unavailable: 'Impossible de vérifier votre licence pour le moment. Réessayez dans quelques instants.' });
+    Object.assign(messages.de, { cloud_saves_details_error: 'Die Spielstände für dieses Spiel konnten nicht geladen werden. Versuche es erneut.', cloud_saves_license_unavailable: 'Deine Lizenz konnte gerade nicht überprüft werden. Versuche es in Kürze erneut.' });
     Object.assign(messages.ptbr, { cloud_saves_export: 'Baixar', cloud_saves_exporting: 'Baixando…', cloud_saves_exported: 'Save baixado em ZIP.', cloud_saves_export_failed: 'Não foi possível baixar este save completo.', cloud_saves_open_folder: 'Abrir pasta do save', cloud_saves_folder_failed: 'Não foi possível localizar a pasta deste save neste computador.' });
     Object.assign(messages.en, { cloud_saves_export: 'Download', cloud_saves_exporting: 'Downloading…', cloud_saves_exported: 'Save downloaded as ZIP.', cloud_saves_export_failed: 'Could not download this complete save.', cloud_saves_open_folder: 'Open save folder', cloud_saves_folder_failed: 'Could not find this save folder on this computer.' });
     Object.assign(messages.es, { cloud_saves_export: 'Descargar', cloud_saves_exporting: 'Descargando…', cloud_saves_exported: 'Partida descargada como ZIP.', cloud_saves_export_failed: 'No se pudo descargar esta partida completa.', cloud_saves_open_folder: 'Abrir carpeta de la partida', cloud_saves_folder_failed: 'No se encontró la carpeta de esta partida en este equipo.' });
@@ -207,13 +212,16 @@
             if (current) void loadGames();
         }
 
-        function errorMessage(code) {
+        function errorMessage(code, operation) {
+            if (code === 'steam_closed') return tr('cloud_saves_unavailable_steam_closed');
+            if (code === 'steam_account_unavailable') return tr('cloud_saves_error_account');
+            if (operation === 'list') return tr('cloud_saves_error');
+            if (operation === 'details') return tr('cloud_saves_details_error');
+            if (code === 'cloud_license_unavailable') return tr('cloud_saves_license_unavailable');
             if (code === 'game_active') return tr('cloud_saves_error_game_active');
             if (code === 'recovery_incomplete') return tr('cloud_saves_error_recovery_incomplete');
             if (code === 'busy') return tr('cloud_saves_error_busy');
             if (['recovery_not_found', 'recovery_conflict', 'cloud_timeout', 'cloud_server_error'].includes(code)) return tr(`cloud_saves_error_${code}`);
-            if (code === 'steam_closed') return tr('cloud_saves_unavailable_steam_closed');
-            if (code === 'steam_account_unavailable') return tr('cloud_saves_error_account');
             return tr('cloud_saves_error_generic');
         }
 
@@ -426,7 +434,7 @@
                     }
                 }
                 state.error = !state.cached || state.games.length === 0;
-                notify(errorMessage(error.message), 'error');
+                notify(errorMessage(error.message, 'list'), 'error');
             } finally {
                 if (requestId !== state.listRequestId) return;
                 state.loading = false;
@@ -481,7 +489,7 @@
                     elements.detailsState.hidden = true;
                     elements.listState.hidden = false;
                 }
-                notify(errorMessage(error.message), 'error');
+                notify(errorMessage(error.message, 'details'), 'error');
             } finally {
                 if (requestId === state.detailRequestId) {
                     elements.detailsLoading.hidden = true;
@@ -512,7 +520,7 @@
             } catch (error) {
                 console.warn('[cloud-saves:restore] failed', { code: error?.message || 'unknown' });
                 if (error.message === 'recovery_not_found') await openGame(game.appId);
-                notify(errorMessage(error.message), 'error');
+                notify(errorMessage(error.message, 'restore'), 'error');
             } finally {
                 state.restoring = false;
                 button.disabled = false;
