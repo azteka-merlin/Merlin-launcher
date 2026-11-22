@@ -23,6 +23,7 @@ const MERLIN_WINDOW_ICON_PATH = path.join(__dirname, 'assets/merlin-window-icon.
 const MERLIN_TRAY_ICON_PATH = path.join(__dirname, 'assets/merlin-tray.ico');
 
 const { createConfigStore } = require('./src/main/config/config-store');
+const { migrateConfig } = require('./src/main/config/migrate-config');
 const { createCorrectionsCatalogClient } = require('./src/main/corrections/corrections-catalog-client');
 const { createCorrectionsCatalogStore } = require('./src/main/corrections/corrections-catalog-store');
 const { createCorrectionsService } = require('./src/main/corrections/corrections-service');
@@ -219,11 +220,7 @@ if (!app.isPackaged) {
     const devUserData = path.join(devDataRoot, 'User Data');
     const devSessionData = path.join(devDataRoot, 'Session Data');
     fs.mkdirSync(devUserData, { recursive: true });
-    const devConfig = path.join(devUserData, 'config.json');
-    if (!fs.existsSync(devConfig)) {
-        try { fs.copyFileSync(path.join(__dirname, 'config.json'), devConfig, fs.constants.COPYFILE_EXCL); }
-        catch (error) { if (error.code !== 'EEXIST') throw error; }
-    }
+    migrateConfig(path.join(__dirname, 'config.json'), path.join(devUserData, 'config.json'));
     fs.mkdirSync(devSessionData, { recursive: true });
     app.setPath('userData', devUserData);
     app.setPath('sessionData', devSessionData);

@@ -1,3 +1,5 @@
+const { randomUUID } = require('node:crypto');
+
 function createConfigStore({ fs, path, getFilePath, defaults }) {
     let config = { ...defaults };
 
@@ -15,12 +17,20 @@ function createConfigStore({ fs, path, getFilePath, defaults }) {
     }
 
     function save() {
+        let temporary;
         try {
             const configFile = getFilePath();
             fs.mkdirSync(path.dirname(configFile), { recursive: true });
-            fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
+            temporary = `${configFile}.${process.pid}.${randomUUID()}.tmp`;
+            fs.writeFileSync(temporary, JSON.stringify(config, null, 2), { flag: 'wx' });
+            fs.renameSync(temporary, configFile);
         } catch (error) {
             console.error('Error saving config:', error);
+        } finally {
+            if (temporary) {
+                try { fs.unlinkSync(temporary); }
+                catch (error) { if (error.code !== 'ENOENT') console.error('Error cleaning config temporary file:', error); }
+            }
         }
     }
 
