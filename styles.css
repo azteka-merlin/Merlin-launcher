@@ -5865,6 +5865,58 @@ body[data-merlin-view="steam-store"] .steam-context-bar {
 #customGamesView.corrections-view { padding: clamp(.75rem, 1.4vw, 1.25rem) clamp(.75rem, 1.4vw, 1.35rem); background: var(--merlin-shell-background); }
 #customGamesView .custom-games-card { width: min(100%, 1360px); min-height: auto; margin-inline: auto; padding: clamp(1rem, 1.4vw, 1.25rem) clamp(1rem, 1.5vw, 1.5rem); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 #customGamesView .library-controls { gap: .85rem; margin-bottom: .8rem; }
+.custom-games-search-controls {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex: 1;
+    max-width: 410px;
+    min-width: 0;
+    margin-left: auto;
+}
+.custom-games-search-controls .library-search-wrap {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+.custom-games-installed-filter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 38px;
+    height: 38px;
+    padding: 8px;
+    border: 1px solid var(--merlin-shell-border);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.custom-games-installed-filter svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+}
+.custom-games-installed-filter:hover {
+    color: #c084fc;
+    border-color: #8b5cf6;
+}
+.custom-games-installed-filter[aria-pressed="true"] {
+    color: #e9d5ff;
+    border-color: #a855f7;
+    background: rgba(139, 92, 246, .25);
+    box-shadow: inset 0 0 0 1px rgba(168, 85, 247, .3);
+}
+.custom-games-installed-filter[aria-pressed="true"] path {
+    fill: currentColor;
+}
+.custom-games-installed-filter:focus-visible {
+    outline: 2px solid #a855f7;
+    outline-offset: 3px;
+}
 #customGamesView .custom-games-grid { gap: .85rem; margin-top: .7rem; }
 #customGamesView .custom-game-card { gap: .8rem; padding: .95rem; border-color: var(--merlin-shell-border); background: linear-gradient(145deg, rgb(17, 19, 31), rgb(13, 15, 24)); box-shadow: inset 0 1px rgba(255, 255, 255, .025), 0 10px 24px rgba(0, 0, 0, .12); }
 #customGamesView .correction-card-note:hover { transform: none; }

@@ -5,6 +5,7 @@ const customGameTranslations = {
         custom_games_nav: 'Baixe e Jogue', custom_games_title: 'Baixe e Jogue',
         custom_games_subtitle: 'Escolha um disco, instale e abra seus jogos pelo Merlin.',
         custom_games_refresh: 'Atualizar', custom_games_refreshing: 'Atualizando…', custom_games_search: 'Buscar jogos', custom_games_search_placeholder: 'Buscar por nome',
+        custom_games_installed_only: 'Mostrar somente jogos instalados', custom_games_show_all: 'Mostrar todos os jogos', custom_games_no_installed: 'Nenhum jogo instalado encontrado.',
         custom_games_loading: 'Carregando jogos…', custom_games_empty: 'Nenhum jogo disponível no momento.',
         custom_games_offline: 'Sem conexão. Os jogos já instalados continuam disponíveis.',
         custom_games_error: 'Não foi possível carregar os jogos. Tente novamente.',
@@ -67,11 +68,14 @@ const customGameTranslations = {
         custom_games_process_check_failed: 'Não foi possível consultar o estado do jogo agora. Tente novamente.',
         custom_games_folder: 'Abrir pasta', custom_games_uninstall: 'Desinstalar',
         custom_games_uninstall_title: 'Desinstalar jogo?',
-        custom_games_uninstall_message: 'A pasta do jogo será movida para a Lixeira. Seus saves fora dela não serão removidos.',
+        custom_games_uninstall_message: 'A pasta do jogo será excluída permanentemente. Saves fora dessa pasta serão preservados.',
         custom_games_info: 'Instruções', custom_games_no_drives: 'Nenhum disco disponível para instalação.',
         custom_games_install_success: 'Jogo instalado. Pronto para jogar!',
-        custom_games_uninstall_success: 'Jogo movido para a Lixeira.',
-        custom_games_uninstall_failed: 'O Windows recusou mover a pasta para a Lixeira. A instalação foi mantida. Verifique se a Lixeira desse disco está disponível e tente novamente.',
+        custom_games_uninstall_success: '{name} desinstalado',
+        custom_games_uninstall_failed: 'Não foi possível excluir todos os arquivos do jogo. Feche o jogo e tente novamente.',
+        custom_games_uninstalling: 'Desinstalando...',
+        custom_games_uninstall_counting: 'Preparando exclusão · {count} itens encontrados',
+        custom_games_uninstall_progress: '{removed} de {total} itens removidos · {percent}%',
         custom_games_operation_failed: 'Não foi possível concluir a operação.',
         custom_games_busy: 'Aguarde o download do outro jogo terminar.',
         custom_games_disk_space: 'Não há espaço suficiente no disco escolhido.',
@@ -87,6 +91,7 @@ const customGameTranslations = {
         custom_games_nav: 'Download & Play', custom_games_title: 'Download & Play',
         custom_games_subtitle: 'Choose a drive, install your games, and launch them from Merlin.',
         custom_games_refresh: 'Refresh', custom_games_refreshing: 'Refreshing…', custom_games_search: 'Search games', custom_games_search_placeholder: 'Search by name',
+        custom_games_installed_only: 'Show installed games only', custom_games_show_all: 'Show all games', custom_games_no_installed: 'No installed games found.',
         custom_games_loading: 'Loading games…', custom_games_empty: 'No games available right now.',
         custom_games_offline: 'No connection. Installed games remain available.',
         custom_games_error: 'Could not load games. Try again.',
@@ -149,11 +154,14 @@ const customGameTranslations = {
         custom_games_process_check_failed: 'Could not check the game status right now. Try again.',
         custom_games_folder: 'Open folder', custom_games_uninstall: 'Uninstall',
         custom_games_uninstall_title: 'Uninstall game?',
-        custom_games_uninstall_message: 'The game folder will be moved to the Recycle Bin. Saves outside it will not be removed.',
+        custom_games_uninstall_message: 'The game folder will be permanently deleted. Saves outside this folder will be preserved.',
         custom_games_info: 'Instructions', custom_games_no_drives: 'No drive is available for installation.',
         custom_games_install_success: 'Game installed. Ready to play!',
-        custom_games_uninstall_success: 'Game moved to the Recycle Bin.',
-        custom_games_uninstall_failed: 'Windows refused to move the folder to the Recycle Bin. The installation was kept. Check that the drive’s Recycle Bin is available and try again.',
+        custom_games_uninstall_success: '{name} uninstalled',
+        custom_games_uninstall_failed: 'Could not delete all game files. Close the game and try again.',
+        custom_games_uninstalling: 'Uninstalling...',
+        custom_games_uninstall_counting: 'Preparing deletion · {count} items found',
+        custom_games_uninstall_progress: '{removed} of {total} items removed · {percent}%',
         custom_games_operation_failed: 'Could not complete this action.',
         custom_games_busy: 'Wait for the other game download to finish.',
         custom_games_disk_space: 'Not enough space on the selected drive.',
@@ -169,6 +177,7 @@ const customGameTranslations = {
         custom_games_nav: 'Descarga y juega', custom_games_title: 'Descarga y juega',
         custom_games_subtitle: 'Elige una unidad, instala tus juegos y ábrelos desde Merlin.',
         custom_games_refresh: 'Actualizar', custom_games_refreshing: 'Actualizando…', custom_games_search: 'Buscar juegos', custom_games_search_placeholder: 'Buscar por nombre',
+        custom_games_installed_only: 'Mostrar solo juegos instalados', custom_games_show_all: 'Mostrar todos los juegos', custom_games_no_installed: 'No se encontraron juegos instalados.',
         custom_games_loading: 'Cargando juegos…', custom_games_empty: 'No hay juegos disponibles por ahora.',
         custom_games_offline: 'Sin conexión. Los juegos instalados siguen disponibles.',
         custom_games_error: 'No se pudieron cargar los juegos. Inténtalo de nuevo.',
@@ -231,11 +240,14 @@ const customGameTranslations = {
         custom_games_process_check_failed: 'No se pudo consultar el estado del juego. Inténtalo de nuevo.',
         custom_games_folder: 'Abrir carpeta', custom_games_uninstall: 'Desinstalar',
         custom_games_uninstall_title: '¿Desinstalar juego?',
-        custom_games_uninstall_message: 'La carpeta del juego se moverá a la Papelera. No se borrarán las partidas guardadas fuera de ella.',
+        custom_games_uninstall_message: 'La carpeta del juego se eliminará permanentemente. Se conservarán las partidas guardadas fuera de ella.',
         custom_games_info: 'Instrucciones', custom_games_no_drives: 'No hay unidades disponibles para instalar.',
         custom_games_install_success: 'Juego instalado. ¡Listo para jugar!',
-        custom_games_uninstall_success: 'Juego movido a la Papelera.',
-        custom_games_uninstall_failed: 'Windows rechazó mover la carpeta a la Papelera. La instalación se conservó. Comprueba que la Papelera de esa unidad esté disponible e inténtalo de nuevo.',
+        custom_games_uninstall_success: '{name} desinstalado',
+        custom_games_uninstall_failed: 'No se pudieron eliminar todos los archivos del juego. Cierra el juego e inténtalo de nuevo.',
+        custom_games_uninstalling: 'Desinstalando...',
+        custom_games_uninstall_counting: 'Preparando eliminación · {count} elementos encontrados',
+        custom_games_uninstall_progress: '{removed} de {total} elementos eliminados · {percent}%',
         custom_games_operation_failed: 'No se pudo completar la operación.',
         custom_games_busy: 'Espera a que termine la otra descarga.',
         custom_games_disk_space: 'No hay suficiente espacio en la unidad seleccionada.',
@@ -251,6 +263,7 @@ const customGameTranslations = {
         custom_games_nav: 'Télécharger et jouer', custom_games_title: 'Télécharger et jouer',
         custom_games_subtitle: 'Choisissez un disque, installez vos jeux et lancez-les depuis Merlin.',
         custom_games_refresh: 'Actualiser', custom_games_refreshing: 'Actualisation…', custom_games_search: 'Rechercher des jeux', custom_games_search_placeholder: 'Rechercher par nom',
+        custom_games_installed_only: 'Afficher uniquement les jeux installés', custom_games_show_all: 'Afficher tous les jeux', custom_games_no_installed: 'Aucun jeu installé trouvé.',
         custom_games_loading: 'Chargement des jeux…', custom_games_empty: 'Aucun jeu disponible pour le moment.',
         custom_games_offline: 'Hors ligne. Les jeux installés restent disponibles.',
         custom_games_error: 'Impossible de charger les jeux. Réessayez.',
@@ -313,11 +326,14 @@ const customGameTranslations = {
         custom_games_process_check_failed: 'Impossible de vérifier l’état du jeu. Réessayez.',
         custom_games_folder: 'Ouvrir le dossier', custom_games_uninstall: 'Désinstaller',
         custom_games_uninstall_title: 'Désinstaller le jeu ?',
-        custom_games_uninstall_message: 'Le dossier du jeu sera déplacé dans la Corbeille. Les sauvegardes externes ne seront pas supprimées.',
+        custom_games_uninstall_message: 'Le dossier du jeu sera supprimé définitivement. Les sauvegardes externes seront conservées.',
         custom_games_info: 'Instructions', custom_games_no_drives: 'Aucun disque disponible pour l’installation.',
         custom_games_install_success: 'Jeu installé. Prêt à jouer !',
-        custom_games_uninstall_success: 'Jeu déplacé dans la Corbeille.',
-        custom_games_uninstall_failed: 'Windows a refusé de déplacer le dossier dans la Corbeille. Le jeu est conservé. Vérifiez que la Corbeille de ce disque est disponible, puis réessayez.',
+        custom_games_uninstall_success: '{name} désinstallé',
+        custom_games_uninstall_failed: 'Impossible de supprimer tous les fichiers du jeu. Fermez le jeu et réessayez.',
+        custom_games_uninstalling: 'Désinstallation...',
+        custom_games_uninstall_counting: 'Préparation de la suppression · {count} éléments trouvés',
+        custom_games_uninstall_progress: '{removed} sur {total} éléments supprimés · {percent}%',
         custom_games_operation_failed: 'Impossible de terminer cette opération.',
         custom_games_busy: 'Attendez la fin de l’autre téléchargement.',
         custom_games_disk_space: 'Espace insuffisant sur le disque choisi.',
@@ -333,6 +349,7 @@ const customGameTranslations = {
         custom_games_nav: 'Laden & Spielen', custom_games_title: 'Laden & Spielen',
         custom_games_subtitle: 'Wähle ein Laufwerk, installiere Spiele und starte sie in Merlin.',
         custom_games_refresh: 'Aktualisieren', custom_games_refreshing: 'Wird aktualisiert…', custom_games_search: 'Spiele suchen', custom_games_search_placeholder: 'Nach Namen suchen',
+        custom_games_installed_only: 'Nur installierte Spiele anzeigen', custom_games_show_all: 'Alle Spiele anzeigen', custom_games_no_installed: 'Keine installierten Spiele gefunden.',
         custom_games_loading: 'Spiele werden geladen…', custom_games_empty: 'Momentan sind keine Spiele verfügbar.',
         custom_games_offline: 'Keine Verbindung. Installierte Spiele bleiben verfügbar.',
         custom_games_error: 'Spiele konnten nicht geladen werden. Versuche es erneut.',
@@ -395,11 +412,14 @@ const customGameTranslations = {
         custom_games_process_check_failed: 'Der Spielstatus konnte nicht geprüft werden. Versuche es erneut.',
         custom_games_folder: 'Ordner öffnen', custom_games_uninstall: 'Deinstallieren',
         custom_games_uninstall_title: 'Spiel deinstallieren?',
-        custom_games_uninstall_message: 'Der Spielordner wird in den Papierkorb verschoben. Spielstände außerhalb des Ordners bleiben erhalten.',
+        custom_games_uninstall_message: 'Der Spielordner wird dauerhaft gelöscht. Spielstände außerhalb dieses Ordners bleiben erhalten.',
         custom_games_info: 'Anleitung', custom_games_no_drives: 'Kein Laufwerk zur Installation verfügbar.',
         custom_games_install_success: 'Spiel installiert. Bereit zum Spielen!',
-        custom_games_uninstall_success: 'Spiel in den Papierkorb verschoben.',
-        custom_games_uninstall_failed: 'Windows hat das Verschieben des Ordners in den Papierkorb abgelehnt. Die Installation bleibt erhalten. Prüfe, ob der Papierkorb dieses Laufwerks verfügbar ist, und versuche es erneut.',
+        custom_games_uninstall_success: '{name} deinstalliert',
+        custom_games_uninstall_failed: 'Nicht alle Spieldateien konnten gelöscht werden. Schließe das Spiel und versuche es erneut.',
+        custom_games_uninstalling: 'Deinstallation...',
+        custom_games_uninstall_counting: 'Löschung wird vorbereitet · {count} Einträge gefunden',
+        custom_games_uninstall_progress: '{removed} von {total} Einträgen gelöscht · {percent}%',
         custom_games_operation_failed: 'Aktion konnte nicht abgeschlossen werden.',
         custom_games_busy: 'Warte, bis der andere Download abgeschlossen ist.',
         custom_games_disk_space: 'Nicht genug Speicherplatz auf dem gewählten Laufwerk.',
@@ -417,7 +437,7 @@ for (const [language, messages] of Object.entries(customGameTranslations)) Objec
 document.addEventListener('DOMContentLoaded', () => {
     const api = window.electronAPI.customGames;
     const el = Object.fromEntries([
-        'customGamesBtn', 'customGamesView', 'customGamesRefresh', 'customGamesSearch', 'customGamesState',
+        'customGamesBtn', 'customGamesView', 'customGamesRefresh', 'customGamesInstalledOnly', 'customGamesSearch', 'customGamesState',
         'customGamesGrid', 'customGamesInstallModal', 'customGamesInstallName', 'customGamesInstallImage',
         'customGamesInstallSize', 'customGamesInstallNote', 'customGamesDriveList', 'customGamesInstallSpace',
         'customGamesInstallPath', 'customGamesInstallCancel', 'customGamesInstallConfirm',
@@ -427,9 +447,11 @@ document.addEventListener('DOMContentLoaded', () => {
         'customGamesWidgetRate', 'customGamesWidgetBar', 'customGamesWidgetOpen', 'customGamesWidgetClose',
         'customGamesInfoModal', 'customGamesInfoName', 'customGamesInfoText', 'customGamesInfoClose',
         'customGamesCloseModal', 'customGamesCloseName', 'customGamesCloseCancel', 'customGamesCloseConfirm',
+        'customGamesUninstallProgress', 'customGamesUninstallDetail', 'customGamesUninstallBar',
         'customGamesUninstallModal', 'customGamesUninstallName', 'customGamesUninstallCancel', 'customGamesUninstallConfirm',
     ].map(id => [id, document.getElementById(id)]));
     let games = [];
+    let installedOnly = false;
     let drives = [];
     let selected = null;
     let selectedDrive = '';
@@ -655,9 +677,11 @@ document.addEventListener('DOMContentLoaded', () => {
         gridDirty = false;
         el.customGamesGrid.replaceChildren();
         const query = el.customGamesSearch.value.trim().toLocaleLowerCase();
-        const visible = games.filter(game => game.name.toLocaleLowerCase().includes(query));
-        if (!games.length) setState(tr('custom_games_empty'));
-        else if (!visible.length) setState(tr('custom_games_empty'));
+        el.customGamesInstalledOnly.setAttribute('aria-pressed', String(installedOnly));
+        el.customGamesInstalledOnly.setAttribute('aria-label', tr('custom_games_installed_only'));
+        el.customGamesInstalledOnly.title = tr(installedOnly ? 'custom_games_show_all' : 'custom_games_installed_only');
+        const visible = games.filter(game => (!installedOnly || game.installed) && game.name.toLocaleLowerCase().includes(query));
+        if (!visible.length) setState(tr(installedOnly ? 'custom_games_no_installed' : 'custom_games_empty'));
         else el.customGamesState.hidden = true;
         for (const game of visible) {
             const card = document.createElement('article');
@@ -722,6 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!result.success) notify(errorText(result.code), 'error');
                 }));
                 actions.append(action(tr('custom_games_uninstall'), () => {
+                    el.customGamesUninstallProgress.hidden = true;
                     uninstallTarget = game;
                     el.customGamesUninstallName.textContent = game.name;
                     el.customGamesUninstallModal.hidden = false;
@@ -774,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (['integrity_index_unavailable', 'integrity_unavailable', 'invalid_integrity_manifest'].includes(code)) return tr('custom_games_integrity_unavailable');
         if (code === 'busy') return tr('custom_games_busy');
         if (code === 'download_stalled') return tr('custom_games_connection_failed');
-        if (code === 'trash_failed') return tr('custom_games_uninstall_failed');
+        if (code === 'trash_failed' || code === 'uninstall_failed') return tr('custom_games_uninstall_failed');
         if (code === 'disk_space') return tr('custom_games_disk_space');
         if (code === 'EACCES' || code === 'EPERM') return tr('custom_games_permission');
         if (code === 'folder_exists') return tr('custom_games_folder_exists');
@@ -806,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
             drives = result.drives || [];
             offline = Boolean(result.offline);
             loaded = true;
-            if (result.operation && !isTerminal(result.operation) && !progressSnapshot) {
+            if (result.operation && result.operation.kind !== 'uninstall' && !isTerminal(result.operation) && !progressSnapshot) {
                 progressModalDismissed = true;
                 renderProgress(result.operation);
             }
@@ -957,7 +982,23 @@ document.addEventListener('DOMContentLoaded', () => {
         el.customGamesInstallModal.hidden = false;
     }
 
+    function renderUninstallProgress(state) {
+        if (state.id !== uninstallTarget?.id) return;
+        el.customGamesUninstallProgress.hidden = false;
+        el.customGamesUninstallBar.setAttribute('aria-label', tr('custom_games_uninstalling'));
+        const counting = state.phase === 'counting';
+        const total = Number(state.totalItems) || 0;
+        const removed = Number(state.removedItems) || 0;
+        const percent = total > 0 ? Math.min(100, Math.floor(removed * 100 / total)) : 0;
+        if (counting) el.customGamesUninstallBar.removeAttribute('value');
+        else el.customGamesUninstallBar.value = percent;
+        el.customGamesUninstallDetail.textContent = counting
+            ? tr('custom_games_uninstall_counting', { count: total.toLocaleString() })
+            : tr('custom_games_uninstall_progress', { removed: removed.toLocaleString(), total: total.toLocaleString(), percent });
+    }
+
     function onProgress(state) {
+        if (state?.kind === 'uninstall') { renderUninstallProgress(state); return; }
         if (!state?.id) return;
         if (isTerminal(state)) {
             // The installer can send terminal progress before it finishes cleanup.
@@ -1129,11 +1170,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!uninstallTarget || uninstallPending) return;
         const item = uninstallTarget;
         uninstallPending = true;
+        renderUninstallProgress({ id: item.id, phase: 'counting' });
+        el.customGamesUninstallConfirm.textContent = tr('custom_games_uninstalling');
         el.customGamesUninstallConfirm.disabled = true;
         el.customGamesUninstallCancel.disabled = true;
         try {
             const result = await api.uninstall(item.id);
-            notify(result.success ? tr('custom_games_uninstall_success') : errorText(result.code), result.success ? 'success' : 'error');
+            notify(result.success ? tr('custom_games_uninstall_success', { name: item.name }) : errorText(result.code), result.success ? 'success' : 'error');
             if (result.success) {
                 el.customGamesUninstallModal.hidden = true;
                 uninstallTarget = null;
@@ -1145,6 +1188,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } finally {
             uninstallPending = false;
+            el.customGamesUninstallConfirm.textContent = tr('custom_games_uninstall');
             el.customGamesUninstallConfirm.disabled = false;
             el.customGamesUninstallCancel.disabled = false;
         }
@@ -1155,6 +1199,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     el.customGamesRefresh.addEventListener('click', () => load(true));
     el.customGamesSearch.addEventListener('input', render);
+    el.customGamesInstalledOnly.addEventListener('click', () => {
+        installedOnly = !installedOnly;
+        render();
+    });
     window.addEventListener('merlin-view-changed', event => {
         const requested = event.detail?.view === 'custom-games';
         if (requested && !hasGoldAccess) {

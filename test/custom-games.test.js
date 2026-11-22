@@ -188,6 +188,47 @@ test('extraction progress is throttled so large archives do not flood the render
     }
 });
 
+test('ZIP installation publishes the measured rate after a long gap between progress notifications', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-sparse-progress-'));
+    const originalNow = Date.now;
+    let clock = 1000;
+    try {
+        const disk = path.join(root, 'disk');
+        fs.mkdirSync(disk);
+        const zip = new AdmZip();
+        zip.addFile('Game/data.bin', Buffer.from('synthetic file'));
+        const archive = zip.toBuffer();
+        const item = {
+            id: 'a8fb0e0e-714c-4cf4-a449-2d57c591edcb', name: 'Sparse Progress', installName: 'Sparse Progress',
+            archiveKey: 'archives/sparse.zip', archiveSize: archive.length,
+        };
+        const axios = { get: async (url, options) => {
+            if (url.endsWith('/custom-games')) return { data: { games: [item] } };
+            assert.equal(options.headers.Range, `bytes=0-${archive.length - 1}`);
+            return { status: 206, headers: { 'content-range': `bytes 0-${archive.length - 1}/${archive.length}` },
+                data: Readable.from((async function* () { clock += 166000; yield archive; })()) };
+        } };
+        const service = createCustomGamesService({
+            app: { getPath: () => root }, axios, authSession: { getAccessToken: async () => 'test-token' },
+            apiBaseUrl: 'https://staging.api-merlin.com/api', shell: { openPath: async () => '' },
+            testDriveRoot: () => disk,
+        });
+        const progress = [];
+        service.subscribeProgress(state => progress.push(state));
+        await service.list();
+        Date.now = () => clock;
+        const result = await service.install(item.id, 'X');
+        assert.equal(result.success, true, JSON.stringify(result));
+        const completeDownload = progress.find(state => state.stage === 'downloading' && state.received === archive.length);
+        assert.ok(completeDownload);
+        assert.equal(completeDownload.speedBytesPerSecond, archive.length / 166);
+        assert.equal(completeDownload.etaSeconds, 0);
+    } finally {
+        Date.now = originalNow;
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 test('ZIP paths cannot escape Merlin-games or create Windows alternate streams', () => {
     const root = path.resolve('C:\\Merlin-games\\.merlin-installing-test');
     for (const entry of ['../outside.txt', '/absolute.txt', 'C:/Windows/file.txt', 'Game/file:stream',
@@ -711,68 +752,106 @@ test('explicit cancellation removes the partial ZIP and resume metadata while th
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('failed move to the Recycle Bin preserves the installation and returns the Windows error code', async () => {
+function uninstallFixture() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-uninstall-'));
     const id = 'f8fb0e0e-714c-4cf4-a449-2d57c591edcb';
-    const item = { id, name: 'Locked Game', installName: 'Locked Game', archiveKey: 'archives/locked.zip', archiveSize: 1 };
+    const item = { id, name: 'Game', installName: 'Game', archiveKey: 'archives/game.zip', archiveSize: 1 };
     const disk = path.join(root, 'disk');
     const installedPath = path.join(disk, 'Merlin-games', item.installName);
     const registryFile = path.join(root, 'custom-games-installs-staging.api-merlin.com.json');
-    let trashError = Object.assign(new Error('Access is denied'), { code: 'EPERM' });
+    fs.mkdirSync(path.join(installedPath, 'Data', 'Nested'), { recursive: true });
+    fs.writeFileSync(path.join(installedPath, '.merlin-install.json'), JSON.stringify({ id }));
+    fs.writeFileSync(path.join(installedPath, 'Data', 'Nested', 'game.bin'), 'game data');
+    fs.writeFileSync(registryFile, JSON.stringify({ [id]: { drive: 'X', installName: item.installName } }));
+    const service = createCustomGamesService({
+        app: { getPath: () => root }, initialCatalog: [item],
+        axios: {}, authSession: { getAccessToken: async () => 'test-token' },
+        apiBaseUrl: 'https://staging.api-merlin.com/api',
+        shell: { trashItem: async () => { assert.fail('Uninstall must not open the Windows Recycle Bin'); } },
+        testDriveRoot: () => disk,
+    });
+    return { root, id, disk, installedPath, registryFile, service };
+}
+
+test('uninstall permanently removes only the marked game and preserves external saves and junction targets', async () => {
+    const f = uninstallFixture();
     try {
-        fs.mkdirSync(installedPath, { recursive: true });
-        fs.writeFileSync(path.join(installedPath, '.merlin-install.json'), JSON.stringify({ id }));
-        fs.writeFileSync(registryFile, JSON.stringify({ [id]: { drive: 'X', installName: item.installName } }));
-        const service = createCustomGamesService({
-            app: { getPath: () => root },
-            axios: { get: async () => ({ data: { games: [item] } }) },
-            authSession: { getAccessToken: async () => 'test-token' },
-            apiBaseUrl: 'https://staging.api-merlin.com/api',
-            shell: { trashItem: async () => { throw trashError; } },
-            windowsRecycleBinMove: async () => { throw new Error('Recycle Bin fallback failed'); },
-            testDriveRoot: () => disk,
-        });
-        await service.list();
-        const originalConsoleError = console.error;
-        let permissionResult;
-        let trashResult;
-        try {
-            console.error = () => {};
-            permissionResult = await service.uninstall(id);
-            trashError = new Error('Failed to perform delete operation');
-            trashResult = await service.uninstall(id);
-        } finally { console.error = originalConsoleError; }
-        assert.deepEqual(permissionResult, { success: false, code: 'EPERM' });
-        assert.deepEqual(trashResult, { success: false, code: 'trash_failed' });
-        assert.equal(fs.existsSync(path.join(installedPath, '.merlin-install.json')), true);
-    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+        const saves = path.join(f.root, 'saves');
+        fs.mkdirSync(saves);
+        fs.writeFileSync(path.join(saves, 'keep.sav'), 'save');
+        fs.symlinkSync(saves, path.join(f.installedPath, 'linked-saves'), process.platform === 'win32' ? 'junction' : 'dir');
+        const sibling = path.join(f.disk, 'Merlin-games', 'Another game');
+        fs.mkdirSync(sibling);
+        fs.writeFileSync(path.join(sibling, 'keep.bin'), 'other game');
+        const progress = [];
+        f.service.subscribeProgress(state => progress.push(state));
+        assert.deepEqual(await f.service.uninstall(f.id), { success: true });
+        assert.equal(progress[0].phase, 'counting');
+        assert.equal(progress.at(-1).stage, 'completed');
+        assert.equal(progress.at(-1).totalItems, 4);
+        assert.equal(progress.at(-1).removedItems, 4);
+        assert.equal(fs.existsSync(f.installedPath), false);
+        assert.equal(fs.readFileSync(path.join(saves, 'keep.sav'), 'utf8'), 'save');
+        assert.equal(fs.readFileSync(path.join(sibling, 'keep.bin'), 'utf8'), 'other game');
+        assert.equal(JSON.parse(fs.readFileSync(f.registryFile))[f.id], undefined);
+    } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });
 
-test('Windows Recycle Bin fallback completes uninstall after Electron trash operation fails', async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merlin-custom-uninstall-fallback-'));
-    const id = 'f8fb0e0e-714c-4cf4-a449-2d57c591edcb';
-    const item = { id, name: 'Nested Game', installName: 'Nested Game', archiveKey: 'archives/nested.zip', archiveSize: 1 };
-    const disk = path.join(root, 'disk');
-    const installedPath = path.join(disk, 'Merlin-games', item.installName);
+test('an interrupted permanent uninstall retains its marker and registry and can be retried', async () => {
+    const f = uninstallFixture();
+    const originalRm = fs.promises.rm;
+    const originalError = console.error;
     try {
-        fs.mkdirSync(path.join(installedPath, 'Data', 'Nested'), { recursive: true });
-        fs.writeFileSync(path.join(installedPath, '.merlin-install.json'), JSON.stringify({ id }));
-        fs.writeFileSync(path.join(installedPath, 'Data', 'Nested', 'save.dat'), 'fixture');
-        fs.writeFileSync(path.join(root, 'custom-games-installs-staging.api-merlin.com.json'), JSON.stringify({
-            [id]: { drive: 'X', installName: item.installName },
-        }));
-        const service = createCustomGamesService({
-            app: { getPath: () => root }, axios: { get: async () => ({ data: { games: [item] } }) },
-            authSession: { getAccessToken: async () => 'test-token' }, apiBaseUrl: 'https://staging.api-merlin.com/api',
-            shell: { trashItem: async () => { throw new Error('Failed to perform delete operation'); } },
-            windowsRecycleBinMove: async source => fs.promises.rename(source, path.join(root, 'recycle-bin-fixture')),
-            testDriveRoot: () => disk,
-        });
-        await service.list();
-        assert.deepEqual(await service.uninstall(id), { success: true });
-        assert.equal(fs.existsSync(installedPath), false);
-        assert.equal(fs.existsSync(path.join(root, 'recycle-bin-fixture', 'Data', 'Nested', 'save.dat')), true);
-    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+        fs.promises.rm = async target => {
+            if (target.startsWith(f.installedPath + path.sep)) throw Object.assign(new Error('Locked file'), { code: 'EPERM' });
+            assert.fail('Unexpected deletion target');
+        };
+        console.error = () => {};
+        assert.deepEqual(await f.service.uninstall(f.id), { success: false, code: 'EPERM' });
+        assert.equal(fs.existsSync(path.join(f.installedPath, '.merlin-install.json')), true);
+        assert.ok(JSON.parse(fs.readFileSync(f.registryFile))[f.id]);
+        fs.promises.rm = originalRm;
+        assert.deepEqual(await f.service.uninstall(f.id), { success: true });
+    } finally {
+        console.error = originalError;
+        fs.promises.rm = originalRm;
+        fs.rmSync(f.root, { recursive: true, force: true });
+    }
+});
+
+test('permanent uninstall excludes concurrent changes and refuses an unmarked directory', async () => {
+    const f = uninstallFixture();
+    try {
+        const pending = f.service.uninstall(f.id);
+        assert.deepEqual(await f.service.uninstall(f.id), { success: false, code: 'busy' });
+        assert.deepEqual(await f.service.install(f.id, 'X'), { success: false, code: 'busy' });
+        assert.deepEqual(await f.service.cancel(), { success: false, code: 'busy' });
+        assert.deepEqual(await pending, { success: true });
+        fs.mkdirSync(f.installedPath);
+        fs.writeFileSync(path.join(f.installedPath, 'keep.bin'), 'unmarked data');
+        const originalError = console.error;
+        try {
+            console.error = () => {};
+            assert.deepEqual(await f.service.uninstall(f.id), { success: false, code: 'not_installed' });
+        } finally { console.error = originalError; }
+        assert.equal(fs.readFileSync(path.join(f.installedPath, 'keep.bin'), 'utf8'), 'unmarked data');
+    } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test('permanent uninstall refuses a redirected installation root even with a matching marker', async () => {
+    const f = uninstallFixture();
+    const originalError = console.error;
+    try {
+        const external = path.join(f.root, 'external-game');
+        fs.renameSync(f.installedPath, external);
+        fs.symlinkSync(external, f.installedPath, process.platform === 'win32' ? 'junction' : 'dir');
+        console.error = () => {};
+        assert.deepEqual(await f.service.uninstall(f.id), { success: false, code: 'not_installed' });
+        assert.equal(fs.readFileSync(path.join(external, 'Data', 'Nested', 'game.bin'), 'utf8'), 'game data');
+    } finally {
+        console.error = originalError;
+        fs.rmSync(f.root, { recursive: true, force: true });
+    }
 });
 
 test('a catalog executable added after installation enables Play despite an old null local value', async () => {

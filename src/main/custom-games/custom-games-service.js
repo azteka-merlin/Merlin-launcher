@@ -1,12 +1,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawn, execFile } = require('node:child_process');
+const { execFile } = require('node:child_process');
 const { createHash, randomUUID } = require('node:crypto');
 const { extractSafeZip, safeEntryPath } = require('./safe-zip');
 const { createTransferMeter, createTaskLimiter } = require('./transfer-progress');
 const { normalizeIntegrityManifest, verifyInstalledFiles } = require('./integrity');
 const { createUpdatePlan, stageUpdate, applyUpdate, recoverUpdate, removeWorkspace, protectedFile } = require('./update-files');
 const { privilegedGameOperations } = require('./privileged-game-operations');
+const { removeGameFiles } = require('./remove-game-files');
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
@@ -15,7 +16,6 @@ const MAX_BUNDLE_MEMBER_SIZE = 200 * 1024 * 1024;
 const DOWNLOAD_WORKERS = 4;
 const SMALL_FILE_WORKERS = 12;
 const SMALL_FILE_LIMIT = 64 * 1024 * 1024;
-const RATE_WINDOW_MS = 30_000;
 const DOWNLOAD_IDLE_TIMEOUT_MS = 45_000;
 const INSTALL_SAFETY_BYTES = 512 * 1024 * 1024;
 const MARKER = '.merlin-install.json';
@@ -46,37 +46,6 @@ function requiredFreeBytes(archiveSize, partialSize = 0, packageType = 'zip') {
     const size = Number(archiveSize);
     if (packageType === 'folder') return Math.max(0, size - Number(partialSize)) + INSTALL_SAFETY_BYTES;
     return Math.max(0, size - Number(partialSize)) + size + INSTALL_SAFETY_BYTES;
-}
-
-function moveWithWindowsShellToRecycleBin(targetPath) {
-    const encodedPath = Buffer.from(targetPath, 'utf8').toString('base64');
-    const command = [
-        "$ErrorActionPreference = 'Stop'",
-        `$target = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encodedPath}'))`,
-        "if (-not (Test-Path -LiteralPath $target)) { throw 'Install folder no longer exists' }",
-        '$shell = New-Object -ComObject Shell.Application',
-        '$recycleBin = $shell.Namespace(10)',
-        "if (-not $recycleBin) { throw 'Windows Recycle Bin is unavailable' }",
-        '$recycleBin.MoveHere($target, 0x14)',
-        '$deadline = [DateTime]::UtcNow.AddSeconds(90)',
-        'while ((Test-Path -LiteralPath $target) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 200 }',
-        "if (Test-Path -LiteralPath $target) { throw 'Windows did not move the install folder to the Recycle Bin' }",
-    ].join('; ');
-
-    return new Promise((resolve, reject) => {
-        const child = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-STA', '-Command', command], {
-            windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        let output = '';
-        const append = chunk => { if (output.length < 8192) output += chunk.toString(); };
-        child.stdout.on('data', append);
-        child.stderr.on('data', append);
-        child.once('error', reject);
-        child.once('close', code => {
-            if (code === 0 && !fs.existsSync(targetPath)) return resolve();
-            reject(new Error(output.trim() || `Windows Recycle Bin fallback failed (${code ?? 'unknown exit'})`));
-        });
-    });
 }
 
 function runPowerShell(command, timeout = 15000) {
@@ -152,7 +121,7 @@ async function requestCloseExecutable(executablePath, installRoot, privilegedClo
 }
 
 function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, testDriveRoot = null,
-    windowsRecycleBinMove = moveWithWindowsShellToRecycleBin, downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS,
+    downloadIdleTimeoutMs = DOWNLOAD_IDLE_TIMEOUT_MS,
     initialCatalog = null, installRunner = null, extractionConcurrency = 2, isGameRunning = hasRunningGameProcess }) {
     const dataRoot = app.getPath('userData');
     const source = new URL(apiBaseUrl).hostname.replace(/[^a-z0-9.-]/gi, '_');
@@ -456,7 +425,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 // so an old local registry entry (including null) cannot hide the Play action.
                 executablePath: item.executablePath || (found ? registry[item.id]?.executablePath || marker?.executablePath : null) || null };
         }),
-            drives, offline, operation: active ? { ...active.snapshot } : null };
+            drives, offline, operation: active?.snapshot ? { ...active.snapshot } : null };
     }
 
     async function list() {
@@ -499,34 +468,19 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const progressValue = stage === 'downloading' ? Number(extra.received) : Number(extra.bytes);
         const progressTotal = stage === 'downloading' ? Number(extra.total) : Number(extra.totalBytes);
         const terminal = ['completed', 'failed', 'cancelled'].includes(stage);
-        operation.rateStage = stage;
-        operation.rateStats ||= Object.create(null);
-        const rate = operation.rateStats[stage] ||= { samples: [], last: null };
-
-        // Extraction can report once per decompressed stream chunk. Keep the same
-        // bounded IPC cadence for every stage and do rate math only when publishing.
+        // Rate calculations share the meter used by folder extraction and repair.
         const shouldPublish = force || terminal || !operation.lastEmit || now - operation.lastEmit >= 400;
-        if (shouldPublish && Number.isFinite(progressValue) && Number.isFinite(progressTotal)) {
-            const previous = rate.last;
-            if (previous && (now - previous.at > RATE_WINDOW_MS || progressValue < previous.value)) {
-                rate.samples = [];
-            } else if (previous && now > previous.at) {
-                rate.samples.push({ from: previous.at, at: now, bytes: progressValue - previous.value });
-            }
-            rate.samples = rate.samples.filter(sample => now - sample.at <= RATE_WINDOW_MS);
-            rate.last = { at: now, value: progressValue };
-        }
         let speedBytesPerSecond = operation.snapshot?.speedBytesPerSecond || 0;
         let etaSeconds = operation.snapshot?.etaSeconds ?? null;
         if (shouldPublish) {
-            const sampleBytes = rate.samples.reduce((sum, sample) => sum + sample.bytes, 0);
-            const firstSampleAt = rate.samples[0]?.from;
-            const elapsedMs = firstSampleAt == null ? 0 : Math.max(0, now - firstSampleAt);
-            speedBytesPerSecond = elapsedMs > 0 ? sampleBytes * 1000 / elapsedMs : 0;
-            etaSeconds = elapsedMs >= 8_000 && speedBytesPerSecond > 0 && Number.isFinite(progressValue) && Number.isFinite(progressTotal)
-                ? Math.max(0, Math.ceil((progressTotal - progressValue) / speedBytesPerSecond)) : null;
-            // Folder repair/update knows both the selected object bytes and object count.
-            // Its longer-window estimate is more representative than a byte-only burst.
+            speedBytesPerSecond = 0;
+            etaSeconds = null;
+            if (Number.isFinite(progressValue) && Number.isFinite(progressTotal)) {
+                operation.rateMeters ||= Object.create(null);
+                const meter = operation.rateMeters[stage] ||= createTransferMeter();
+                ({ speedBytesPerSecond, etaSeconds } = meter.update(progressValue, progressTotal, 0, 0, now));
+            }
+            // Folder repair/update also accounts for the number of pending objects.
             if (stage === 'downloading' && ['repair', 'update'].includes(operation.kind) &&
                 operation.item.packageType === 'folder' && Object.hasOwn(extra, 'etaSeconds')) {
                 speedBytesPerSecond = extra.speedBytesPerSecond;
@@ -1266,6 +1220,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
 
     async function cancel() {
         if (!active) return { success: false, code: 'not_running' };
+        if (active.kind === 'uninstall') return { success: false, code: 'busy' };
         if (active.external) return installRunner.cancel();
         const operation = active;
         operation.cancelRequested = true;
@@ -1277,7 +1232,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     async function suspend() {
         if (!active) return;
         if (active.external) { await installRunner.dispose(); return; }
-        active.controller.abort();
+        if (active.kind !== 'uninstall') active.controller.abort();
         await active.finished;
     }
 
@@ -1511,49 +1466,54 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     }
 
     async function uninstall(id) {
-        if (active) return { success: false, code: 'busy' };
-        let movedToTrash = false;
+        if (active || installRunner?.pending?.()) return { success: false, code: 'busy' };
+        const operation = { kind: 'uninstall', item: { id } };
+        let finishOperation;
+        operation.finished = new Promise(resolve => { finishOperation = resolve; });
+        active = operation;
         try {
             const { current } = requireInstalled(id);
+            emit(operation, () => {}, 'uninstalling', { kind: 'uninstall', phase: 'counting', totalItems: 0, removedItems: 0 }, true);
             await ensureGameRootAccess(current.drive);
-            try { await shell.trashItem(current.path); }
-            catch (electronError) {
-                if (process.platform !== 'win32') throw electronError;
-                try { await windowsRecycleBinMove(current.path); }
-                catch (fallbackError) {
-                    const combined = new Error(fallbackError.message || electronError.message || 'trash_failed');
-                    combined.code = electronError.code || 'trash_failed';
-                    combined.electronMessage = electronError.message || String(electronError);
-                    throw combined;
-                }
+            const root = path.resolve(current.path);
+            const stat = await fs.promises.lstat(root);
+            if (!stat.isDirectory() || stat.isSymbolicLink() ||
+                (await fs.promises.realpath(root)).toLowerCase() !== root.toLowerCase()) {
+                throw new Error('invalid_install_path');
             }
-            movedToTrash = true;
+            const markerPath = path.join(root, MARKER);
+            const marker = await fs.promises.readFile(markerPath, 'utf8');
+            if (JSON.parse(marker).id !== id) throw new Error('invalid_install_path');
+            // Keep the marker until the contents are gone so an interrupted removal can be retried.
+            const counts = await removeGameFiles(root, progress =>
+                emit(operation, () => {}, 'uninstalling', { kind: 'uninstall', ...progress },
+                    operation.snapshot?.phase !== progress.phase));
+            await fs.promises.unlink(markerPath);
+            try { await fs.promises.rmdir(root); }
+            catch (error) {
+                await fs.promises.writeFile(markerPath, marker, { flag: 'wx' }).catch(() => {});
+                throw error;
+            }
+            emit(operation, () => {}, 'completed', { kind: 'uninstall', ...counts, done: true }, true);
             delete registry[id];
             integrityProblems.delete(id);
             try { await saveJson(registryFile, registry); }
             catch (error) {
-                // The game is already in the Recycle Bin; stale registry data cannot make it appear installed
-                // because installation markers are checked on disk.
                 console.warn('[CustomGames] Uninstall completed, but the local registry could not be saved', {
                     id, code: error.code || null, message: error.message || String(error),
                 });
             }
             return { success: true };
         } catch (error) {
-            const message = error.message || String(error);
-            const code = error.code || (/failed to perform delete operation/i.test(message)
-                ? 'trash_failed' : message || 'uninstall_failed');
-            console.error('[CustomGames] Uninstall failed', {
-                id, movedToTrash, code: error.code || null, message,
-                electronMessage: error.electronMessage || null,
-            });
+            const code = error.code || error.message || 'uninstall_failed';
+            emit(operation, () => {}, 'failed', { kind: 'uninstall', code, done: true }, true);
+            console.error('[CustomGames] Uninstall failed', { id, code, message: error.message || String(error) });
             return { success: false, code };
-        }
+        } finally { if (active === operation) active = null; finishOperation(); }
     }
 
     return { list, refresh, install, update, verify, repair, cancel, suspend, openFolder, play, runningGames, closeGame,
         uninstall, listDrives, subscribeProgress };
 }
 
-module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount, validArchiveSize,
-    moveWithWindowsShellToRecycleBin };
+module.exports = { createCustomGamesService, requiredFreeBytes, validFolderManifestFileCount, validArchiveSize };

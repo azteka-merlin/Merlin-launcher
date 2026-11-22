@@ -13,7 +13,9 @@ function element(tag = 'div') {
         classList: { add() {}, remove() {}, toggle() {} },
         addEventListener(name, handler) { listeners.set(name, handler); },
         click() { if (!this.disabled) return listeners.get('click')?.({ target: this }); },
-        setAttribute() {},
+        input() { return listeners.get('input')?.({ target: this }); },
+        setAttribute(name, value) { (this.attributes ||= {})[name] = value; },
+        removeAttribute(name) { delete this[name]; },
         replaceChildren(...children) { this.children = children; this.replacements++; },
         append(...children) { this.children.push(...children); },
         querySelector() { return this.span ||= element('span'); },
@@ -90,6 +92,40 @@ function renderer(options = {}) {
 const MiB = 1024 ** 2;
 const downloading = overrides => ({ id: 'one', name: 'Game One', stage: 'downloading',
     received: 20 * MiB, total: 100 * MiB, speedBytesPerSecond: MiB, etaSeconds: 80, ...overrides });
+
+test('installed filter combines with search and exposes a reversible pressed state', async () => {
+    const ui = renderer({ list: async () => ({ success: true, games: [
+        { id: 'one', name: 'Alpha Installed', installed: true },
+        { id: 'two', name: 'Beta Installed', installed: true },
+        { id: 'three', name: 'Alpha Available', installed: null },
+    ], drives: [] }) });
+    await ui.open();
+    const filter = ui.get('customGamesInstalledOnly');
+    assert.equal(filter.attributes['aria-pressed'], 'false');
+    filter.click();
+    assert.equal(filter.attributes['aria-pressed'], 'true');
+    assert.equal(filter.title, 'Mostrar todos os jogos');
+    assert.equal(ui.get('customGamesGrid').children.length, 2);
+    const search = ui.get('customGamesSearch');
+    search.value = 'alpha';
+    search.input();
+    assert.equal(ui.get('customGamesGrid').children.length, 1);
+    assert.equal(ui.get('customGamesGrid').children[0].children[1].textContent, 'Alpha Installed');
+    filter.click();
+    assert.equal(filter.attributes['aria-pressed'], 'false');
+    assert.equal(ui.get('customGamesGrid').children.length, 2);
+});
+
+test('installed filter explains an empty result and remains active after refresh', async () => {
+    const ui = renderer();
+    await ui.open();
+    ui.get('customGamesInstalledOnly').click();
+    assert.equal(ui.get('customGamesGrid').hidden, true);
+    assert.equal(ui.get('customGamesState').children.at(-1).textContent, 'Nenhum jogo instalado encontrado.');
+    await ui.get('customGamesRefresh').click();
+    assert.equal(ui.get('customGamesInstalledOnly').attributes['aria-pressed'], 'true');
+    assert.equal(ui.get('customGamesGrid').hidden, true);
+});
 
 test('Baixe e Jogue stays hidden and blocks navigation without active Gold entitlement', () => {
     const ui = renderer();
@@ -295,6 +331,28 @@ test('successful uninstall unlocks its dialog before a slow catalog refresh comp
     assert.equal(ui.get('customGamesUninstallConfirm').disabled, false);
     assert.equal(ui.get('customGamesUninstallCancel').disabled, false);
     finishRefresh({ success: true, games: [], drives: [] });
+});
+
+test('uninstall shows counting followed by measured removal progress in its own dialog', async () => {
+    let finish;
+    const ui = renderer({
+        list: async () => ({ success: true, games: [{ id: 'installed', name: 'Game', installed: true }], drives: [] }),
+        uninstall: () => new Promise(resolve => { finish = resolve; }),
+    });
+    await ui.open();
+    ui.get('customGamesGrid').children[0].children[3].children[1].click();
+    const pending = ui.get('customGamesUninstallConfirm').click();
+    assert.equal(ui.get('customGamesUninstallProgress').hidden, false);
+    ui.progress({ id: 'installed', kind: 'uninstall', phase: 'counting', totalItems: 100 });
+    assert.match(ui.get('customGamesUninstallDetail').textContent, /100 itens encontrados/);
+    assert.equal(ui.get('customGamesUninstallBar').value, undefined);
+    ui.progress({ id: 'installed', kind: 'uninstall', phase: 'removing', totalItems: 100, removedItems: 35 });
+    assert.equal(ui.get('customGamesUninstallBar').value, 35);
+    assert.match(ui.get('customGamesUninstallDetail').textContent, /35 de 100.*35%/);
+    assert.equal(ui.frames.size, 0);
+    finish({ success: true });
+    await pending;
+    assert.equal(ui.get('customGamesUninstallModal').hidden, true);
 });
 
 test('integrity actions show a verification result and safe paths without installation success messaging', async () => {

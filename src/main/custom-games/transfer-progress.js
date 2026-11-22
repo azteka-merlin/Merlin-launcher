@@ -6,10 +6,15 @@ function createTransferMeter({ windowMs = WINDOW_MS, minimumSampleMs = 8_000 } =
     let previous = null;
     return {
         update(bytes, totalBytes, files = 0, totalFiles = 0, now = Date.now()) {
-            if (previous && (bytes < previous.bytes || files < previous.files || now - previous.at > windowMs)) samples.length = 0;
+            if (previous && (bytes < previous.bytes || files < previous.files || now < previous.at)) samples.length = 0;
             else if (previous && now > previous.at) samples.push({ from: previous.at, at: now,
                 bytes: bytes - previous.bytes, files: files - previous.files });
-            previous = { bytes, files, at: now };
+            // A sparse notification describes work across the entire gap. Keep that
+            // interval in the window, including during bursts of completed files.
+            // Coalesce same-millisecond notifications into the next timed interval.
+            if (!previous || now !== previous.at || bytes < previous.bytes || files < previous.files) {
+                previous = { bytes, files, at: now };
+            }
             while (samples.length && now - samples[0].at > windowMs) samples.shift();
             const elapsed = samples.length ? now - samples[0].from : 0;
             const speed = elapsed > 0 ? samples.reduce((sum, sample) => sum + sample.bytes, 0) * 1000 / elapsed : 0;
