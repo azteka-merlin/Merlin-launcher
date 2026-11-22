@@ -77,7 +77,7 @@ const customGameTranslations = {
         custom_games_disk_space: 'Não há espaço suficiente no disco escolhido.',
         custom_games_permission: 'Sem permissão para gravar na pasta Merlin-games desse disco. Execute o Merlin como administrador e tente novamente.',
         custom_games_folder_exists: 'Já existe uma pasta com esse nome nesse disco. Escolha outro disco ou mova a pasta antes de instalar.',
-        custom_games_archive_failed: 'O ZIP está corrompido ou contém arquivos inseguros. Avise o suporte.',
+        custom_games_archive_failed: 'Não foi possível extrair o pacote do jogo. Entre em contato com o suporte e informe o código do erro.',
         custom_games_package_failed: 'Os arquivos do jogo estão incompletos ou inválidos. Avise o suporte.',
         custom_games_executable_missing: 'O executável cadastrado não existe no pacote do jogo. Avise o suporte.',
         custom_games_cancelled: 'Download cancelado e arquivos temporários removidos.',
@@ -159,7 +159,7 @@ const customGameTranslations = {
         custom_games_disk_space: 'Not enough space on the selected drive.',
         custom_games_permission: 'No permission to write to this drive’s Merlin-games folder. Run Merlin as administrator and try again.',
         custom_games_folder_exists: 'A folder with that name already exists on this drive. Choose another drive or move the folder first.',
-        custom_games_archive_failed: 'The ZIP is corrupt or contains unsafe files. Contact support.',
+        custom_games_archive_failed: 'Could not extract the game package. Contact support and include the error code.',
         custom_games_package_failed: 'Game files are incomplete or invalid. Contact support.',
         custom_games_executable_missing: 'The configured executable is missing from the game package. Contact support.',
         custom_games_cancelled: 'Download canceled and temporary files removed.',
@@ -241,7 +241,7 @@ const customGameTranslations = {
         custom_games_disk_space: 'No hay suficiente espacio en la unidad seleccionada.',
         custom_games_permission: 'No hay permiso para escribir en la carpeta Merlin-games. Ejecuta Merlin como administrador e inténtalo de nuevo.',
         custom_games_folder_exists: 'Ya existe una carpeta con ese nombre en la unidad. Elige otra unidad o mueve la carpeta.',
-        custom_games_archive_failed: 'El ZIP está dañado o contiene archivos inseguros. Contacta con soporte.',
+        custom_games_archive_failed: 'No se pudo extraer el paquete del juego. Contacta con soporte e indica el código del error.',
         custom_games_package_failed: 'Los archivos del juego están incompletos o no son válidos. Contacta con soporte.',
         custom_games_executable_missing: 'Falta el ejecutable configurado en el paquete del juego. Contacta con soporte.',
         custom_games_cancelled: 'Descarga cancelada y archivos temporales eliminados.',
@@ -323,7 +323,7 @@ const customGameTranslations = {
         custom_games_disk_space: 'Espace insuffisant sur le disque choisi.',
         custom_games_permission: 'Accès refusé au dossier Merlin-games du disque. Lancez Merlin en tant qu’administrateur, puis réessayez.',
         custom_games_folder_exists: 'Un dossier de ce nom existe déjà sur ce disque. Choisissez-en un autre ou déplacez le dossier.',
-        custom_games_archive_failed: 'Le ZIP est corrompu ou contient des fichiers dangereux. Contactez le support.',
+        custom_games_archive_failed: 'Impossible d’extraire le paquet du jeu. Contactez le support et indiquez le code d’erreur.',
         custom_games_package_failed: 'Les fichiers du jeu sont incomplets ou invalides. Contactez le support.',
         custom_games_executable_missing: 'L’exécutable configuré est absent du paquet du jeu. Contactez le support.',
         custom_games_cancelled: 'Téléchargement annulé et fichiers temporaires supprimés.',
@@ -405,7 +405,7 @@ const customGameTranslations = {
         custom_games_disk_space: 'Nicht genug Speicherplatz auf dem gewählten Laufwerk.',
         custom_games_permission: 'Keine Schreibberechtigung für den Merlin-games-Ordner. Starte Merlin als Administrator und versuche es erneut.',
         custom_games_folder_exists: 'Ein Ordner mit diesem Namen existiert bereits. Wähle ein anderes Laufwerk oder verschiebe den Ordner.',
-        custom_games_archive_failed: 'Die ZIP-Datei ist beschädigt oder enthält unsichere Dateien. Kontaktiere den Support.',
+        custom_games_archive_failed: 'Das Spielpaket konnte nicht entpackt werden. Kontaktiere den Support und gib den Fehlercode an.',
         custom_games_package_failed: 'Die Spieldateien sind unvollständig oder ungültig. Kontaktiere den Support.',
         custom_games_executable_missing: 'Die angegebene EXE fehlt im Spielepaket. Kontaktiere den Support.',
         custom_games_cancelled: 'Download abgebrochen und temporäre Dateien entfernt.',
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (code === 'executable_missing') return tr('custom_games_executable_missing');
         if (code === 'cancelled') return tr('custom_games_cancelled');
         if (code === 'invalid_folder_manifest' || code === 'invalid_range_response' || code === 'incomplete_download') return tr('custom_games_package_failed');
-        if (String(code || '').startsWith('archive_') || code === 'unsafe_archive_path' || code === 'duplicate_archive_path') return tr('custom_games_archive_failed');
+        if (String(code || '').startsWith('archive_') || code === 'unsafe_archive_path' || code === 'duplicate_archive_path') return `${tr('custom_games_archive_failed')} (${code})`;
         return tr('custom_games_operation_failed');
     }
 
