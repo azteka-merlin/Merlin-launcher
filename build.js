@@ -181,6 +181,10 @@ const dllsOnly = process.argv.includes('--opensteamtool-only') || process.argv.i
 if (dllsOnly) {
     console.log('OpenSteamTool Release DLLs are ready.');
 } else {
+    console.log('Building the restricted Merlin game operations service...');
+    execFileSync(process.execPath, [path.join(rootDir, 'scripts', 'build-game-operations-service.js')], {
+        cwd: rootDir, stdio: 'inherit',
+    });
     console.log('Cleaning previous Electron build artifacts...');
     cleanBuildDirectory(distDir);
     console.log('Building transparent Electron package...');

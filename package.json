@@ -1,6 +1,6 @@
 {
   "name": "merlin",
-  "version": "2.5.9",
+  "version": "2.5.10",
   "description": "Merlin game launcher for Windows",
   "main": "main.js",
   "scripts": {
@@ -53,6 +53,7 @@
     "files": [
       "**/*",
       "!build.js",
+      "!config.json",
       "!scripts{,/**/*}",
       "!cods-launchers{,/**/*}",
       "!*.obj",
@@ -66,7 +67,8 @@
       "!.vscode{,/**/*}",
       "!test{,/**/*}",
       "!docs{,/**/*}",
-      "!assets/dlls{,/**/*}"
+      "!assets/dlls{,/**/*}",
+      "!assets/game-operations{,/**/*}"
     ],
     "extraResources": [
       {
@@ -79,6 +81,10 @@
           "merlin-helper.dll",
           "merlin_cloud_redirect.dll"
         ]
+      },
+      {
+        "from": "assets/game-operations/MerlinGameOperationsService.exe",
+        "to": "game-operations/MerlinGameOperationsService.exe"
       }
     ],
     "win": {
@@ -88,7 +94,7 @@
       "icon": "assets/merlin-icon-compact.ico"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": true,
       "include": "scripts/installer.nsh"
     }

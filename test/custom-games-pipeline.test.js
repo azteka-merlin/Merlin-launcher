@@ -99,6 +99,24 @@ test('bundle extraction overlaps remaining downloads and counters span all bundl
     } finally { f.cleanup(); }
 });
 
+test('folder checkpoints survive a transient Windows sharing violation', { skip: process.platform !== 'win32' }, async () => {
+    const f = fixture();
+    const rename = fs.promises.rename;
+    let failures = 0;
+    try {
+        fs.promises.rename = async (from, to) => {
+            if (!failures && to === f.stateFile && fs.existsSync(to)) {
+                failures++;
+                throw Object.assign(new Error('sharing violation'), { code: 'EPERM' });
+            }
+            return rename(from, to);
+        };
+        const result = await f.create().install(f.item.id, 'X');
+        assert.equal(result.success, true, JSON.stringify(result));
+        assert.equal(failures, 1);
+    } finally { fs.promises.rename = rename; f.cleanup(); }
+});
+
 test('suspending keeps validated extracted bundles and resume does not redownload them', async () => {
     const f = fixture({ bundles: 2 });
     try {

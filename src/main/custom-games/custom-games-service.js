@@ -6,6 +6,7 @@ const { extractSafeZip, safeEntryPath } = require('./safe-zip');
 const { createTransferMeter, createTaskLimiter } = require('./transfer-progress');
 const { normalizeIntegrityManifest, verifyInstalledFiles } = require('./integrity');
 const { createUpdatePlan, stageUpdate, applyUpdate, recoverUpdate, removeWorkspace, protectedFile } = require('./update-files');
+const { privilegedGameOperations } = require('./privileged-game-operations');
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
@@ -107,7 +108,7 @@ async function findRunningExecutables(targets) {
         .filter(value => typeof value === 'string'));
 }
 
-async function requestCloseExecutable(executablePath, installRoot) {
+async function requestCloseExecutable(executablePath, installRoot, privilegedCloseGame = privilegedGameOperations.closeGame) {
     if (process.platform !== 'win32') throw new Error('game_close_unsupported');
     const encoded = Buffer.from(JSON.stringify({ executable: executablePath, root: installRoot }), 'utf8').toString('base64');
     const command = `$target = ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}'))); ` +
@@ -133,8 +134,21 @@ async function requestCloseExecutable(executablePath, installRoot) {
         'if (-not $remaining.Count) { [Console]::Out.Write("closed"); exit 0 }; ' +
         'Start-Sleep -Milliseconds 400 } while ([DateTime]::UtcNow -lt $deadline); ' +
         'if ($accessDenied) { [Console]::Out.Write("access_denied") } else { [Console]::Out.Write("timeout") }';
-    try { return await runPowerShell(command, 22000); }
-    catch { throw new Error('game_process_check_failed'); }
+    let result;
+    try { result = await runPowerShell(command, 22000); }
+    catch { result = 'access_denied'; }
+    if (result === 'closed' || result === 'not_running') return result;
+    if (!['access_denied', 'timeout'].includes(result)) return result;
+
+    try {
+        const relativeExecutable = path.relative(installRoot, executablePath).replace(/\\/g, '/');
+        const elevated = await privilegedCloseGame({ root: installRoot, executable: relativeExecutable, graceMilliseconds: 0 });
+        if (elevated?.success) return 'closed';
+        if (elevated?.code === 'game_not_running') return result === 'not_running' ? result : 'closed';
+        if (['access_denied', 'game_path_not_allowed'].includes(elevated?.code)) return 'access_denied';
+        if (elevated?.code === 'close_timeout') return 'timeout';
+    } catch { /* An uninstalled helper leaves the existing same-user close path available. */ }
+    return result;
 }
 
 function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, testDriveRoot = null,
@@ -150,6 +164,37 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
     const integrityProblems = new Map();
     let catalog = initialCatalog || loadJson(cacheFile, []);
     let registry = loadJson(registryFile, {});
+
+    async function ensureGameRootAccess(letter) {
+        if (process.platform !== 'win32') return;
+        const drive = String(letter || '').trim().toUpperCase();
+        if (!/^[C-Z]$/.test(drive)) throw new Error('invalid_drive');
+        if (testDriveRoot) {
+            const testGamesRoot = path.join(testDriveRoot(drive), 'Merlin-games');
+            await fs.promises.mkdir(testGamesRoot, { recursive: true });
+            await fs.promises.access(testGamesRoot, fs.constants.R_OK | fs.constants.W_OK);
+            return;
+        }
+        const gamesRoot = `${drive}:\\Merlin-games`;
+        try {
+            await fs.promises.mkdir(gamesRoot, { recursive: true });
+            await fs.promises.access(gamesRoot, fs.constants.R_OK | fs.constants.W_OK);
+            return;
+        } catch (error) {
+            if (!['EACCES', 'EPERM', 'ENOENT'].includes(error.code)) throw error;
+        }
+
+        const result = await privilegedGameOperations.prepareDrive(drive);
+        if (!result?.success) {
+            const error = new Error(result?.code === 'helper_unavailable'
+                ? 'game_folder_permission_helper_missing' : 'game_folder_permission_failed');
+            error.helperCode = result?.code || null;
+            throw error;
+        }
+        try {
+            await fs.promises.access(gamesRoot, fs.constants.R_OK | fs.constants.W_OK);
+        } catch { throw new Error('game_folder_permission_failed'); }
+    }
 
     function loadJson(file, fallback) {
         try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -173,7 +218,14 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const temp = `${file}.${process.pid}.${randomUUID()}.tmp`;
         try {
             await fs.promises.writeFile(temp, JSON.stringify(value), 'utf8');
-            await fs.promises.rename(temp, file);
+            for (let attempt = 0; ; attempt++) {
+                try { await fs.promises.rename(temp, file); break; }
+                catch (error) {
+                    if (process.platform !== 'win32' || attempt >= 4 ||
+                        !['EPERM', 'EACCES', 'EBUSY'].includes(error.code)) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 20 * (attempt + 1)));
+                }
+            }
         } finally { await fs.promises.unlink(temp).catch(() => {}); }
     }
 
@@ -1073,13 +1125,19 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         };
         const orderedFiles = normalizedFiles.filter(file => localSizes.get(file.id) !== file.sizeBytes)
             .sort((a, b) => b.sizeBytes - a.sizeBytes);
+        let firstFailure;
+        const stopWorkers = error => {
+            firstFailure ??= error;
+            operation.controller.abort();
+            throw error;
+        };
         const runQueue = async (queue, workers) => {
             let next = 0;
             const worker = async () => {
                 while (next < queue.length) {
                     const file = queue[next++];
                     try { await downloadFile(file); }
-                    catch (error) { operation.controller.abort(); throw error; }
+                    catch (error) { stopWorkers(error); }
                 }
             };
             const results = await Promise.allSettled(Array.from({ length: Math.min(workers, queue.length) }, worker));
@@ -1094,11 +1152,11 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             await runQueue(orderedFiles.filter(file => file.sizeBytes < SMALL_FILE_LIMIT), SMALL_FILE_WORKERS);
         })();
         const results = await Promise.allSettled([
-            transfers.catch(error => { operation.controller.abort(); throw error; }),
-            ...readyBundles.map(bundle => extractBundle(bundle).catch(error => { operation.controller.abort(); throw error; })),
+            transfers.catch(stopWorkers),
+            ...readyBundles.map(bundle => extractBundle(bundle).catch(stopWorkers)),
         ]);
         const failure = results.find(result => result.status === 'rejected');
-        if (failure) throw failure.reason;
+        if (failure) throw firstFailure || failure.reason;
         if (normalizedFiles.some(file => localSizes.get(file.id) !== file.sizeBytes)) throw new Error('incomplete_download');
         report(true);
         await saveJson(stateFile, state);
@@ -1146,6 +1204,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             ? `.merlin-installing-${item.id}` : `.merlin-installing-${item.id}-${require('node:crypto').randomUUID()}`);
         let folderDownloadComplete = false;
         try {
+            await ensureGameRootAccess(letter);
             await openDownloadSession(operation);
             const files = folderPackage
                 ? await downloadFolder(item, letter, operation, staging, onProgress)
@@ -1310,6 +1369,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             ? `.merlin-updating-${id}` : `.merlin-updating-${id}-${randomUUID()}`);
         try {
             emit(operation, onProgress, 'preparing', { kind, preparation: 'recovering' }, true);
+            await ensureGameRootAccess(current.drive);
             await recoverUpdate(current.path, id);
             const marker = loadJson(path.join(current.path, MARKER), null);
             if (repairing && (marker?.archiveKey !== item.archiveKey || !Array.isArray(options.repairPaths) ||
@@ -1455,6 +1515,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         let movedToTrash = false;
         try {
             const { current } = requireInstalled(id);
+            await ensureGameRootAccess(current.drive);
             try { await shell.trashItem(current.path); }
             catch (electronError) {
                 if (process.platform !== 'win32') throw electronError;

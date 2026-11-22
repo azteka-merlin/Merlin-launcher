@@ -142,7 +142,7 @@ test('installer rechecks Steam after extraction and before copying any DLL', () 
     const install = installer.match(/!macro customInstall\b([\s\S]*?)!macroend/);
     assert.ok(install, 'The production installer must define customInstall.');
     const shutdown = install[1].indexOf('Call MerlinEnsureSteamClosed');
-    const firstCopy = install[1].indexOf('CopyFileW');
+    const firstCopy = install[1].indexOf('--install-steam-dlls');
     assert.ok(shutdown >= 0, 'customInstall must recheck and close Steam.');
     assert.ok(firstCopy > shutdown, 'Steam must close immediately before destination DLL writes.');
     const beforeCopy = install[1].slice(shutdown, firstCopy);

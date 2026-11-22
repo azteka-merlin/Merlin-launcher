@@ -56,6 +56,22 @@ function checkSymlinkSupport(required) {
         fs.symlinkSync(targetPath, linkPath, 'file');
         ok('Windows symlink creation is available.');
     } catch (error) {
+        if (required && process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code)) {
+            // Use the same artifact resolver as the installed electron-builder.
+            const probe = spawnSync(process.execPath, ['-e', `
+                const fs = require('node:fs');
+                const path = require('node:path');
+                require('app-builder-lib/out/codeSign/windowsCodeSign').getSignVendorPath().then(dir => {
+                    for (const file of ['rcedit-x64.exe', 'windows-10/x64/signtool.exe']) {
+                        if (!fs.statSync(path.join(dir, file)).size) process.exitCode = 1;
+                    }
+                }).catch(() => { process.exitCode = 1; });
+            `], { cwd: rootDir, timeout: 30000, windowsHide: true, stdio: 'ignore' });
+            if (probe.status === 0) {
+                ok('Electron Builder resolved the Windows build tools despite restricted symlink creation.');
+                return;
+            }
+        }
         const message = 'Windows symlink creation is blocked. Electron Builder needs this while extracting winCodeSign. Enable Windows Developer Mode or run the build terminal as Administrator.';
         if (required) {
             fail(message);

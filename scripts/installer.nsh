@@ -1,9 +1,11 @@
 !include "getProcessInfo.nsh"
+!include "MUI2.nsh"
 Var pid
 !ifndef BUILD_UNINSTALLER
 Var steamInstallPath
-Var steamCopyFile
-Var steamCopyError
+Var merlinServiceCheckbox
+Var merlinServiceChoice
+!include "nsDialogs.nsh"
 !endif
 
 !include "${__FILEDIR__}\steam-shutdown.nsh"
@@ -23,21 +25,16 @@ Var steamCopyError
       ${endIf}
 
       doStopProcess:
-
       DetailPrint `Closing running "${PRODUCT_NAME}"...`
-
       !ifdef INSTALL_MODE_PER_ALL_USERS
         nsExec::Exec `taskkill /im "${APP_EXECUTABLE_FILENAME}" /fi "PID ne $pid"`
       !else
         nsExec::Exec `%SYSTEMROOT%\System32\cmd.exe /c taskkill /im "${APP_EXECUTABLE_FILENAME}" /fi "PID ne $pid" /fi "USERNAME eq %USERNAME%"`
       !endif
       Sleep 300
-
       StrCpy $R1 0
-
       loop:
         IntOp $R1 $R1 + 1
-
         !insertmacro FIND_PROCESS "${APP_EXECUTABLE_FILENAME}" $R0
         ${if} $R0 == 0
           Sleep 1000
@@ -56,7 +53,6 @@ Var steamCopyError
         ${else}
           Goto not_running
         ${endIf}
-
         ${if} $R1 > 1
           DetailPrint 'Unable to close Merlin; stopping installation.'
           SetErrorLevel 1
@@ -69,16 +65,48 @@ Var steamCopyError
   ${endIf}
 !macroend
 
+!macro customPageAfterChangeDir
+  !insertmacro skipPageIfUpdated
+  Page custom MerlinOptionsPageCreate MerlinOptionsPageLeave
+!macroend
+
+!ifndef BUILD_UNINSTALLER
+Function MerlinOptionsPageCreate
+  !insertmacro MUI_HEADER_TEXT "Opções do Merlin" "O serviço auxiliar é obrigatório para instalar o Merlin."
+  nsDialogs::Create 1018
+  Pop $0
+  ${If} $0 == error
+    Abort
+  ${EndIf}
+  ${NSD_CreateLabel} 0u 0u 100% 28u "O Merlin configura a pasta de jogos para você instalar, atualizar e remover jogos sem pedidos repetidos de permissão."
+  Pop $0
+  ${NSD_CreateCheckbox} 0u 36u 100% 18u "Instalar o serviço auxiliar do Merlin (obrigatório)"
+  Pop $merlinServiceCheckbox
+  ${NSD_Check} $merlinServiceCheckbox
+  ${NSD_CreateLabel} 18u 56u 90% 28u "Necessário para preparar outras unidades e fechar jogos que o Windows bloquearia para o Launcher."
+  Pop $0
+  nsDialogs::Show
+FunctionEnd
+
+Function MerlinOptionsPageLeave
+  ${NSD_GetState} $merlinServiceCheckbox $merlinServiceChoice
+  ${If} $merlinServiceChoice != ${BST_CHECKED}
+    MessageBox MB_ICONEXCLAMATION|MB_OK "O serviço auxiliar é obrigatório para instalar o Merlin. Marque essa opção para continuar."
+    Abort
+  ${EndIf}
+FunctionEnd
+!endif
+
 !macro customInit
-  ; Per-machine installs must never continue without an elevated process.
-  ; This also blocks any unexpected non-admin fallback after a denied UAC prompt.
+  StrCpy $merlinServiceChoice ${BST_CHECKED}
+
   ${IfNot} ${UAC_IsAdmin}
-    MessageBox MB_ICONSTOP|MB_OK "Administrator permission is required to install Merlin. The installation will now close."
+    MessageBox MB_ICONSTOP|MB_OK "A instalação do Merlin precisa de permissão de administrador. O instalador será fechado."
     SetErrorLevel 740
     Quit
   ${EndIf}
 
-  ; Resolve the Steam client itself, which can be installed on any drive.
+  ; The Steam runtime DLLs are required by Merlin, so close Steam before install.
   ReadRegStr $steamInstallPath HKCU "Software\Valve\Steam" "SteamPath"
   ${IfNot} ${FileExists} "$steamInstallPath\steam.exe"
     ReadRegStr $steamInstallPath HKLM "Software\WOW6432Node\Valve\Steam" "InstallPath"
@@ -89,101 +117,80 @@ Var steamCopyError
 
   Call MerlinEnsureSteamClosed
   ${If} $steamCloseReady != "1"
-    MessageBox MB_ICONSTOP|MB_OK "Steam could not be closed. No Steam files were changed. $steamCloseError"
+    MessageBox MB_ICONSTOP|MB_OK "A Steam precisa estar fechada para instalar os componentes necessários do Merlin. $steamCloseError"
     SetErrorLevel 1
     Quit
   ${EndIf}
 !macroend
 
 !macro customInstall
-  ; Extraction and uninstall can take time. Steam may have reopened since .onInit.
-  ; Check again at the actual copy boundary, after the old Merlin has been closed.
-  Call MerlinEnsureSteamClosed
-  ${If} $steamCloseReady != "1"
-    MessageBox MB_ICONSTOP|MB_OK "Merlin was installed, but Steam could not be closed. No Steam files were changed. $steamCloseError"
+  SetShellVarContext all
+  ; Configure only the default game root. The helper grants inherited Modify to
+  ; the interactive user's SID and preserves the rest of the NTFS ACL.
+  nsExec::ExecToStack '"$INSTDIR\resources\game-operations\MerlinGameOperationsService.exe" --configure-game-folders'
+  Pop $0
+  Pop $1
+  ${If} $0 != 0
+    ${If} ${isUpdated}
+      DetailPrint "Could not refresh Merlin-games permissions ($0). See $APPDATA\Merlin\GameOperations\operations.log."
+    ${Else}
+      MessageBox MB_ICONSTOP|MB_OK "Não foi possível configurar permissões de Modificar para C:\Merlin-games. A instalação foi interrompida. Detalhes: $APPDATA\Merlin\GameOperations\operations.log"
+      SetErrorLevel 1
+      Quit
+    ${EndIf}
+  ${EndIf}
+
+  ; The service is required for fresh installs and upgrades from older versions.
+  nsExec::ExecToStack '"$INSTDIR\resources\game-operations\MerlinGameOperationsService.exe" --install-service'
+  Pop $0
+  Pop $1
+  ${If} $0 != 0
+    MessageBox MB_ICONSTOP|MB_OK "Falha ao instalar o serviço auxiliar obrigatório ($0). Consulte $APPDATA\Merlin\GameOperations\operations.log." /SD IDOK
     SetErrorLevel 1
     Quit
+  ${Else}
+    WriteRegDWORD HKLM "Software\Merlin\GameOperations" "ServiceEnabled" 1
   ${EndIf}
-  StrCpy $0 "$steamInstallPath"
 
-  ${If} ${FileExists} "$0\steam.exe"
-    StrCpy $1 "0"
-
-    ${If} $1 == "0"
-      StrCpy $steamCopyFile "OpenSteamTool.dll"
-      StrCpy $steamCopyError "2"
-      ${If} ${FileExists} "$INSTDIR\resources\dlls\OpenSteamTool.dll"
-        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\OpenSteamTool.dll", w "$0\OpenSteamTool.dll", i 0) i.r2 ?e'
-        Pop $steamCopyError
-        ${If} $2 == 0
-          StrCpy $1 "1"
-        ${EndIf}
-      ${Else}
-        StrCpy $1 "1"
-      ${EndIf}
+  ${If} ${FileExists} "$steamInstallPath\steam.exe"
+    ; Steam may have reopened during extraction. Close it again before copying.
+    Call MerlinEnsureSteamClosed
+    ${If} $steamCloseReady != "1"
+      MessageBox MB_ICONSTOP|MB_OK "A Steam não pôde ser fechada. Nenhum arquivo da Steam foi alterado. $steamCloseError"
+      SetErrorLevel 1
+      Quit
     ${EndIf}
 
-    ${If} $1 == "0"
-      StrCpy $steamCopyFile "dwmapi.dll"
-      StrCpy $steamCopyError "2"
-      ${If} ${FileExists} "$INSTDIR\resources\dlls\dwmapi.dll"
-        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\dwmapi.dll", w "$0\dwmapi.dll", i 0) i.r2 ?e'
-        Pop $steamCopyError
-        ${If} $2 == 0
-          StrCpy $1 "1"
-        ${EndIf}
-      ${Else}
-        StrCpy $1 "1"
-      ${EndIf}
-    ${EndIf}
-
-    ${If} $1 == "0"
-      StrCpy $steamCopyFile "xinput1_4.dll"
-      StrCpy $steamCopyError "2"
-      ${If} ${FileExists} "$INSTDIR\resources\dlls\xinput1_4.dll"
-        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\xinput1_4.dll", w "$0\xinput1_4.dll", i 0) i.r2 ?e'
-        Pop $steamCopyError
-        ${If} $2 == 0
-          StrCpy $1 "1"
-        ${EndIf}
-      ${Else}
-        StrCpy $1 "1"
-      ${EndIf}
-    ${EndIf}
-
-    ${If} $1 == "0"
-      StrCpy $steamCopyFile "merlin_cloud_redirect.dll"
-      StrCpy $steamCopyError "2"
-      ${If} ${FileExists} "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll"
-        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\merlin_cloud_redirect.dll", w "$0\merlin_cloud_redirect.dll", i 0) i.r2 ?e'
-        Pop $steamCopyError
-        ${If} $2 == 0
-          StrCpy $1 "1"
-        ${EndIf}
-      ${Else}
-        StrCpy $1 "1"
-      ${EndIf}
-    ${EndIf}
-
-    ${If} $1 == "0"
-      StrCpy $steamCopyFile "merlin-helper.dll"
-      StrCpy $steamCopyError "2"
-      ${If} ${FileExists} "$INSTDIR\resources\dlls\merlin-helper.dll"
-        System::Call 'kernel32::CopyFileW(w "$INSTDIR\resources\dlls\merlin-helper.dll", w "$0\merlin-helper.dll", i 0) i.r2 ?e'
-        Pop $steamCopyError
-        ${If} $2 == 0
-          StrCpy $1 "1"
-        ${EndIf}
-      ${Else}
-        StrCpy $1 "1"
-      ${EndIf}
-    ${EndIf}
-
-    ${If} $1 == "1"
-      FileOpen $2 "$INSTDIR\merlin-steam-install.log" w
-      FileWrite $2 "File: $steamCopyFile$\r$\nWindows error: $steamCopyError$\r$\nSteam: $steamInstallPath$\r$\n"
-      FileClose $2
-      MessageBox MB_ICONEXCLAMATION|MB_OK "Merlin could not copy $steamCopyFile to Steam. Windows error: $steamCopyError.$\r$\nDetails: $INSTDIR\merlin-steam-install.log$\r$\nUse Repair inside Merlin after resolving the error."
+    nsExec::ExecToStack '"$INSTDIR\resources\game-operations\MerlinGameOperationsService.exe" --install-steam-dlls "$steamInstallPath" "$INSTDIR\resources\dlls"'
+    Pop $0
+    Pop $1
+    ${If} $0 != 0
+      MessageBox MB_ICONEXCLAMATION|MB_OK "O Merlin foi instalado, mas não foi possível copiar e verificar os componentes da Steam ($0). Consulte $APPDATA\Merlin\GameOperations\operations.log e use Verificar/Repair."
+      WriteRegDWORD HKLM "Software\Merlin\GameOperations" "SteamIntegrationEnabled" 0
+    ${Else}
+      WriteRegDWORD HKLM "Software\Merlin\GameOperations" "SteamIntegrationEnabled" 1
     ${EndIf}
   ${EndIf}
+  SetShellVarContext current
+!macroend
+
+!macro customUnInstall
+  SetShellVarContext all
+  ${IfNot} ${isUpdated}
+    ReadRegDWORD $2 HKLM "Software\Merlin\GameOperations" "ServiceEnabled"
+    ${If} $2 == 1
+      nsExec::ExecToStack '"$APPDATA\Merlin\GameOperations\MerlinGameOperationsService.exe" --remove-service'
+      Pop $0
+      Pop $1
+      ${If} $0 == 0
+        Delete "$APPDATA\Merlin\GameOperations\MerlinGameOperationsService.exe"
+        DeleteRegKey HKLM "Software\Merlin\GameOperations"
+      ${Else}
+        MessageBox MB_ICONEXCLAMATION|MB_OK "O serviço auxiliar do Merlin não pôde ser removido ($0). Consulte $APPDATA\Merlin\GameOperations\operations.log."
+      ${EndIf}
+    ${Else}
+      DeleteRegKey HKLM "Software\Merlin\GameOperations"
+    ${EndIf}
+  ${EndIf}
+  SetShellVarContext current
 !macroend

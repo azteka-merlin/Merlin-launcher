@@ -21,6 +21,7 @@ tmp/
 .deps/
 OpenSteamTool/build/
 vendor/CloudRedirect/build/
+/assets/game-operations/*.exe
 
 # Manifesto de integridade gerado durante o build
 dist/integrity.json

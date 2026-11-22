@@ -219,15 +219,18 @@ if (!app.isPackaged) {
     const devUserData = path.join(devDataRoot, 'User Data');
     const devSessionData = path.join(devDataRoot, 'Session Data');
     fs.mkdirSync(devUserData, { recursive: true });
+    const devConfig = path.join(devUserData, 'config.json');
+    if (!fs.existsSync(devConfig)) {
+        try { fs.copyFileSync(path.join(__dirname, 'config.json'), devConfig, fs.constants.COPYFILE_EXCL); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+    }
     fs.mkdirSync(devSessionData, { recursive: true });
     app.setPath('userData', devUserData);
     app.setPath('sessionData', devSessionData);
 }
 
 function getConfigFilePath() {
-    return app.isPackaged
-        ? path.join(app.getPath('userData'), 'config.json')
-        : path.join(__dirname, 'config.json');
+    return path.join(app.getPath('userData'), 'config.json');
 }
 
 function getLibraryFilePath() {
