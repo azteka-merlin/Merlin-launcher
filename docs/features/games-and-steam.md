@@ -11,6 +11,12 @@
 - `steam_path_missing`, `steam_path_invalid` e `required_files_missing` devem direcionar para configurar/reparar, nunca iniciar instalacao.
 - Restart fecha Steam, espera tres segundos e a abre novamente; exige readiness completo.
 
+## Intervalo da Hubcap
+
+- A API permite uma tentativa de manifest da Hubcap a cada 10 segundos por chave da fonte. Se o intervalo ainda estiver ativo, passa imediatamente para a proxima fonte configurada.
+- Esse intervalo nao se aplica a Ryuu, DepotBox, Steam API ou aos fallbacks. O launcher nao adiciona espera geral entre chamadas a API de manifests.
+- O bloqueio por cota diaria esgotada da Hubcap continua separado e respeita a renovacao da cota.
+
 ## Descoberta do jogo
 
 - Entrada aceita link Steam/SteamDB suportado, App ID do catalogo ou sugestao selecionada.
@@ -35,6 +41,8 @@
 3. Se vier JSON `success: false`, tratar como resultado de negocio antes de validar ZIP.
 4. Validar ZIP, extrair em temporario e copiar `.manifest` para `depotcache` e `.lua` para `config/stplug-in`.
 5. Exigir ao menos um arquivo reconhecido copiado e invalidar Biblioteca.
+
+Depois de uma instalacao bem-sucedida, o launcher inicia em segundo plano o registro do App ID no catalogo central. A API preserva um App ID ja cadastrado; se estiver ausente, consulta a Steam e depois o DepotBox para obter um nome confirmado. Falha desse registro nao altera o resultado da instalacao. O launcher deve usar a API do ambiente configurado; publique a rota da API antes de distribuir um launcher que a chama.
 
 Nao gravar arquivos em outros destinos. Temporarios devem ser limpos tambem em falha.
 
