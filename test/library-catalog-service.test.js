@@ -17,10 +17,28 @@ function createFixture(initialGames = {}) {
                 state.games = { ...games };
                 state.syncedAt = syncedAt || null;
             },
+            upsertMany: games => Object.assign(state.games, games),
             get: appId => state.games[appId] || null
         }
     };
 }
+
+test('central name sync does not turn a Ryuu fallback into a cached cover', async () => {
+    const fixture = createFixture();
+    const service = createLibraryCatalogService({
+        catalogStore: fixture.catalogStore,
+        catalogClient: {
+            downloadForAppIds: async () => ({
+                '123': { name: 'Verified title', coverUrl: 'https://generator.ryuu.lol/files/images/123.jpg', coverSource: 'ryuu_image' }
+            })
+        }
+    });
+
+    const result = await service.syncAppIds(['123']);
+    assert.equal(result['123'].name, 'Verified title');
+    assert.equal(result['123'].coverUrl, null);
+    assert.equal(fixture.catalogStore.get('123').coverUrl, null);
+});
 
 test('search refreshes the catalog once when no local name match is found', async () => {
     let downloads = 0;

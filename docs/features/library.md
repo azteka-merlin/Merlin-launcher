@@ -4,6 +4,7 @@
 
 - A Biblioteca representa arquivos `Steam/config/stplug-in/<appid>.lua`, nao todos os jogos instalados na Steam.
 - Le `libraryfolders.vdf` para localizar bibliotecas Steam e catalogos/caches para nome e capa.
+- A listagem local responde primeiro; a atualizacao de metadados consulta `games_catalog` por App ID para todos os jogos gerenciados, inclusive os que ja tem nome no cache, e corrige nomes divergentes em segundo plano.
 - Falha em metadados remotos nao deve ocultar App IDs locais. Atualizacao forcada tenta enriquecer novamente.
 - Busca, pagina e estados vazios sao responsabilidade visual do renderer sobre os itens retornados.
 

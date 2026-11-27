@@ -73,6 +73,32 @@ test('blocks install now while the queue contains any game', async () => {
     assert.equal(result.code, 'queue_not_empty');
 });
 
+test('catalog registration runs in background only after a successful installation', async () => {
+    const registered = [];
+    const service = createAddGamesService({
+        parseSteamGameLink: link => ({ appId: link, fallbackName: `Game ${link}` }),
+        nameResolver: { resolve: async (_appId, fallback) => fallback },
+        catalogService: {
+            resolveByAppId: async appId => ({ appId, name: `Game ${appId}` }),
+            registerInstalled: appId => {
+                registered.push(appId);
+                return new Promise(() => {});
+            }
+        },
+        queue: createGameQueue(),
+        gameInstaller: { install: async ({ appId }) => ({ success: appId === '1' }) },
+        configStore: { get: () => ({ steamPath: 'C:\\Steam' }) },
+        steamService: {}
+    });
+
+    assert.equal((await service.installNow({ selected: { appId: '1', name: 'Game 1' } })).success, true);
+    await Promise.resolve();
+    assert.deepEqual(registered, ['1']);
+    assert.equal((await service.installNow({ selected: { appId: '2', name: 'Game 2' } })).success, false);
+    await Promise.resolve();
+    assert.deepEqual(registered, ['1']);
+});
+
 test('searches the catalog and installs a selected game with cover metadata', async () => {
     let receivedAutoUpdate = null;
     const service = createAddGamesService({

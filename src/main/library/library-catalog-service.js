@@ -51,6 +51,18 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return withCovers;
     }
 
+    async function syncAppIds(appIds) {
+        const downloaded = await catalogClient.downloadForAppIds(appIds);
+        const games = Object.fromEntries(Object.entries(downloaded)
+            .map(([appId, entry]) => [appId, normalizeEntry(appId, entry)]));
+        catalogStore.upsertMany(games);
+        return games;
+    }
+
+    async function registerInstalled(appId) {
+        return searchClient?.registerInstalled?.(appId) || false;
+    }
+
     function findByAppId(appId) {
         const entry = normalizeEntry(appId, catalogStore.get(appId));
         if (!entry) return null;
@@ -246,7 +258,7 @@ function createLibraryCatalogService({ catalogStore, catalogClient, searchClient
         return (await searchWithStatus(query, options)).items;
     }
 
-    return { ensureLoaded, enrichAppIds, findByAppId, lookupMetadata, refresh, rememberEntries, resolveByAppId, search, searchWithStatus };
+    return { ensureLoaded, enrichAppIds, findByAppId, lookupMetadata, syncAppIds, registerInstalled, refresh, rememberEntries, resolveByAppId, search, searchWithStatus };
 }
 
 module.exports = { createLibraryCatalogService };

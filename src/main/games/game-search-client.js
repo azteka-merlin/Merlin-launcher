@@ -69,7 +69,37 @@ function createGameSearchClient({
             .filter(Boolean);
     }
 
-    return { search };
+    async function registerInstalled(appId) {
+        const normalizedAppId = String(appId || '').trim();
+        if (!/^\d+$/.test(normalizedAppId)) return false;
+        const endpoint = url.replace(/\/search$/, '/catalog/installed');
+        const send = async token => axios.post(endpoint, { appId: normalizedAppId }, {
+            timeout: 5000,
+            httpsAgent,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+                'User-Agent': 'Merlin/2.0'
+            }
+        });
+        try {
+            let response;
+            try {
+                response = await send(await authSession.getAccessToken());
+            } catch (error) {
+                if (error?.response?.status !== 401) throw error;
+                await authSession.handleUnauthorized();
+                response = await send(await authSession.getAccessToken());
+            }
+            return response.data?.registered === true;
+        } catch (error) {
+            console.warn(`Unable to register installed game ${normalizedAppId} in Merlin catalog:`, error.message);
+            return false;
+        }
+    }
+
+    return { search, registerInstalled };
 }
 
 module.exports = {

@@ -107,6 +107,13 @@ function createAddGamesService({
 }) {
     let installing = false;
 
+    function registerInstalledInBackground(appId) {
+        if (typeof catalogService?.registerInstalled !== 'function') return;
+        void Promise.resolve()
+            .then(() => catalogService.registerInstalled(appId))
+            .catch(error => console.warn(`Unable to register installed game ${appId}:`, error.message));
+    }
+
     function queueState() {
         const items = queue.list();
         return { items, count: items.length, locked: queue.isLocked(), installing };
@@ -314,6 +321,7 @@ function createAddGamesService({
             }));
             if (result.success) {
                 libraryService?.recordName(resolved.item.appId, resolved.item);
+                registerInstalledInBackground(resolved.item.appId);
             }
             return { ...result, item: resolved.item };
         } finally {
@@ -359,6 +367,7 @@ function createAddGamesService({
 
                 if (result.success) {
                     libraryService?.recordName(item.appId, item);
+                    registerInstalledInBackground(item.appId);
                     installed.push(item);
                     queue.remove(item.appId, true);
                     events.queueUpdated?.(queueState());

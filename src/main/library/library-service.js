@@ -154,6 +154,17 @@ function createLibraryService({
             if (!paths.success) return paths;
             const before = JSON.stringify(cachedItems || []);
             const appIds = managedLuaFiles(paths.luaDirectory).map(file => file.appId);
+            if (appIds.length > 0 && typeof catalogService.syncAppIds === 'function') {
+                try {
+                    const centralEntries = await catalogService.syncAppIds(appIds);
+                    if (generation !== metadataGeneration) return { success: false, code: 'superseded' };
+                    for (const [appId, entry] of Object.entries(centralEntries)) {
+                        if (entry?.name) applyCatalogData(appId, entry);
+                    }
+                } catch (error) {
+                    console.warn('Unable to sync Library names with Merlin catalog:', error.message);
+                }
+            }
             if (typeof catalogService.lookupMetadata === 'function') {
                 const missingCovers = [...new Set(appIds)].filter(appId =>
                     !cacheStore.get(appId)?.coverUrl && !catalogStore.get(appId)?.coverUrl

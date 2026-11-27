@@ -65,6 +65,7 @@ function serviceFor(fixture, download, overrides = {}) {
         catalogStore: fixture.catalogStore,
         catalogService: {
             ...(overrides.lookupMetadata ? { lookupMetadata: overrides.lookupMetadata } : {}),
+            ...(overrides.syncAppIds ? { syncAppIds: overrides.syncAppIds } : {}),
             enrichAppIds: async (appIds, { allowCatalogRefresh = true } = {}) => {
                 assert.equal(allowCatalogRefresh, false, 'Library must never download the Ryuu catalog');
                 const downloaded = await download();
@@ -141,6 +142,23 @@ test('uses the local catalog before downloading the remote catalog', async t => 
     assert.equal(downloads, 0);
     assert.equal(fixture.cache['2'].name, 'Catalog Game');
     assert.equal(fixture.cache['2'].coverUrl, 'https://example.com/catalog.jpg');
+});
+
+test('refresh synchronizes a cached name from the central Merlin catalog', async t => {
+    const fixture = createFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(fixture.luaDirectory, '4321.lua'), 'addappid(4321)');
+    fixture.cache['4321'] = { name: 'Old local title', coverUrl: null, coverSource: null };
+    const service = serviceFor(fixture, async () => { throw new Error('No search expected'); }, {
+        syncAppIds: async appIds => {
+            assert.deepEqual(appIds, ['4321']);
+            return { '4321': { name: 'Correct catalog title', coverUrl: null, coverSource: null } };
+        }
+    });
+
+    const result = await service.refreshMetadata();
+    assert.equal(result.success, true);
+    assert.equal(result.items[0].gameName, 'Correct catalog title');
 });
 
 test('returns the local library first and enriches missing metadata separately', async t => {
