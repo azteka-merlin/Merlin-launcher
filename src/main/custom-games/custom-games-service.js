@@ -8,10 +8,10 @@ const { normalizeIntegrityManifest, verifyInstalledFiles } = require('./integrit
 const { createUpdatePlan, stageUpdate, applyUpdate, recoverUpdate, removeWorkspace, protectedFile } = require('./update-files');
 const { privilegedGameOperations } = require('./privileged-game-operations');
 const { removeGameFiles } = require('./remove-game-files');
+const { MAX_R2_OBJECT_BYTES } = require('./size-limits');
 
 const CHUNK_SIZE = 64 * 1024 * 1024;
 const FOLDER_CHUNK_SIZE = 256 * 1024 * 1024;
-const MAX_FOLDER_BUNDLES = 2500;
 const MAX_BUNDLE_MEMBER_SIZE = 200 * 1024 * 1024;
 const DOWNLOAD_WORKERS = 4;
 const SMALL_FILE_WORKERS = 12;
@@ -39,7 +39,7 @@ function validFolderManifestFileCount(files) {
 
 function validArchiveSize(value) {
     const size = Number(value);
-    return Number.isSafeInteger(size) && size > 0 && size <= 100 * 1024 ** 3;
+    return Number.isSafeInteger(size) && size > 0 && size <= MAX_R2_OBJECT_BYTES;
 }
 
 function requiredFreeBytes(archiveSize, partialSize = 0, packageType = 'zip') {
@@ -262,7 +262,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         }
         const folder = loadJson(path.join(downloads, `${item.id}.folder.json`), null);
         if (folder?.id === item.id && typeof folder.packageKey === 'string' && Number.isSafeInteger(folder.totalBytes) &&
-            folder.totalBytes > 0 && folder.totalBytes <= 200 * 1024 ** 3 &&
+            folder.totalBytes > 0 &&
             fs.existsSync(path.join(gamesRoot, `.merlin-installing-${item.id}`))) {
             return { ...item, ...folder.snapshot, id: item.id, archiveKey: folder.packageKey,
                 archiveSize: folder.totalBytes, packageType: 'folder' };
@@ -697,8 +697,8 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const finalFileCount = (Array.isArray(files) ? files.length : 0) +
             (Array.isArray(bundles) ? bundles.reduce((sum, bundle) => sum + (Array.isArray(bundle.files) ? bundle.files.length : 0), 0) : 0);
         if (manifest?.gameId !== item.id || !Array.isArray(files) || !Array.isArray(bundles) ||
-            finalFileCount < 1 || bundles.length > MAX_FOLDER_BUNDLES ||
-            !Number.isSafeInteger(total) || total < 1 || total > 200 * 1024 ** 3 || total !== Number(item.archiveSize)) {
+            finalFileCount < 1 ||
+            !Number.isSafeInteger(total) || total < 1 || total !== Number(item.archiveSize)) {
             throw new Error('invalid_folder_manifest');
         }
         emit(operation, onProgress, 'checking_manifest', { totalInstallFiles: finalFileCount }, true);
@@ -707,7 +707,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
         const seen = new Set();
         const normalizedFiles = files.map(file => {
             if (!/^[a-f0-9-]{36}$/i.test(String(file.id || '')) || !Number.isSafeInteger(file.sizeBytes) ||
-                file.sizeBytes < 0 || file.sizeBytes > 30 * 1024 ** 3 || typeof file.path !== 'string' ||
+                file.sizeBytes < 0 || file.sizeBytes > MAX_R2_OBJECT_BYTES || typeof file.path !== 'string' ||
                 (file.sha256 != null && !/^[a-f0-9]{64}$/i.test(String(file.sha256)))) {
                 throw new Error('invalid_folder_manifest');
             }
@@ -720,6 +720,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
             if (seen.has(relative)) throw new Error('invalid_folder_manifest');
             seen.add(relative);
             declared += file.sizeBytes;
+            if (!Number.isSafeInteger(declared)) throw new Error('invalid_folder_manifest');
             return { id: file.id, path: file.path, sizeBytes: file.sizeBytes, etag: file.etag || null,
                 sha256: file.sha256 ? String(file.sha256).toLowerCase() : null,
                 target, count: Math.ceil(file.sizeBytes / FOLDER_CHUNK_SIZE) };
@@ -742,6 +743,7 @@ function createCustomGamesService({ app, axios, authSession, apiBaseUrl, shell, 
                 if (seen.has(relative)) throw new Error('invalid_folder_manifest');
                 seen.add(relative);
                 declared += member.sizeBytes;
+                if (!Number.isSafeInteger(declared)) throw new Error('invalid_folder_manifest');
                 return { path: member.path, target, sizeBytes: member.sizeBytes,
                     sha256: String(member.sha256).toLowerCase() };
             });

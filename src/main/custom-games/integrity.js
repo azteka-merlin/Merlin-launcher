@@ -2,21 +2,21 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { safeEntryPath } = require('./safe-zip');
+const { MAX_R2_OBJECT_BYTES } = require('./size-limits');
 
-const MAX_BYTES = 200 * 1024 ** 3;
 const MAX_ISSUES = 100;
 
 function normalizeIntegrityManifest(value, gameId, archiveKey, root) {
     if (value?.version !== 1 || value.gameId !== gameId || value.archiveKey !== archiveKey ||
         !Array.isArray(value.files) || value.files.length < 1 ||
-        !Number.isSafeInteger(value.totalSizeBytes) || value.totalSizeBytes < 0 || value.totalSizeBytes > MAX_BYTES) {
+        !Number.isSafeInteger(value.totalSizeBytes) || value.totalSizeBytes < 0) {
         throw new Error('invalid_integrity_manifest');
     }
     let total = 0;
     const seen = new Set();
     const files = value.files.map(file => {
         if (!file || typeof file.path !== 'string' || file.path.length > 32767 ||
-            !Number.isSafeInteger(file.sizeBytes) || file.sizeBytes < 0 || file.sizeBytes > MAX_BYTES ||
+            !Number.isSafeInteger(file.sizeBytes) || file.sizeBytes < 0 ||
             typeof file.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(file.sha256)) throw new Error('invalid_integrity_manifest');
         let target;
         try { target = safeEntryPath(root, file.path); }
@@ -25,10 +25,11 @@ function normalizeIntegrityManifest(value, gameId, archiveKey, root) {
         if (seen.has(relative)) throw new Error('invalid_integrity_manifest');
         seen.add(relative);
         total += file.sizeBytes;
+        if (!Number.isSafeInteger(total)) throw new Error('invalid_integrity_manifest');
         let zip;
         if (file.zip != null) {
             if (![0, 8, 9].includes(file.zip.method) || !Number.isSafeInteger(file.zip.compressedSize) ||
-                file.zip.compressedSize < 0 || file.zip.compressedSize > 100 * 1024 ** 3) throw new Error('invalid_integrity_manifest');
+                file.zip.compressedSize < 0 || file.zip.compressedSize > MAX_R2_OBJECT_BYTES) throw new Error('invalid_integrity_manifest');
             zip = { method: file.zip.method, compressedSize: file.zip.compressedSize };
         }
         return { path: file.path, sizeBytes: file.sizeBytes, sha256: file.sha256.toLowerCase(), ...(zip ? { zip } : {}) };

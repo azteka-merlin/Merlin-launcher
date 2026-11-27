@@ -91,6 +91,8 @@ async function inspectArchive(zipPath, destination, isCancelled, expectedEntries
                 const unixMode = entry.externalFileAttributes >>> 16;
                 if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
                 if (entry.isEncrypted() || ![0, 8, 9].includes(entry.compressionMethod)) throw new Error('unsupported_archive_compression');
+                if (!Number.isSafeInteger(entry.uncompressedSize) || entry.uncompressedSize < 0 ||
+                    !Number.isSafeInteger(totalBytes + entry.uncompressedSize)) throw new Error('archive_size_invalid');
                 if (!normalized.endsWith('/')) {
                     files += 1;
                     if (expectedHashes && !/^[a-f0-9]{64}$/i.test(String(expectedHashes.get(relative) || ''))) {
@@ -172,6 +174,8 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
                 seen.add(relative);
                 const unixMode = entry.externalFileAttributes >>> 16;
                 if ((unixMode & 0xf000) === 0xa000) throw new Error('archive_symlink_not_allowed');
+                if (!Number.isSafeInteger(entry.uncompressedSize) || entry.uncompressedSize < 0 ||
+                    !Number.isSafeInteger(declaredTotal + entry.uncompressedSize)) throw new Error('archive_size_invalid');
                 declaredTotal += entry.uncompressedSize;
                 if (declaredTotal > MAX_UNCOMPRESSED) throw new Error('archive_size_limit');
                 if (entry.fileName.endsWith('/')) {
@@ -187,7 +191,8 @@ async function extractSafeZip(zipPath, destination, onProgress = () => {}, isCan
                                 if (isCancelled()) throw new Error('cancelled');
                                 size += chunk.length;
                                 extracted += chunk.length;
-                                if (size > entry.uncompressedSize || extracted > MAX_UNCOMPRESSED) throw new Error('archive_size_limit');
+                                if (size > entry.uncompressedSize || !Number.isSafeInteger(extracted)) throw new Error('archive_size_invalid');
+                                if (extracted > MAX_UNCOMPRESSED) throw new Error('archive_size_limit');
                                 if (crc !== null) crc = updateCrc(crc, chunk);
                                 hash?.update(chunk);
                                 report();

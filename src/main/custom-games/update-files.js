@@ -7,6 +7,7 @@ const { pipeline } = require('node:stream/promises');
 const { safeEntryPath, extractSafeZip } = require('./safe-zip');
 const { decodeDeflate64 } = require('./deflate64');
 const { createTransferMeter, createTaskLimiter } = require('./transfer-progress');
+const { MAX_R2_OBJECT_BYTES } = require('./size-limits');
 
 const MARKER = '.merlin-install.json';
 const RANGE_BYTES = 64 * 1024 ** 2;
@@ -331,7 +332,7 @@ async function stageUpdate({ staging, item, manifest, folderManifest, plan, requ
     } else {
         for (const file of plan.replace) {
             if (!file.zip || ![0, 8, 9].includes(file.zip.method) || !Number.isSafeInteger(file.zip.compressedSize) ||
-                file.zip.compressedSize < 0 || file.zip.compressedSize > 100 * 1024 ** 3) throw new Error('integrity_index_unavailable');
+                file.zip.compressedSize < 0 || file.zip.compressedSize > MAX_R2_OBJECT_BYTES) throw new Error('integrity_index_unavailable');
             downloads.push({ ...file, sizeBytes: file.zip.compressedSize, kind: 'zip-entry' });
         }
     }

@@ -11,10 +11,10 @@ const { extractSafeZip, safeEntryPath } = require('../src/main/custom-games/safe
 const { registerCustomGamesIpc } = require('../src/main/ipc/register-custom-games-ipc');
 const { createCustomGamesService, requiredFreeBytes, validArchiveSize, validFolderManifestFileCount } = require('../src/main/custom-games/custom-games-service');
 
-test('ZIP archive size ceiling is 100 GiB inclusive', () => {
-    const max = 100 * 1024 ** 3;
-    assert.equal(validArchiveSize(max), true);
-    assert.equal(validArchiveSize(max + 1), false);
+test('ZIP archive size accepts R2 multipart objects up to the storage limit', () => {
+    const maxR2ObjectBytes = 5 * 1024 ** 4 - 5 * 1024 ** 3;
+    assert.equal(validArchiveSize(maxR2ObjectBytes), true);
+    assert.equal(validArchiveSize(maxR2ObjectBytes + 1), false);
     assert.equal(validArchiveSize(0), false);
     assert.equal(validArchiveSize(Number.MAX_SAFE_INTEGER + 1), false);
 });
